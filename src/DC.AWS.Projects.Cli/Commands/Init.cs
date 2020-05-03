@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
@@ -13,12 +12,8 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             if (File.Exists(Path.Combine(options.GetRootedPath(), ".project.settings")))
                 throw new InvalidOperationException("This project is already initialized.");
-            
-            var projectSettings = new ProjectSettings
-            {
-                DefaultLanguage = options.Language,
-                ProjectRoot = options.GetRootedPath()
-            };
+
+            var projectSettings = ProjectSettings.New(options.GetLanguage(), options.GetRootedPath());
 
             projectSettings.Save();
             
@@ -46,8 +41,8 @@ namespace DC.AWS.Projects.Cli.Commands
         [Verb("init", HelpText = "Initialize a project here.")]
         public class Options
         {
-            [Option('l', "lang", Default = SupportedLanguage.Node, HelpText = "Default language to use for functions")]
-            public SupportedLanguage Language { get; set; }
+            [Option('l', "lang", Default = FunctionLanguage.DefaultLanguage, HelpText = "Default language to use for functions")]
+            public string Language { private get; set; }
             
             public string Path { private get; set; } = Environment.CurrentDirectory;
 
@@ -62,6 +57,11 @@ namespace DC.AWS.Projects.Cli.Commands
                     path = path.Substring(2);
 
                 return System.IO.Path.Combine(Environment.CurrentDirectory, path);
+            }
+
+            public FunctionLanguage GetLanguage()
+            {
+                return FunctionLanguage.Parse(Language);
             }
         }
     }

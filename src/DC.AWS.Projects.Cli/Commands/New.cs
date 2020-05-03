@@ -28,8 +28,8 @@ namespace DC.AWS.Projects.Cli.Commands
             [Option('n', "name", Required = true, HelpText = "The name of the project.")]
             public string Name { get; set; }
             
-            [Option('l', "lang", Default = SupportedLanguage.Node, HelpText = "Default language to use for functions.")]
-            public SupportedLanguage Language { get; set; }
+            [Option('l', "lang", Default = FunctionLanguage.DefaultLanguage, HelpText = "Default language to use for functions.")]
+            public string Language { get; set; }
         }
     }
 }

@@ -10,7 +10,12 @@ namespace DC.AWS.Projects.Cli
 {
     public class ProjectSettings
     {
-        public SupportedLanguage DefaultLanguage { get; set; }
+        private ProjectSettings()
+        {
+            
+        }
+        
+        public string DefaultLanguage { private get; set; }
         public IDictionary<string, ApiConfiguration> Apis { get; set; } = new Dictionary<string, ApiConfiguration>();
 
         public IDictionary<string, ClientConfiguration> Clients { get; set; } =
@@ -19,18 +24,27 @@ namespace DC.AWS.Projects.Cli
         [JsonIgnore]
         public string ProjectRoot { get; set; }
 
+        public static ProjectSettings New(FunctionLanguage defaultLanguage, string path)
+        {
+            return new ProjectSettings
+            {
+                DefaultLanguage = defaultLanguage?.ToString(),
+                ProjectRoot = path
+            };
+        }
+
         public void AddApi(
             string name,
             string baseUrl,
             string relativePath,
-            SupportedLanguage? defaultLanguage,
+            FunctionLanguage defaultLanguage,
             int externalPort,
             int? port = null)
         {
             Apis[name] = new ApiConfiguration
             {
                 BaseUrl = baseUrl,
-                DefaultLanguage = defaultLanguage,
+                DefaultLanguage = defaultLanguage?.ToString(),
                 Port = port ?? GetRandomUnusedPort(),
                 ExternalPort = externalPort,
                 RelativePath = relativePath
@@ -74,9 +88,11 @@ namespace DC.AWS.Projects.Cli
             };
         }
 
-        public SupportedLanguage GetLanguage(string api = null)
+        public FunctionLanguage GetLanguage(string api = null)
         {
-            return Apis.ContainsKey(api ?? "") ? Apis[api ?? ""].DefaultLanguage ?? DefaultLanguage : DefaultLanguage;
+            return FunctionLanguage.Parse(Apis.ContainsKey(api ?? "")
+                ? Apis[api ?? ""].DefaultLanguage ?? DefaultLanguage
+                : DefaultLanguage);
         }
 
         public static ProjectSettings Read()
@@ -107,6 +123,11 @@ namespace DC.AWS.Projects.Cli
         public (string path, string name) FindApiRoot(string path)
         {
             return FindRoot(path, "api");
+        }
+        
+        public (string path, string name) FindFunctionRoot(string path)
+        {
+            return FindRoot(path, "function");
         }
 
         public string FindApiPath(string name)
@@ -153,7 +174,7 @@ namespace DC.AWS.Projects.Cli
         
         private (string path, string name) FindRoot(string path, string type)
         {
-            var currentPath = path;
+            var currentPath = GetRootedPath(path);
 
             while (true)
             {
@@ -200,7 +221,7 @@ namespace DC.AWS.Projects.Cli
         public class ApiConfiguration
         {
             public string BaseUrl { get; set; }
-            public SupportedLanguage? DefaultLanguage { get; set; }
+            public string DefaultLanguage { get; set; }
             public int Port { get; set; }
             public int ExternalPort { get; set; }
             public string RelativePath { get; set; }

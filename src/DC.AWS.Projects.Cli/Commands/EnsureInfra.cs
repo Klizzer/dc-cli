@@ -7,7 +7,6 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using CommandLine;
-using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Commands
@@ -90,21 +89,6 @@ namespace DC.AWS.Projects.Cli.Commands
         public class Options
         {
             
-        }
-        
-        private class TemplateData
-        {
-            public string AWSTemplateFormatVersion { get; set; }
-            public string Transform { get; set; }
-            public IDictionary<string, object> Outputs { get; set; } = new Dictionary<string, object>();
-            public IDictionary<string, IDictionary<string, string>> Parameters { get; set; } = new Dictionary<string, IDictionary<string, string>>();
-            public IDictionary<string, ResourceData> Resources { get; set; } = new Dictionary<string, ResourceData>();
-            
-            public class ResourceData
-            {
-                public string Type { get; set; }
-                public IDictionary<string, object> Properties { get; set; }
-            }
         }
     }
 }

@@ -25,7 +25,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 options.Name,
                 options.BaseUrl,
                 options.GetRelativeApiPath(settings),
-                options.DefaultLanguage, 
+                options.GetLanguage(), 
                 options.ExternalPort);
 
             Templates.Extract(
@@ -77,7 +77,7 @@ namespace DC.AWS.Projects.Cli.Commands
             public string Path { private get; set; }
 
             [Option('l', "lang", HelpText = "Default language for api functions.")]
-            public SupportedLanguage? DefaultLanguage { get; set; }
+            public string DefaultLanguage { private get; set; }
 
             [Option('o', "port", Default = 4000, HelpText = "Port to run api on.")]
             public int ExternalPort { get; set; }
@@ -92,6 +92,11 @@ namespace DC.AWS.Projects.Cli.Commands
                 var dir = new DirectoryInfo(GetRootedApiPath(settings).Substring(settings.ProjectRoot.Length));
 
                 return dir.FullName.Substring(1);
+            }
+
+            public FunctionLanguage GetLanguage()
+            {
+                return string.IsNullOrEmpty(DefaultLanguage) ? null : FunctionLanguage.Parse(DefaultLanguage);
             }
         }
     }

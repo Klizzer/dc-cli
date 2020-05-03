@@ -3,7 +3,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: [[FUNCTION_PATH]]
-      Handler: handler.handler
+      Handler: [[FUNCTION_HANDLER]]
       Runtime: [[FUNCTION_RUNTIME]]
       Events:
         Api:

@@ -33,7 +33,7 @@ namespace DC.AWS.Projects.Cli.Commands
             public string Path { get; set; }
             
             [Option('l', "lang", HelpText = "Language to use for the function.")]
-            public SupportedLanguage? Language { get; set; }
+            public string Language { get; set; }
         }
     }
 }
