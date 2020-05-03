@@ -1,0 +1,2 @@
+There is a bug on windows in boto3. You need to change the source of botocore:
+https://github.com/boto/boto3/issues/1602#issuecomment-460584212

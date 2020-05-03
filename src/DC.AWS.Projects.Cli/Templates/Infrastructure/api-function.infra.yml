@@ -1,0 +1,29 @@
+Resources:
+  [[FUNCTION_NAME]]Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: [[FUNCTION_PATH]]
+      Handler: handler.handler
+      Runtime: [[FUNCTION_RUNTIME]]
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Method: [[FUNCTION_METHOD]]
+            Path: [[URL]]
+            RestApiId:
+              Ref: [[API_NAME]]Gw
+
+  [[API_NAME]]Gw[[FUNCTION_NAME]]EndpointPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName:
+        Ref: [[FUNCTION_NAME]]Function
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub:
+          - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${__ApiId__}/*/*
+          - __ApiId__:
+              Ref: [[API_NAME]]Gw
+    

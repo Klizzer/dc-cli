@@ -1,0 +1,44 @@
+Parameters:
+  DomainName:
+    Type: String
+
+Resources:
+  [[API_NAME]]Gw:
+    Type: AWS::Serverless::Api
+    Properties:
+      EndpointConfiguration: REGIONAL
+      MinimumCompressionSize: 1024
+      Name: [[API_NAME]]
+      StageName: prod
+
+  [[API_NAME]]DomainName:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName:
+        Ref: [[API_NAME]]DomainName
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      RegionalCertificateArn:
+        Ref: [[API_NAME]]DomainCertificate
+
+  [[API_NAME]]DomainCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName:
+        Ref: [[API_NAME]]DomainName
+      DomainValidationOptions:
+      - DomainName:
+          Ref: [[API_NAME]]DomainName
+        ValidationDomain:
+          Ref: [[API_NAME]]DomainName
+        ValidationMethod: DNS
+
+  [[API_NAME]]Mapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName:
+        Ref: [[API_NAME]]DomainName
+      RestApiId:
+        Ref: [[API_NAME]]Gw
+      Stage: prod

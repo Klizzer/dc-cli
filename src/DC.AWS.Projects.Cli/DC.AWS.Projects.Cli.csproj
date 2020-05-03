@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyName>dc-aws</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.105.38" />
+    <PackageReference Include="CommandLineParser" Version="2.7.82" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="SharpZipLib" Version="1.2.0" />
+    <PackageReference Include="YamlDotNet" Version="8.1.1" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="Project/**/*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+
+    <None Include="Templates/Functions/**/*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\Config\api-proxy.conf" />
+    <EmbeddedResource Include="Templates\Infrastructure\api.infra.yml" />
+    <EmbeddedResource Include="Templates\Infrastructure\api-function.infra.yml" />
+  </ItemGroup>
+</Project>

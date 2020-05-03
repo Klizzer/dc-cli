@@ -1,0 +1,14 @@
+*.user
+.settings.json
+config/.apis.conf
+.vs/
+.idea/
+bin/
+obj/
+.localstack/
+node_modules/
+.tools/
+.generated/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
