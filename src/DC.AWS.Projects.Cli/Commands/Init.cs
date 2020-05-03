@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -15,12 +16,11 @@ namespace DC.AWS.Projects.Cli.Commands
             
             var projectSettings = new ProjectSettings
             {
-                DefaultLanguage = options.Language
+                DefaultLanguage = options.Language,
+                ProjectRoot = options.GetRootedPath()
             };
 
-            var settings = Json.Serialize(projectSettings);
-            
-            File.WriteAllText(Path.Combine(options.GetRootedPath(), ".project.settings"), settings);
+            projectSettings.Save();
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
@@ -32,10 +32,15 @@ namespace DC.AWS.Projects.Cli.Commands
                 projectFilesSourcePath, 
                 options.GetRootedPath(),
                 ("PROJECT_NAME", projectDirectory.Name));
+            
+            var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = "make",
+                Arguments = "init",
+                WorkingDirectory = projectDirectory.FullName
+            });
 
-            Console.WriteLine(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? $"Run command \"make -f Makefile.win init\" in \"./{projectDirectory.Name}\" to initialize the project."
-                : $"Run command \"make init\" in \"./{projectDirectory.Name}\" to initialize the project.");
+            process?.WaitForExit();
         }
         
         [Verb("init", HelpText = "Initialize a project here.")]

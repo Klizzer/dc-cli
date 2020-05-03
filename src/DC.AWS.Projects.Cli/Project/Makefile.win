@@ -1,9 +1,0 @@
-.PHONY: start.aws-services
-start.aws-services:
-	if not exist .localstack mkdir .localstack
-	docker-compose -f ./localstack-env.windows.yml down || true
-	docker-compose -f ./localstack-env.windows.yml up -d
-	
-.PHONY: install.env
-install.env:
-	choco install terraform

@@ -18,7 +18,8 @@ namespace DC.AWS.Projects.Cli
                     Configure.Options,
                     SetupProxy.Options,
                     EnsureLocalstackRunning.Options,
-                    EnsureInfra.Options>(args)
+                    EnsureInfra.Options,
+                    Client.Options>(args)
                 .WithParsed<New.Options>(New.Execute)
                 .WithParsed<Init.Options>(Init.Execute)
                 .WithParsed<Func.Options>(Func.Execute)
@@ -29,7 +30,8 @@ namespace DC.AWS.Projects.Cli
                 .WithParsed<Configure.Options>(Configure.Execute)
                 .WithParsed<SetupProxy.Options>(SetupProxy.Execute)
                 .WithParsed<EnsureLocalstackRunning.Options>(EnsureLocalstackRunning.Execute)
-                .WithParsed<EnsureInfra.Options>(EnsureInfra.Execute);
+                .WithParsed<EnsureInfra.Options>(EnsureInfra.Execute)
+                .WithParsed<Client.Options>(Client.Execute);
         }
     }
 }

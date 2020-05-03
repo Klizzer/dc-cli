@@ -1,6 +1,7 @@
 using System;
 using System.IO;
-using System.Net;
+using System.Linq;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using CommandLine;
 
@@ -19,26 +20,50 @@ namespace DC.AWS.Projects.Cli.Commands
                 throw new InvalidOperationException($"You can't add a new api at: \"{options.GetRootedApiPath(settings)}\". It already exists.");
 
             Directory.CreateDirectory(options.GetRootedApiPath(settings));
+            
+            settings.AddApi(
+                options.Name,
+                options.BaseUrl,
+                options.GetRelativeApiPath(settings),
+                options.DefaultLanguage, 
+                options.ExternalPort);
 
-            InfrastructureTemplates.Extract(
+            Templates.Extract(
                 "api.infra.yml",
                 Path.Combine(options.GetRootedApiPath(settings), "api.infra.yml"),
+                Templates.TemplateType.Infrastructure,
                 ("API_NAME", options.Name));
-
-            settings.AddApi(options.Name, options.BaseUrl, options.DefaultLanguage, GetRandomUnusedPort());
             
-            File.WriteAllText(Path.Combine(settings.ProjectRoot, ".project.settings"), Json.Serialize(settings));
+            var url = options.BaseUrl;
+
+            if (url.StartsWith("/"))
+                url = url.Substring(1);
+
+            if (url.EndsWith("/"))
+                url = url.Substring(0, url.Length - 1);
+            
+            Templates.Extract(
+                "proxy.conf",
+                Path.Combine(options.GetRootedApiPath(settings), "proxy.nginx.conf"),
+                Templates.TemplateType.Config,
+                ("BASE_URL", url),
+                ("SERVER_IP", GetLocalIpAddress()),
+                ("API_PORT", settings.Apis[options.Name].Port.ToString()));
+            
+            settings.Save();
         }
         
-        private static int GetRandomUnusedPort()
+        public static string GetLocalIpAddress()
         {
-            var listener = new TcpListener(IPAddress.Any, 0);
-            listener.Start();
-            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
-            return port;
+            return (from item in NetworkInterface.GetAllNetworkInterfaces()
+                    where item.NetworkInterfaceType == NetworkInterfaceType.Ethernet &&
+                          item.OperationalStatus == OperationalStatus.Up
+                    from ip in item.GetIPProperties().UnicastAddresses
+                    where ip.Address.AddressFamily == AddressFamily.InterNetwork
+                    select ip.Address.ToString())
+                .FirstOrDefault();
         }
-
+        
         [Verb("api", HelpText = "Create a api.")]
         public class Options
         {
@@ -53,15 +78,20 @@ namespace DC.AWS.Projects.Cli.Commands
 
             [Option('l', "lang", HelpText = "Default language for api functions.")]
             public SupportedLanguage? DefaultLanguage { get; set; }
-            
-            public string GetRootedBasePath(ProjectSettings projectSettings)
-            {
-                return projectSettings.GetRootedPath(Path);
-            }
+
+            [Option('o', "port", Default = 4000, HelpText = "Port to run api on.")]
+            public int ExternalPort { get; set; }
             
             public string GetRootedApiPath(ProjectSettings projectSettings)
             {
-                return System.IO.Path.Combine(GetRootedBasePath(projectSettings), Name);
+                return System.IO.Path.Combine(projectSettings.GetRootedPath(Path), Name);
+            }
+            
+            public string GetRelativeApiPath(ProjectSettings settings)
+            {
+                var dir = new DirectoryInfo(GetRootedApiPath(settings).Substring(settings.ProjectRoot.Length));
+
+                return dir.FullName.Substring(1);
             }
         }
     }

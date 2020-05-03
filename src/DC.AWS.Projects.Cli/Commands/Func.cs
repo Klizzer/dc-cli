@@ -48,9 +48,10 @@ namespace DC.AWS.Projects.Cli.Commands
             Console.WriteLine("Enter method:");
             var method = Console.ReadLine();
             
-            InfrastructureTemplates.Extract(
+            Templates.Extract(
                 "api-function.infra.yml",
                 Path.Combine(options.GetRootedFunctionPath(settings), "function.infra.yml"),
+                Templates.TemplateType.Infrastructure,
                 ("FUNCTION_NAME", options.Name),
                 ("FUNCTION_RUNTIME", languageRuntimes[options.GetLanguage(settings)]),
                 ("FUNCTION_METHOD", method),

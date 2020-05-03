@@ -89,6 +89,9 @@ namespace DC.AWS.Projects.Cli.Commands
         
         private class TemplateData
         {
+            public string AWSTemplateFormatVersion { get; set; }
+            public string Transform { get; set; }
+            public IDictionary<string, object> Outputs { get; set; } = new Dictionary<string, object>();
             public IDictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
             public IDictionary<string, ResourceData> Resources { get; set; } = new Dictionary<string, ResourceData>();
             

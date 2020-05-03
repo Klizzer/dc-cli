@@ -9,6 +9,12 @@ LOCALSTACK_VERSION = latest
 LOCALSTACK_SERVICES = 'edge,apigateway,cloudformation,dynamodb,iam,lambda,logs,s3,sts'
 PROJECT_NAME = [[PROJECT_NAME]]
 
+ifeq ($(OS), Windows_NT)
+    DETECTED_OS := Windows
+else
+    DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
 AWS_REGION ?= us-east-1
 VERSION_NUMBER ?= $(shell date +%Y.%m.%d.%H%M%S)
 
@@ -19,8 +25,8 @@ build:
 	dc-aws build
 
 .PHONY: init.infra
-init.infra: build
-	docker build -t $(PROJECT_NAME)/aws-sam-local ./infrastructure/containers/sam
+init.infra:
+	$(foreach directory, $(wildcard ./infrastructure/containers/*), docker build -t "$(PROJECT_NAME)/$(notdir $(directory))" $(directory);)
 
 .PHONY: init
 init:
@@ -56,14 +62,14 @@ start.localstack: stop.localstack
 
 .PHONY: stop.proxy
 stop.proxy:
-	docker stop $(PROJECT_NAME)-proxy || true
-	docker container rm $(PROJECT_NAME)-proxy || true
+	$(foreach file, $(wildcard ./config/.generated/*.proxy), docker stop $(PROJECT_NAME)-proxy-$(basename $(notdir $(file))) || true;)
+	$(foreach file, $(wildcard ./config/.generated/*.proxy), docker container rm $(PROJECT_NAME)-proxy-$(basename $(notdir $(file))) || true;)
 
 .PHONY: start.proxy
-start.proxy: stop.proxy
+start.proxy: stop.proxy build
 	dc-aws setup-proxy
 	docker pull nginx
-	docker run --name $(PROJECT_NAME)-proxy -d -p 4000:80 -v $(CURDIR)/config/proxy.conf:/etc/nginx/nginx.conf -v $(CURDIR)/config/.apis.conf:/etc/nginx/.apis.conf nginx
+	$(foreach file, $(wildcard ./config/.generated/*.proxy), $(eval PORT = `./.tools/jj -i $(file) port`) $(eval RELATIVE_PATH = `./.tools/jj -i $(file) path`) docker run --name $(PROJECT_NAME)-proxy-$(basename $(notdir $(file))) -d -v "$(CURDIR)/$(RELATIVE_PATH)/proxy.nginx.conf:/etc/nginx/nginx.conf" -v "$(CURDIR)/$(RELATIVE_PATH)/_child_paths:/etc/nginx/_child_paths" -p $(PORT):80 nginx;)
 
 .PHONY: stop.api
 stop.api:
@@ -72,10 +78,19 @@ stop.api:
 
 .PHONY: start.api
 start.api: build stop.api
-	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), $(eval API_PORT = `./.tools/jj -i ./.project.settings apis.$(basename $(basename $(notdir $(file)))).port`) docker run --name $(PROJECT_NAME)-$(basename $(basename $(notdir $(file)))) -d -v "$(CURDIR)/infrastructure/environment/.generated/$(notdir $(file)):/var/opt/template.yml" -v /var/run/docker.sock:/var/run/docker.sock -v "$(CURDIR):/var/opt" -p $(API_PORT):3000 $(PROJECT_NAME)/aws-sam-local local start-api --docker-volume-basedir "$(CURDIR)" --host 0.0.0.0;)
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), $(eval API_PORT = `./.tools/jj -i ./.project.settings apis.$(basename $(basename $(notdir $(file)))).port`) docker run --name $(PROJECT_NAME)-$(basename $(basename $(notdir $(file)))) -d -v "$(CURDIR)/infrastructure/environment/.generated/$(notdir $(file)):/var/opt/template.yml" -v /var/run/docker.sock:/var/run/docker.sock -v "$(CURDIR):/var/opt" -p $(API_PORT):3000 $(PROJECT_NAME)/sam local start-api --docker-volume-basedir "$(CURDIR)" --host 0.0.0.0;)
+
+.PHONY: stop.client
+stop.client:
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), docker stop $(PROJECT_NAME)-client-$(basename $(notdir $(file))) || true;)
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), docker container rm $(PROJECT_NAME)-client-$(basename $(notdir $(file))) || true;)
+
+.PHONY: start.client
+start.client:
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), $(eval CLIENT_PORT = `./.tools/jj -i $(file) port`) $(eval CLIENT_RELATIVE_PATH = `./.tools/jj -i $(file) relativePath`) docker run --name $(PROJECT_NAME)-client-$(basename $(notdir $(file))) -d -v "$(CURDIR)/$(CLIENT_RELATIVE_PATH):/usr/src/app" -p $(CLIENT_PORT):3000 $(PROJECT_NAME)/node-client run dev --hostname 0.0.0.0;)
 
 .PHONY: start
-start: start.localstack start.proxy start.api ensure.infra ensure.localstack
+start: start.localstack start.proxy start.api start.client ensure.infra ensure.localstack
 	echo "Everything up and running."
 
 .PHONY: stop
@@ -88,11 +103,15 @@ logs.localstack:
 
 .PHONY: logs.proxy
 logs.proxy:
-	docker logs $(PROJECT_NAME)-proxy
+	$(foreach file, $(wildcard ./config/.generated/*.proxy), docker logs $(PROJECT_NAME)-proxy-$(basename $(notdir $(file)));)
 
 .PHONY: logs.api
 logs.api:
 	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), docker logs $(PROJECT_NAME)-$(basename $(basename $(notdir $(file))));)
+
+.PHONY: logs.client
+logs.client:
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), docker logs $(PROJECT_NAME)-$(basename $(notdir $(file)));)
 
 .PHONY: clear
 clear: stop

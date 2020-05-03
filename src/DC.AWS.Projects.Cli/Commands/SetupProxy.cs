@@ -2,7 +2,6 @@ using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Text;
 using CommandLine;
 
@@ -14,37 +13,33 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = ProjectSettings.Read();
             
-            var apiProxyConfig = new StringBuilder();
+            var destination = Path.Combine(settings.ProjectRoot, "config/.generated");
+            
+            if (Directory.Exists(destination))
+                Directory.Delete(destination, true);
 
+            Directory.CreateDirectory(destination);
+            
             foreach (var api in settings.Apis)
             {
-                var proxyTemplateData = Assembly
-                    .GetExecutingAssembly()
-                    .GetManifestResourceStream("DC.AWS.Projects.Cli.Templates.Config.api-proxy.conf");
-
-                var url = api.Value.BaseUrl;
-
-                if (url.StartsWith("/"))
-                    url = url.Substring(1);
-
-                if (url.EndsWith("/"))
-                    url = url.Substring(0, url.Length - 1);
-
-                using (proxyTemplateData)
-                using(var reader = new StreamReader(proxyTemplateData!))
+                File.WriteAllText(Path.Combine(destination, $"api-{api.Key}.proxy"), Json.Serialize(new
                 {
-                    var templateData = reader.ReadToEnd();
-
-                    templateData = templateData
-                        .Replace("[[BASE_URL]]", url)
-                        .Replace("[[SERVER_IP]]", GetLocalIpAddress())
-                        .Replace("[[API_PORT]]", api.Value.Port.ToString());
-
-                    apiProxyConfig.Append(templateData);
-                }
+                    Port = api.Value.ExternalPort,
+                    Path = api.Value.RelativePath
+                }));
             }
             
-            File.WriteAllText(Path.Combine(settings.ProjectRoot, "config/.apis.conf"), apiProxyConfig.ToString());
+            foreach (var client in settings.Clients)
+            {
+                if (string.IsNullOrEmpty(client.Value.Api))
+                {
+                    File.WriteAllText(Path.Combine(destination, $"client-{client.Key}.proxy"), Json.Serialize(new
+                    {
+                        Port = client.Value.ExternalPort,
+                        Path = client.Value.RelativePath
+                    }));
+                }
+            }
         }
 
         private static string GetLocalIpAddress()

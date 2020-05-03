@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using Newtonsoft.Json;
 
 namespace DC.AWS.Projects.Cli
@@ -10,17 +12,65 @@ namespace DC.AWS.Projects.Cli
     {
         public SupportedLanguage DefaultLanguage { get; set; }
         public IDictionary<string, ApiConfiguration> Apis { get; set; } = new Dictionary<string, ApiConfiguration>();
-        
+
+        public IDictionary<string, ClientConfiguration> Clients { get; set; } =
+            new Dictionary<string, ClientConfiguration>();
+
         [JsonIgnore]
         public string ProjectRoot { get; set; }
 
-        public void AddApi(string name, string baseUrl, SupportedLanguage? defaultLanguage, int port)
+        public void AddApi(
+            string name,
+            string baseUrl,
+            string relativePath,
+            SupportedLanguage? defaultLanguage,
+            int externalPort,
+            int? port = null)
         {
             Apis[name] = new ApiConfiguration
             {
                 BaseUrl = baseUrl,
                 DefaultLanguage = defaultLanguage,
-                Port = port
+                Port = port ?? GetRandomUnusedPort(),
+                ExternalPort = externalPort,
+                RelativePath = relativePath
+            };
+        }
+
+        public void AddClient(
+            string name,
+            string baseUrl,
+            string relativePath,
+            ClientType clientType,
+            int externalPort,
+            int? port = null)
+        {
+            Clients[name] = new ClientConfiguration
+            {
+                BaseUrl = baseUrl,
+                ClientType = clientType,
+                Port = port ?? GetRandomUnusedPort(),
+                RelativePath = relativePath,
+                Api = null,
+                ExternalPort = externalPort
+            };
+        }
+        
+        public void AddClient(
+            string name,
+            string baseUrl,
+            string relativePath,
+            ClientType clientType,
+            string api,
+            int? port = null)
+        {
+            Clients[name] = new ClientConfiguration
+            {
+                BaseUrl = baseUrl,
+                ClientType = clientType,
+                Port = port ?? GetRandomUnusedPort(),
+                RelativePath = relativePath,
+                Api = api
             };
         }
 
@@ -48,12 +98,12 @@ namespace DC.AWS.Projects.Cli
                 currentPath = Directory.GetParent(currentPath).FullName;
             }
         }
-        
-        public (string path, string name) FindFunctionRoot(string path)
-        {
-            return FindRoot(path, "function");
-        }
 
+        public void Save()
+        {
+            File.WriteAllText(Path.Combine(ProjectRoot, ".project.settings"), Json.Serialize(this));
+        }
+        
         public (string path, string name) FindApiRoot(string path)
         {
             return FindRoot(path, "api");
@@ -68,23 +118,7 @@ namespace DC.AWS.Projects.Cli
 
             return path;
         }
-
-        public bool HasApiAt(string path)
-        {
-            var currentPath = path;
-
-            while (true)
-            {
-                if (!currentPath.StartsWith(ProjectRoot))
-                    return false;
-                
-                if (File.Exists(Path.Combine(currentPath, $"api.tf")))
-                    return true;
-                
-                currentPath = Directory.GetParent(currentPath).FullName;
-            }
-        }
-
+        
         public string GetApiFunctionUrl(string api, string functionUrl)
         {
             if (!Apis.ContainsKey(api))
@@ -154,11 +188,32 @@ namespace DC.AWS.Projects.Cli
                 .FirstOrDefault(foundPath => !string.IsNullOrEmpty(foundPath));
         }
         
+        private static int GetRandomUnusedPort()
+        {
+            var listener = new TcpListener(IPAddress.Any, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
+        
         public class ApiConfiguration
         {
             public string BaseUrl { get; set; }
             public SupportedLanguage? DefaultLanguage { get; set; }
             public int Port { get; set; }
+            public int ExternalPort { get; set; }
+            public string RelativePath { get; set; }
+        }
+        
+        public class ClientConfiguration
+        {
+            public string BaseUrl { get; set; }
+            public string RelativePath { get; set; }
+            public ClientType ClientType { get; set; }
+            public int Port { get; set; }
+            public string Api { get; set; }
+            public int? ExternalPort { get; set; }
         }
     }
 }

@@ -25,8 +25,9 @@
   </ItemGroup>
   
   <ItemGroup>
-    <EmbeddedResource Include="Templates\Config\api-proxy.conf" />
+    <EmbeddedResource Include="Templates\Config\client-proxy.conf" />
     <EmbeddedResource Include="Templates\Infrastructure\api.infra.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-function.infra.yml" />
+    <EmbeddedResource Include="Templates\Config\proxy.conf" />
   </ItemGroup>
 </Project>
