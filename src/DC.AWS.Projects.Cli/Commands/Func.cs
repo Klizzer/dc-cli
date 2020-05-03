@@ -55,18 +55,9 @@ namespace DC.AWS.Projects.Cli.Commands
                 ("FUNCTION_NAME", options.Name),
                 ("FUNCTION_RUNTIME", languageRuntimes[options.GetLanguage(settings)]),
                 ("FUNCTION_METHOD", method),
-                ("FUNCTION_PATH", options.GetRelativeFunctionPath(settings)),
+                ("FUNCTION_PATH", options.GetRelativeFunctionPath(settings, apiRoot.name)),
                 ("API_NAME", apiRoot.name),
                 ("URL", url));
-
-            // if (!string.IsNullOrEmpty(url) && url != "/")
-            // {
-            //     ApiResource.Execute(new ApiResource.Options
-            //     {
-            //         Api = apiRoot.name,
-            //         Url = url
-            //     });
-            // }
         }
         
         [Verb("func", HelpText = "Create a function.")]
@@ -88,10 +79,12 @@ namespace DC.AWS.Projects.Cli.Commands
             {
                 return System.IO.Path.Combine(settings.GetRootedPath(Path), Name);
             }
-
-            public string GetRelativeFunctionPath(ProjectSettings settings)
+            
+            public string GetRelativeFunctionPath(ProjectSettings settings, string api)
             {
-                var dir = new DirectoryInfo(GetRootedFunctionPath(settings).Substring(settings.ProjectRoot.Length));
+                var apiPath = settings.GetRootedPath(settings.Apis[api].RelativePath);
+                
+                var dir = new DirectoryInfo(GetRootedFunctionPath(settings).Substring(apiPath.Length));
 
                 return dir.FullName.Substring(1);
             }

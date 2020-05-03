@@ -2,7 +2,7 @@ FROM python
 
 RUN pip install aws-sam-cli
 
-WORKDIR /var/opt
+WORKDIR /usr/src/app
 
 EXPOSE 3000
 

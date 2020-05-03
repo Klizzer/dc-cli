@@ -9,6 +9,7 @@ obj/
 node_modules/
 .tools/
 .generated/
+.env/
 **/.terraform/*
 *.tfstate
 *.tfstate.*

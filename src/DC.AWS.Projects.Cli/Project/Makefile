@@ -10,9 +10,9 @@ LOCALSTACK_SERVICES = 'edge,apigateway,cloudformation,dynamodb,iam,lambda,logs,s
 PROJECT_NAME = [[PROJECT_NAME]]
 
 ifeq ($(OS), Windows_NT)
-    DETECTED_OS := Windows
+    DETECTED_OS := windows
 else
-    DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+    DETECTED_OS := $(shell sh -c 'uname | tr A-Z a-z 2>/dev/null || echo unknown')
 endif
 
 AWS_REGION ?= us-east-1
@@ -73,12 +73,12 @@ start.proxy: stop.proxy build
 
 .PHONY: stop.api
 stop.api:
-	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), docker stop $(PROJECT_NAME)-$(basename $(basename $(notdir $(file)))) || true;)
-	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), docker container rm $(PROJECT_NAME)-$(basename $(basename $(notdir $(file)))) || true;)
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), docker stop $(PROJECT_NAME)-api-$(basename $(basename $(notdir $(file)))) || true;)
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), docker container rm $(PROJECT_NAME)-api-$(basename $(basename $(notdir $(file)))) || true;)
 
 .PHONY: start.api
-start.api: build stop.api
-	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), $(eval API_PORT = `./.tools/jj -i ./.project.settings apis.$(basename $(basename $(notdir $(file)))).port`) docker run --name $(PROJECT_NAME)-$(basename $(basename $(notdir $(file)))) -d -v "$(CURDIR)/infrastructure/environment/.generated/$(notdir $(file)):/var/opt/template.yml" -v /var/run/docker.sock:/var/run/docker.sock -v "$(CURDIR):/var/opt" -p $(API_PORT):3000 $(PROJECT_NAME)/sam local start-api --docker-volume-basedir "$(CURDIR)" --host 0.0.0.0;)
+start.api: stop.api build
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), $(eval API_PORT = `./.tools/jj -i ./.project.settings apis.$(basename $(basename $(notdir $(file)))).port`) $(eval API_PATH = `./.tools/jj -i ./.project.settings apis.$(basename $(basename $(notdir $(file)))).relativePath`) docker run --name $(PROJECT_NAME)-api-$(basename $(basename $(notdir $(file)))) -d -v "$(CURDIR)/infrastructure/environment/.generated/$(notdir $(file)):/usr/src/template.yml" -v /var/run/docker.sock:/var/run/docker.sock -v "$(CURDIR)/.env:/usr/src/.env" -v "$(CURDIR)/$(API_PATH):/usr/src/app" -p $(API_PORT):3000 $(PROJECT_NAME)/sam local start-api -t ../template.yml --env-vars ../.env/environment.variables.json --docker-volume-basedir "$(CURDIR)/$(API_PATH)" --host 0.0.0.0;)
 
 .PHONY: stop.client
 stop.client:
@@ -86,11 +86,11 @@ stop.client:
 	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), docker container rm $(PROJECT_NAME)-client-$(basename $(notdir $(file))) || true;)
 
 .PHONY: start.client
-start.client:
+start.client: stop.client
 	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), $(eval CLIENT_PORT = `./.tools/jj -i $(file) port`) $(eval CLIENT_RELATIVE_PATH = `./.tools/jj -i $(file) relativePath`) docker run --name $(PROJECT_NAME)-client-$(basename $(notdir $(file))) -d -v "$(CURDIR)/$(CLIENT_RELATIVE_PATH):/usr/src/app" -p $(CLIENT_PORT):3000 $(PROJECT_NAME)/node-client run dev --hostname 0.0.0.0;)
 
 .PHONY: start
-start: start.localstack start.proxy start.api start.client ensure.infra ensure.localstack
+start: start.localstack start.proxy start.api start.client ensure.infra
 	echo "Everything up and running."
 
 .PHONY: stop
@@ -107,11 +107,11 @@ logs.proxy:
 
 .PHONY: logs.api
 logs.api:
-	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), docker logs $(PROJECT_NAME)-$(basename $(basename $(notdir $(file))));)
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.api.yml), docker logs $(PROJECT_NAME)-api-$(basename $(basename $(notdir $(file))));)
 
 .PHONY: logs.client
 logs.client:
-	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), docker logs $(PROJECT_NAME)-$(basename $(notdir $(file)));)
+	$(foreach file, $(wildcard ./infrastructure/environment/.generated/*.client), docker logs $(PROJECT_NAME)-client-$(basename $(notdir $(file)));)
 
 .PHONY: clear
 clear: stop

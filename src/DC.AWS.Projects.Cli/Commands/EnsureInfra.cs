@@ -7,14 +7,15 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using CommandLine;
+using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class EnsureInfra
     {
-        private static readonly IImmutableDictionary<string, Action<string, TemplateData.ResourceData>> TypeHandlers =
-            new Dictionary<string, Action<string, TemplateData.ResourceData>>
+        private static readonly IImmutableDictionary<string, Action<string, TemplateData, TemplateData.ResourceData, ProjectSettings>> TypeHandlers =
+            new Dictionary<string, Action<string, TemplateData, TemplateData.ResourceData, ProjectSettings>>
             {
                 ["AWS::DynamoDB::Table"] = HandleTable
             }.ToImmutableDictionary();
@@ -32,11 +33,15 @@ namespace DC.AWS.Projects.Cli.Commands
             foreach (var resource in templateData.Resources)
             {
                 if (TypeHandlers.ContainsKey(resource.Value.Type))
-                    TypeHandlers[resource.Value.Type](resource.Key, resource.Value);
+                    TypeHandlers[resource.Value.Type](resource.Key, templateData, resource.Value, settings);
             }
         }
 
-        private static void HandleTable(string name, TemplateData.ResourceData tableNode)
+        private static void HandleTable(
+            string name,
+            TemplateData template, 
+            TemplateData.ResourceData tableNode,
+            ProjectSettings settings)
         {
             EnsureLocalstackRunning.Execute(new EnsureLocalstackRunning.Options
             {
@@ -92,7 +97,7 @@ namespace DC.AWS.Projects.Cli.Commands
             public string AWSTemplateFormatVersion { get; set; }
             public string Transform { get; set; }
             public IDictionary<string, object> Outputs { get; set; } = new Dictionary<string, object>();
-            public IDictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+            public IDictionary<string, IDictionary<string, string>> Parameters { get; set; } = new Dictionary<string, IDictionary<string, string>>();
             public IDictionary<string, ResourceData> Resources { get; set; } = new Dictionary<string, ResourceData>();
             
             public class ResourceData
