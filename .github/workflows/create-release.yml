@@ -1,8 +1,7 @@
 name: Create Release
 on:
-  push:
-    tags:
-      - '*'
+  tag:
+    types: [created]
 jobs:
   build:
     runs-on: ubuntu-latest
