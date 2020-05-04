@@ -20,8 +20,8 @@ endif
 .PHONY: start
 start: stop
 ifeq(DETECTED_OS, Windows)
-	if not exists "$(CURDIR)/.generated" mkdir "$(CURDIR)/.generated"
-	if not exists "$(CURDIR)/$(CONFIG_PATH)/_child_paths" mkdir "$(CURDIR)/$(CONFIG_PATH)/_child_paths"
+	if not exist "$(CURDIR)/.generated" mkdir "$(CURDIR)/.generated"
+	if not exist "$(CURDIR)/$(CONFIG_PATH)/_child_paths" mkdir "$(CURDIR)/$(CONFIG_PATH)/_child_paths"
 else
 	mkdir -p "$(CURDIR)/.generated"
 	mkdir -p "$(CURDIR)/$(CONFIG_PATH)/_child_paths"

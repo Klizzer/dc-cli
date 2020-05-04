@@ -24,7 +24,7 @@ VERSION_NUMBER ?= $(shell date +%Y.%m.%d.%H%M%S)
 init:
 ifeq (DETECTED_OS, Windows)
 	if not exist .tools mkdir .tools
-	if exists .tools/jj.exe del .tools/jj.exe
+	if exist .tools/jj.exe del .tools/jj.exe
 	(powershell -ExecutionPolicy Bypass -Command "& { iwr https://github.com/tidwall/jj/releases/download/v$(JJ_VERSION)/jj-$(JJ_VERSION)-windows-amd64.zip -OutFile %cd%\jj.zip }" && 7z.exe x jj.zip -o"%cd%\.tools" && del jj.zip)
 else
 	mkdir -p ./.tools
@@ -73,7 +73,7 @@ endif
 .PHONY: clear
 clear: stop
 ifeq (DETECTED_OS, Windows)
-	if exists .localstack del .localstack
+	if exist .localstack del .localstack
 else
 	sudo rm -rf ./.localstack
 endif

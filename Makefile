@@ -5,9 +5,13 @@ MAKEFLAGS += --no-builtin-rules
 
 ifeq ($(OS), Windows_NT)
     DETECTED_OS := Windows
+    INSTALL_LOCATION ?= 'c:\dc-tools'
 else
     DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+    INSTALL_LOCATION ?= /usr/local/bin
 endif
+
+.DEFAULT_GOAL := build
 
 .PHONY: build
 build:
@@ -24,12 +28,21 @@ endif
 .PHONY: install
 install: publish
 ifeq (DETECTED_OS, Windows)
+	if not exist $(INSTALL_LOCATION) mkdir $(INSTALL_LOCATION)
+	pathman /au $(INSTALL_LOCATION)
+	copy /B /Y ./.out/dc-aws.exe $(INSTALL_LOCATION)/dc-aws.exe
 else
-	sudo cp ./.out/dc-aws /usr/local/bin
+	sudo cp ./.out/dc-aws $(INSTALL_LOCATION)
 endif
 
 .PHONY: clean
 clean:
+ifeq (DETECTED_OS, Windows)
+	rmdir /Q /S ./.out
+	rmdir /Q /S ./**/**/obj
+	rmdir /Q /S ./**/**/bin
+else
 	rm -rf ./.out
 	rm -rf ./**/**/obj
 	rm -rf ./**/**/bin
+endif
