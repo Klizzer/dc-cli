@@ -1,4 +1,4 @@
-name: Bump version
+name: Tag new releases
 on:
   push:
     branches:
@@ -9,8 +9,9 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Push tag
-        uses: anothrNick/github-tag-action@1.17.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          CUSTOM_TAG: make tag
+        uses: butlerlogic/action-autotag@1.0.0
+        with:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          strategy: regex
+          root: "src/DC.AWS.Projects.Cli/DC.AWS.Projects.Cli.csproj"
+          regex_pattern: "<Version>([0-9\.])</Version>"

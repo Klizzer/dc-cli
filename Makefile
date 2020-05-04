@@ -42,11 +42,6 @@ else
 	sudo cp ./.out/dc-aws $(INSTALL_LOCATION)
 endif
 
-.PHONY: tag
-tag: build
-	$(eval VERSION = `dotnet run --project ./src/DC.AWS.Projects.Cli semver`)
-	echo "v$(VERSION)"
-
 .PHONY: clean
 clean:
 ifeq ($(DETECTED_OS), Windows)
