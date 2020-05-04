@@ -18,8 +18,7 @@ namespace DC.AWS.Projects.Cli
                     Configure.Options,
                     EnsureLocalstackRunning.Options,
                     EnsureInfra.Options,
-                    Client.Options,
-                    SemVer.Options>(args)
+                    Client.Options>(args)
                 .WithParsed<New.Options>(New.Execute)
                 .WithParsed<Init.Options>(Init.Execute)
                 .WithParsed<Func.Options>(Func.Execute)
@@ -30,8 +29,7 @@ namespace DC.AWS.Projects.Cli
                 .WithParsed<Configure.Options>(Configure.Execute)
                 .WithParsed<EnsureLocalstackRunning.Options>(EnsureLocalstackRunning.Execute)
                 .WithParsed<EnsureInfra.Options>(EnsureInfra.Execute)
-                .WithParsed<Client.Options>(Client.Execute)
-                .WithParsed<SemVer.Options>(SemVer.Execute);
+                .WithParsed<Client.Options>(Client.Execute);
         }
     }
 }
