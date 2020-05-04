@@ -1,6 +1,6 @@
 name: Create Release
 on:
-  tag:
+  release:
     types: [created]
 jobs:
   build:
