@@ -1,7 +1,6 @@
 name: Create Release
 on:
-  release:
-    types: [created]
+  create
 jobs:
   build:
     runs-on: ubuntu-latest
