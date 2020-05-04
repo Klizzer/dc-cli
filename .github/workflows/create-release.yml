@@ -1,7 +1,5 @@
 on:
-  create:
-    tags:
-    - 'v*'
+  create
 
 name: Create Release
 
