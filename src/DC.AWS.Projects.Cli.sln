@@ -10,6 +10,7 @@ ProjectSection(SolutionItems) = preProject
 	..\.gitignore = ..\.gitignore
 	..\Makefile = ..\Makefile
 	..\.github\workflows\tag-releases.yml = ..\.github\workflows\tag-releases.yml
+	..\.github\workflows\create-release.yml = ..\.github\workflows\create-release.yml
 EndProjectSection
 EndProject
 Global
