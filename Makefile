@@ -3,6 +3,8 @@ SHELL := /bin/bash
 .DELETE_ON_ERROR:
 MAKEFLAGS += --no-builtin-rules
 
+VERSION ?= 0.0.1
+
 ifeq ($(OS), Windows_NT)
     DETECTED_OS := Windows
     INSTALL_LOCATION ?= c:\dc-tools
@@ -26,29 +28,34 @@ build:
 	
 .PHONY: publish
 publish: clean
-ifeq ($(DETECTED_OS), Windows)
-	dotnet publish ./src/DC.AWS.Projects.Cli -c Release --output $(CURDIR)/.out --self-contained -r win-x64 -p:PublishSingleFile=true
-else
-	dotnet publish ./src/DC.AWS.Projects.Cli -c Release --output $(CURDIR)/.out --self-contained -r linux-x64 -p:PublishSingleFile=true
-endif
+	dotnet publish ./src/DC.AWS.Projects.Cli -c Release --output $(CURDIR)/.out/win-x64 --self-contained -r win-x64 -p:PublishSingleFile=true
+	dotnet publish ./src/DC.AWS.Projects.Cli -c Release --output $(CURDIR)/.out/linux-x64 --self-contained -r linux-x64 -p:PublishSingleFile=true
 
 .PHONY: install
 install: publish
 ifeq ($(DETECTED_OS), Windows)
 	if not exist $(INSTALL_LOCATION) mkdir $(INSTALL_LOCATION)
 	pathman /au $(INSTALL_LOCATION)
-	copy /B /Y .\.out\dc-aws.exe $(INSTALL_LOCATION)\dc-aws.exe
+	copy /B /Y .\.out\win-x64\dc-aws.exe $(INSTALL_LOCATION)\dc-aws.exe
 else
-	sudo cp ./.out/dc-aws $(INSTALL_LOCATION)
+	sudo cp ./.out/linux-x64/dc-aws $(INSTALL_LOCATION)
 endif
+
+.PHONY: package
+package: publish
+	rm -rf ./.packages
+	mkdir ./.packages
+	$(foreach release, $(wildcard ./.out/*), cd $(release) && zip -x *.pdb -r ../../.packages/dc-aws-$(VERSION)-$(notdir $(release)).zip . && cd $(CURDIR);)
 
 .PHONY: clean
 clean:
 ifeq ($(DETECTED_OS), Windows)
+	npx rimraf .\.packages
 	npx rimraf .\.out
 	npx rimraf .\**\**\obj
 	npx rimraf .\**\**\bin
 else
+	rm -rf ./.packages
 	rm -rf ./.out
 	rm -rf ./**/**/obj
 	rm -rf ./**/**/bin

@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@master
+      - name: Build Packages
+        run: make VERSION=${{ github.ref }} package
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
@@ -23,3 +25,21 @@ jobs:
           body: Release ${{ github.ref }}
           draft: false
           prerelease: false
+      - name: Upload win-x64 release
+        uses: actions/upload-release-asset@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./.packages/dc-aws-${{ github.ref }}-win-x64.zip
+          asset_name: dc-aws-${{ github.ref }}-win-x64.zip
+          asset_content_type: application/zip
+      - name: Upload linux-x64 release
+        uses: actions/upload-release-asset@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./.packages/dc-aws-${{ github.ref }}-linux-x64.zip
+          asset_name: dc-aws-${{ github.ref }}-linux-x64.zip
+          asset_content_type: application/zip
