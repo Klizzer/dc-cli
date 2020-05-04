@@ -10,11 +10,12 @@ jobs:
       - uses: actions/checkout@master
       - name: Tag release
         id: tag_release
-        uses: butlerlogic/action-autotag@stable
+        uses: butlerlogic/action-autotag@master
         with:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           strategy: regex
           tag_prefix: "v"
-          version: "0.13.0"
+          root: "src/DC.AWS.Projects.Cli/DC.AWS.Projects.Cli.csproj"
+          regex_pattern: "<Version>((0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?)</Version>"
       - name: Test
         run: echo ${{ steps.tag_release.outputs.tagcreated }}
