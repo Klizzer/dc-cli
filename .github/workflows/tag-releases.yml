@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@master
       - name: Tag release
         id: tag_release
-        uses: butlerlogic/action-autotag@master
+        uses: butlerlogic/action-autotag@stable
         with:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           strategy: regex
