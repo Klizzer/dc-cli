@@ -5,65 +5,44 @@ using System.Linq;
 
 namespace DC.AWS.Projects.Cli
 {
-    public class FunctionLanguage
+    public static class FunctionLanguage
     {
-        private static readonly IImmutableDictionary<string, IImmutableList<string>> AvailableLanguages = 
-            new Dictionary<string, IImmutableList<string>>
+        private static readonly IImmutableList<ILanguage> AvailableLanguages = new List<ILanguage>
         {
-           ["node"] = new List<string>
-           {
-               "nodejs10.x",
-               "nodejs12.x"
-           }.ToImmutableList(),
-           ["go"] = new List<string>
-           {
-               "go1.x"
-           }.ToImmutableList()
-        }.ToImmutableDictionary();
+            NodeLanguage.Instance,
+            GoLanguage.Instance
+        }.ToImmutableList();
         
-        private FunctionLanguage(string name, string runtime)
-        {
-            Name = name;
-            Runtime = runtime;
-        }
+        public const string DefaultLanguage = NodeLanguage.LanguageName;
         
-        public string Name { get; }
-        public string Runtime { get; }
-
-        public override string ToString()
-        {
-            return $"{Name}:{Runtime}";
-        }
-
-        public const string DefaultLanguage = "node:nodejs12.x";
-        
-        public static FunctionLanguage Parse(string language)
+        public static ILanguageRuntime Parse(string language)
         {
             var parts = language.Split(':');
 
-            if (!AvailableLanguages.ContainsKey(parts[0]))
-                throw new InvalidOperationException($"We don't support language: {parts[0]}");
-            
-            if (parts.Length == 1)
-                return new FunctionLanguage(parts[0], AvailableLanguages[parts[0]].Last());
+            var availableLanguage = AvailableLanguages.FirstOrDefault(x => x.Name == parts[0]);
 
-            if (!AvailableLanguages[parts[0]].Contains(parts[1]))
-            {
-                throw new InvalidOperationException(
-                    $"We don't support runtime: {parts[1]} for language: {parts[0]}. Available runtimes are: {string.Join(", ", AvailableLanguages[parts[0]])}");
-            }
-            
-            return new FunctionLanguage(parts[0], parts[1]);
+            if (availableLanguage == null)
+                throw new InvalidOperationException($"We don't support language: {parts[0]}");
+
+            if (parts.Length == 1)
+                return availableLanguage.GetDefaultRuntime();
+
+            var availableRuntimes = availableLanguage.GetRuntimes().ToImmutableList();
+
+            var availableRuntime = availableRuntimes.FirstOrDefault(x => x.Name == parts[1]);
+
+            if (availableRuntime != null)
+                return availableRuntime;
+
+            throw new InvalidOperationException(
+                $"We don't support runtime: {parts[1]} for language: {parts[0]}. Available runtimes are: {string.Join(", ", availableRuntimes.Select(x => x.Name))}");
         }
 
-        public static FunctionLanguage ParseFromRuntime(string runtime)
+        public static ILanguageRuntime ParseFromRuntime(string runtime)
         {
-            if (!AvailableLanguages.Any(x => x.Value.Contains(runtime)))
-                return null;
-
-            var language = AvailableLanguages.First(x => x.Value.Contains(runtime));
-            
-            return new FunctionLanguage(language.Key, runtime);
+            return AvailableLanguages
+                .SelectMany(x => x.GetRuntimes())
+                .FirstOrDefault(x => x.Name == runtime);
         }
     }
 }

@@ -28,7 +28,7 @@ namespace DC.AWS.Projects.Cli.Commands
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
-            Directories.Copy(Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{language.Name}"), options.GetRootedFunctionPath(projectSettings));
+            Directories.Copy(Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{language.Language}"), options.GetRootedFunctionPath(projectSettings));
 
             TriggerHandlers[options.Trigger ?? FunctionTrigger.Api](options, projectSettings);
         }
@@ -37,23 +37,8 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var apiRoot = settings.FindApiRoot(options.GetRootedFunctionPath(settings));
             var functionPath = options.GetRelativeFunctionPath(settings, apiRoot.name);
-            var language = options.GetLanguage(settings);
-            
-            var languageHandlers = new Dictionary<string, string>
-            {
-                ["node"] = "handler.handler",
-                ["go"] = "main"
-            }.ToImmutableDictionary();
-            
-            var functionPathOverrides = new Dictionary<string, string>
-            {
-                ["go"] = Path.Combine(functionPath, ".out")
-            };
+            var runtime = options.GetLanguage(settings);
 
-            var handledFunctionPath = functionPathOverrides.ContainsKey(language.Name)
-                ? functionPathOverrides[language.Name]
-                : functionPath;
-            
             Console.WriteLine("Enter url:");
             var url = settings.GetApiFunctionUrl(apiRoot.name, Console.ReadLine());
 
@@ -65,12 +50,12 @@ namespace DC.AWS.Projects.Cli.Commands
                 Path.Combine(options.GetRootedFunctionPath(settings), "function.infra.yml"),
                 Templates.TemplateType.Infrastructure,
                 ("FUNCTION_NAME", options.Name),
-                ("FUNCTION_RUNTIME", language.Runtime),
+                ("FUNCTION_RUNTIME", runtime.Name),
                 ("FUNCTION_METHOD", method),
-                ("FUNCTION_PATH", handledFunctionPath),
+                ("FUNCTION_PATH", runtime.GetFunctionOutputPath(functionPath)),
                 ("API_NAME", apiRoot.name),
                 ("URL", url),
-                ("FUNCTION_HANDLER", languageHandlers[language.Name]));
+                ("FUNCTION_HANDLER", runtime.GetHandlerName()));
         }
         
         [Verb("func", HelpText = "Create a function.")]
@@ -102,7 +87,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 return dir.FullName.Substring(1);
             }
 
-            public FunctionLanguage GetLanguage(ProjectSettings settings, string api = null)
+            public ILanguageRuntime GetLanguage(ProjectSettings settings, string api = null)
             {
                 return FunctionLanguage.Parse(Language) ?? settings.GetLanguage(api);
             }

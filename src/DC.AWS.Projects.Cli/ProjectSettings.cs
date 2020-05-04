@@ -24,7 +24,7 @@ namespace DC.AWS.Projects.Cli
         [JsonIgnore]
         public string ProjectRoot { get; set; }
 
-        public static ProjectSettings New(FunctionLanguage defaultLanguage, string path)
+        public static ProjectSettings New(ILanguageRuntime defaultLanguage, string path)
         {
             return new ProjectSettings
             {
@@ -37,7 +37,7 @@ namespace DC.AWS.Projects.Cli
             string name,
             string baseUrl,
             string relativePath,
-            FunctionLanguage defaultLanguage,
+            ILanguageRuntime defaultLanguage,
             int externalPort,
             int? port = null)
         {
@@ -88,7 +88,7 @@ namespace DC.AWS.Projects.Cli
             };
         }
 
-        public FunctionLanguage GetLanguage(string api = null)
+        public ILanguageRuntime GetLanguage(string api = null)
         {
             return FunctionLanguage.Parse(Apis.ContainsKey(api ?? "")
                 ? Apis[api ?? ""].DefaultLanguage ?? DefaultLanguage

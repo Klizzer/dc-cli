@@ -94,7 +94,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 return dir.FullName.Substring(1);
             }
 
-            public FunctionLanguage GetLanguage()
+            public ILanguageRuntime GetLanguage()
             {
                 return string.IsNullOrEmpty(DefaultLanguage) ? null : FunctionLanguage.Parse(DefaultLanguage);
             }

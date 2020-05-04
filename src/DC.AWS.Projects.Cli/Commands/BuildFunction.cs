@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using CommandLine;
@@ -11,14 +8,6 @@ namespace DC.AWS.Projects.Cli.Commands
 {
     public static class BuildFunction
     {
-        private static readonly IImmutableDictionary<string, Action<Options, ProjectSettings, FunctionLanguage>>
-            LanguageCompilers = new Dictionary<string, Action<Options, ProjectSettings, FunctionLanguage>>
-                {
-                    ["node"] = BuildNode,
-                    ["go"] = BuildGo
-                }
-                .ToImmutableDictionary();
-        
         public static void Execute(Options options)
         {
             var settings = ProjectSettings.Read();
@@ -38,53 +27,11 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var runtime = function.Properties["Runtime"].ToString();
 
-            var language = FunctionLanguage.ParseFromRuntime(runtime);
-            
-            if (language == null || !LanguageCompilers.ContainsKey(language.Name))
-                return;
+            var languageRuntime = FunctionLanguage.ParseFromRuntime(runtime);
 
-            LanguageCompilers[language.Name](options, settings, language);
+            languageRuntime?.Build(functionRoot.path);
         }
 
-        private static void BuildNode(Options options, ProjectSettings settings, FunctionLanguage language)
-        {
-            var functionRoot = settings.FindFunctionRoot(options.Path);
-
-            if (!File.Exists(Path.Combine(functionRoot.path, "package.json")))
-                return;
-            
-            var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = "yarn",
-                WorkingDirectory = functionRoot.path
-            });
-
-            process?.WaitForExit();
-        }
-
-        private static void BuildGo(Options options, ProjectSettings settings, FunctionLanguage language)
-        {
-            var functionRoot = settings.FindFunctionRoot(options.Path);
-            
-            var restoreProcess = Process.Start(new ProcessStartInfo
-            {
-                FileName = "go",
-                Arguments = "get -v -t -d ./...",
-                WorkingDirectory = functionRoot.path
-            });
-
-            restoreProcess?.WaitForExit();
-
-            var buildProcess = Process.Start(new ProcessStartInfo
-            {
-                FileName = "go",
-                Arguments = "build -o ./.out/main -v .",
-                WorkingDirectory = functionRoot.path
-            });
-
-            buildProcess?.WaitForExit();
-        }
-        
         [Verb("build-func", HelpText = "Build a function.")]
         public class Options
         {
