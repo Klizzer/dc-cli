@@ -15,8 +15,12 @@ else
     DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
 endif
 
-AWS_REGION ?= us-east-1
+AWS_REGION ?= [[AWS_REGION]]
+DEPLOYMENT_BUCKET_NAME ?= $(PROJECT_NAME)-deployments
+DEPLOYMENT_STACK_NAME ?= $(DEPLOYMENT_BUCKET_NAME)
 VERSION_NUMBER ?= $(shell date +%Y.%m.%d.%H%M%S)
+NUGET_FEED_URL ?= [[NUGET_FEED_URL]]
+NUGET_API_KEY ?=
 
 .DEFAULT_GOAL := build
 
@@ -67,13 +71,47 @@ logs:
 ifdef service
 	@make -f ./services/$(service).make PROJECT_NAME=$(PROJECT_NAME) logs
 else
-	$(foreach file, $(wildcard ./services/*.make), make -f $(file) PROJECT_NAME=$(PROJECT_NAME) logs)
+	$(foreach file, $(wildcard ./services/*.make), make -f $(file) PROJECT_NAME=$(PROJECT_NAME) logs;)
+endif
+
+.PHONY: package
+package: build
+ifeq ($(DETECTED_OS), Windows)
+	if exist .packages del .packages
+	mkdir .packages
+	copy /B /Y .\infrastructure\environment\.generated\project.yml .\project.$(VERSION_NUMBER).yml
+else
+	rm -rf ./.packages
+	mkdir ./.packages
+	cp ./infrastructure/environment/.generated/project.yml ./project.$(VERSION_NUMBER).yml
+endif
+	aws cloudformation deploy \
+		--template-file ./infrastructure/deployment-bucket.yml \
+		--stack-name $(DEPLOYMENT_STACK_NAME) \
+		--parameter-overrides DeploymentBucketName=$(DEPLOYMENT_BUCKET_NAME) \
+		--no-fail-on-empty-changeset \
+		--region $(AWS_REGION)
+	aws cloudformation package \
+		--template-file ./project.$(VERSION_NUMBER).yml \
+		--output-template-file ./infrastructure/environment/.generated/project.packaged.yml \
+		--s3-bucket $(DEPLOYMENT_BUCKET_NAME) \
+		--s3-prefix $(VERSION_NUMBER)
+ifeq ($(DETECTED_OS), Windows)
+	del .\project.$(VERSION_NUMBER).yml
+else
+	zip -r ./.packages/$(PROJECT_NAME).$(VERSION_NUMBER).zip ./infrastructure/environment/
+	rm ./project.$(VERSION_NUMBER).yml
+endif
+ifdef NUGET_FEED_URL
+	$(foreach file, $(wildcard ./.packages/*), dotnet nuget push $(file) --skip-duplicate  -k $(NUGET_API_KEY) -s $(NUGET_FEED_URL);)
 endif
 
 .PHONY: clear
 clear: stop
 ifeq ($(DETECTED_OS), Windows)
 	if exist .localstack del .localstack
+	if exist .packages del .packages
 else
 	sudo rm -rf ./.localstack
+	rm -rf ./.packages
 endif

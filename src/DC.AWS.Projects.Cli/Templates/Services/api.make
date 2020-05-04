@@ -19,13 +19,12 @@ start: stop
 	$(eval API_PORT = `$(JJ_EXECUTABLE) -i ./.project.settings apis.$(API_NAME).port`) 
 	$(eval API_PATH = `$(JJ_EXECUTABLE) -i ./.project.settings apis.$(API_NAME).relativePath`) 
 	docker run --name $(CONTAINER_NAME) -d \
-		-v "$(CURDIR)/infrastructure/environment/.generated/$(API_NAME).api.yml:/usr/src/template.yml" \
+		-v "$(CURDIR)/infrastructure/environment/.generated/$(API_NAME).api.yml:/usr/src/app/template.yml" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v "$(CURDIR)/.env:/usr/src/.env" \
-		-v "$(CURDIR)/$(API_PATH):/usr/src/app" \
+		-v "$(CURDIR)/.env:/usr/src/app/.env" \
+		-v "$(CURDIR)/$(API_PATH):/usr/src/app/$(API_PATH)" \
 		-p $(API_PORT):3000 $(PROJECT_NAME)/sam local start-api \
-			-t ../template.yml \
-			--env-vars ../.env/environment.variables.json \
+			--env-vars ./.env/environment.variables.json \
 			--docker-volume-basedir "$(CURDIR)/$(API_PATH)" \
 			--host 0.0.0.0
 

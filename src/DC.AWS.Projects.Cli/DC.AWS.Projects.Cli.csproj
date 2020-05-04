@@ -29,11 +29,8 @@
     <EmbeddedResource Include="Templates\Infrastructure\api.infra.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-function.infra.yml" />
     <EmbeddedResource Include="Templates\Config\proxy.conf" />
-    <None Remove="Templates\Services\api.make" />
     <EmbeddedResource Include="Templates\Services\api.make" />
-    <None Remove="Templates\Services\proxy.make" />
     <EmbeddedResource Include="Templates\Services\proxy.make" />
-    <None Remove="Templates\Services\client.make" />
     <EmbeddedResource Include="Templates\Services\client.make" />
   </ItemGroup>
 </Project>

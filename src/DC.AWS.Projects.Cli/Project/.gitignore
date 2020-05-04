@@ -10,6 +10,7 @@ node_modules/
 .tools/
 .generated/
 .env/
+.packages/
 **/.terraform/*
 *.tfstate
 *.tfstate.*

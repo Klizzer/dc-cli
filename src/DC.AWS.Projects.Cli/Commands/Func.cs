@@ -34,7 +34,7 @@ namespace DC.AWS.Projects.Cli.Commands
         private static ILanguageRuntime SetupApiTrigger(Options options, ProjectSettings settings)
         {
             var apiRoot = settings.FindApiRoot(options.GetRootedFunctionPath(settings));
-            var functionPath = options.GetRelativeFunctionPath(settings, apiRoot.name);
+            var functionPath = options.GetRelativeFunctionPath(settings);
             var runtime = options.GetLanguage(settings);
 
             Console.WriteLine("Enter url:");
@@ -78,11 +78,9 @@ namespace DC.AWS.Projects.Cli.Commands
                 return System.IO.Path.Combine(settings.GetRootedPath(Path), Name);
             }
             
-            public string GetRelativeFunctionPath(ProjectSettings settings, string api)
+            public string GetRelativeFunctionPath(ProjectSettings settings)
             {
-                var apiPath = settings.GetRootedPath(settings.Apis[api].RelativePath);
-                
-                var dir = new DirectoryInfo(GetRootedFunctionPath(settings).Substring(apiPath.Length));
+                var dir = new DirectoryInfo(GetRootedFunctionPath(settings).Substring(settings.ProjectRoot.Length));
 
                 return dir.FullName.Substring(1);
             }

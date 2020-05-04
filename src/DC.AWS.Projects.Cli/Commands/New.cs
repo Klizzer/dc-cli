@@ -16,7 +16,9 @@ namespace DC.AWS.Projects.Cli.Commands
             var initOptions = new Init.Options
             {
                 Path = directory,
-                Language = options.Language
+                Language = options.Language,
+                NugetFeed = options.NugetFeed,
+                AwsRegion = options.AwsRegion
             };
             
             Init.Execute(initOptions);
@@ -30,6 +32,12 @@ namespace DC.AWS.Projects.Cli.Commands
             
             [Option('l', "lang", Default = FunctionLanguage.DefaultLanguage, HelpText = "Default language to use for functions.")]
             public string Language { get; set; }
+            
+            [Option('f', "nuget-feed", Default = "", HelpText = "Nuget feed to publish packages to.")]
+            public string NugetFeed { get; set; }
+            
+            [Option('r', "aws-region", Default = "eu-north-1", HelpText = "Aws region.")]
+            public string AwsRegion { get; set; }
         }
     }
 }

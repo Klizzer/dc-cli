@@ -26,7 +26,9 @@ namespace DC.AWS.Projects.Cli.Commands
             Directories.Copy(
                 projectFilesSourcePath, 
                 options.GetRootedPath(),
-                ("PROJECT_NAME", projectDirectory.Name));
+                ("PROJECT_NAME", projectDirectory.Name),
+                ("AWS_REGION", options.AwsRegion),
+                ("NUGET_FEED_URL", options.NugetFeed));
             
             var process = Process.Start(new ProcessStartInfo
             {
@@ -43,6 +45,12 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             [Option('l', "lang", Default = FunctionLanguage.DefaultLanguage, HelpText = "Default language to use for functions")]
             public string Language { private get; set; }
+            
+            [Option('r', "aws-region", Default = "eu-north-1", HelpText = "Aws region.")]
+            public string AwsRegion { get; set; }
+            
+            [Option('f', "nuget-feed", Default = "", HelpText = "Nuget feed to publish packages to.")]
+            public string NugetFeed { get; set; }
             
             public string Path { private get; set; } = Environment.CurrentDirectory;
 
