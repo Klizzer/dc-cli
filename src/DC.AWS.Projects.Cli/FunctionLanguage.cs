@@ -17,6 +17,9 @@ namespace DC.AWS.Projects.Cli
         
         public static ILanguageRuntime Parse(string language)
         {
+            if (string.IsNullOrEmpty(language))
+                return null;
+            
             var parts = language.Split(':');
 
             var availableLanguage = AvailableLanguages.FirstOrDefault(x => x.Name == parts[0]);

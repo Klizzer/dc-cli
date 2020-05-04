@@ -14,6 +14,5 @@ resource "aws_cloudformation_stack" "[[PROJECT_NAME]]" {
 
   capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND"]
 
-  template_body = file("${path.module}/.generated/project.packaged.yml")
+  template_body = file("./.generated/project.packaged.yml")
 }
-

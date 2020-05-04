@@ -9,8 +9,8 @@ namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Func
     {
-        private static readonly IImmutableDictionary<FunctionTrigger, Action<Options, ProjectSettings>> TriggerHandlers =
-            new Dictionary<FunctionTrigger, Action<Options, ProjectSettings>>
+        private static readonly IImmutableDictionary<FunctionTrigger, Func<Options, ProjectSettings, ILanguageRuntime>> TriggerHandlers =
+            new Dictionary<FunctionTrigger, Func<Options, ProjectSettings, ILanguageRuntime>>
             {
                 [FunctionTrigger.Api] = SetupApiTrigger
             }.ToImmutableDictionary();
@@ -24,16 +24,14 @@ namespace DC.AWS.Projects.Cli.Commands
                 
             Directory.CreateDirectory(options.GetRootedFunctionPath(projectSettings));
 
-            var language = options.GetLanguage(projectSettings);
+            var language = TriggerHandlers[options.Trigger ?? FunctionTrigger.Api](options, projectSettings);
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
             Directories.Copy(Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{language.Language}"), options.GetRootedFunctionPath(projectSettings));
-
-            TriggerHandlers[options.Trigger ?? FunctionTrigger.Api](options, projectSettings);
         }
 
-        private static void SetupApiTrigger(Options options, ProjectSettings settings)
+        private static ILanguageRuntime SetupApiTrigger(Options options, ProjectSettings settings)
         {
             var apiRoot = settings.FindApiRoot(options.GetRootedFunctionPath(settings));
             var functionPath = options.GetRelativeFunctionPath(settings, apiRoot.name);
@@ -56,6 +54,8 @@ namespace DC.AWS.Projects.Cli.Commands
                 ("API_NAME", apiRoot.name),
                 ("URL", url),
                 ("FUNCTION_HANDLER", runtime.GetHandlerName()));
+
+            return runtime;
         }
         
         [Verb("func", HelpText = "Create a function.")]

@@ -91,8 +91,10 @@ namespace DC.AWS.Projects.Cli
         public ILanguageRuntime GetLanguage(string api = null)
         {
             return FunctionLanguage.Parse(Apis.ContainsKey(api ?? "")
-                ? Apis[api ?? ""].DefaultLanguage ?? DefaultLanguage
-                : DefaultLanguage);
+                       ? Apis[api ?? ""].DefaultLanguage ?? DefaultLanguage
+                       : DefaultLanguage)
+                   ?? FunctionLanguage.Parse(DefaultLanguage)
+                   ?? FunctionLanguage.Parse(FunctionLanguage.DefaultLanguage);
         }
 
         public static ProjectSettings Read()

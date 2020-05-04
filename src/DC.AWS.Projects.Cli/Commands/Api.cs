@@ -49,6 +49,30 @@ namespace DC.AWS.Projects.Cli.Commands
                 ("BASE_URL", url),
                 ("SERVER_IP", GetLocalIpAddress()),
                 ("API_PORT", settings.Apis[options.Name].Port.ToString()));
+
+            var apiServicePath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.api.make");
+
+            if (!File.Exists(apiServicePath))
+            {
+                Templates.Extract(
+                    "api.make",
+                    apiServicePath,
+                    Templates.TemplateType.Services,
+                    ("API_NAME", options.Name));   
+            }
+
+            var apiProxyPath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.proxy.make");
+
+            if (!File.Exists(apiProxyPath))
+            {
+                Templates.Extract(
+                    "proxy.make",
+                    apiProxyPath,
+                    Templates.TemplateType.Services,
+                    ("PROXY_NAME", options.Name),
+                    ("CONFIG_PATH", options.GetRelativeApiPath(settings)),
+                    ("PORT", settings.Apis[options.Name].ExternalPort.ToString()));
+            }
             
             settings.Save();
         }

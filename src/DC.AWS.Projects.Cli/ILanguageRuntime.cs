@@ -9,10 +9,5 @@ namespace DC.AWS.Projects.Cli
 
         string GetHandlerName();
         string GetFunctionOutputPath(string functionPath);
-
-        public string ToString()
-        {
-            return $"{Language}:{Name}";
-        }
     }
 }

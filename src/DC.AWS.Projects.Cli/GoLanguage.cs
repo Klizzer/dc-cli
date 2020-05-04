@@ -64,6 +64,11 @@ namespace DC.AWS.Projects.Cli
             {
                 return Path.Combine(functionPath, ".out");
             }
+            
+            public override string ToString()
+            {
+                return $"{Language}:{Name}";
+            }
         }
     }
 }

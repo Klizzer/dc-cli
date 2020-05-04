@@ -40,7 +40,7 @@ namespace DC.AWS.Projects.Cli
                     .Aggregate(
                         templateData,
                         (current, variable) => current
-                            .Replace($"[[{variable.name}]]", variable.value));
+                            .Replace($"[[{variable.name}]]", variable.value.Trim()));
 
                 return templateData;
             }
@@ -49,7 +49,8 @@ namespace DC.AWS.Projects.Cli
         public enum TemplateType
         {
             Infrastructure,
-            Config
+            Config,
+            Services
         }
     }
 }

@@ -29,7 +29,7 @@ namespace DC.AWS.Projects.Cli
         {
             return Node12;
         }
-
+        
         private class NodeRuntime : ILanguageRuntime
         {
             public NodeRuntime(string runtime)
@@ -62,6 +62,11 @@ namespace DC.AWS.Projects.Cli
             public string GetFunctionOutputPath(string functionPath)
             {
                 return functionPath;
+            }
+
+            public override string ToString()
+            {
+                return $"{Language}:{Name}";
             }
         }
     }
