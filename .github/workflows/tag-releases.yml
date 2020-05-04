@@ -14,4 +14,4 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           strategy: regex
           root: "src/DC.AWS.Projects.Cli/DC.AWS.Projects.Cli.csproj"
-          regex_pattern: "<Version>([0-9\.])</Version>"
+          regex_pattern: "<Version>([0-9\\.])</Version>"
