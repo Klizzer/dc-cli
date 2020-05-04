@@ -18,7 +18,7 @@ jobs:
           root: "src/DC.AWS.Projects.Cli/DC.AWS.Projects.Cli.csproj"
           regex_pattern: "<Version>([0-9\\.]{5}([-\\+][\\w\\.0-9]+)?)</Version>"
       - name: Test
-        run: echo ${{ steps.tag_release.outputs.tagname }}
+        run: echo ${{ steps.tag_release.outputs.tagcreated }}
       - name: Build Packages
         if: steps.tag_release.outputs.tagname
         run: make VERSION=${{ steps.tag_release.outputs.tagname }} package
