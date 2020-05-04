@@ -55,9 +55,7 @@ namespace DC.AWS.Projects.Cli.Commands
                     "client-proxy.conf",
                     Path.Combine(settings.ProjectRoot, settings.Apis[options.Api].RelativePath, $"_child_paths/{options.Name}.conf"),
                     Templates.TemplateType.Config,
-                    ("BASE_URL", url),
-                    ("SERVER_IP", Api.GetLocalIpAddress()),
-                    ("CLIENT_PORT", settings.Clients[options.Name].Port.ToString()));
+                    ("BASE_URL", url));
             }
             else
             {
@@ -72,9 +70,7 @@ namespace DC.AWS.Projects.Cli.Commands
                     "proxy.conf",
                     Path.Combine(options.GetRootedClientPath(settings), "proxy.nginx.conf"),
                     Templates.TemplateType.Config,
-                    ("BASE_URL", url),
-                    ("SERVER_IP", Api.GetLocalIpAddress()),
-                    ("API_PORT", settings.Clients[options.Name].Port.ToString()));
+                    ("BASE_URL", url));
                 
                 var apiProxyPath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.proxy.make");
 
@@ -86,7 +82,8 @@ namespace DC.AWS.Projects.Cli.Commands
                         Templates.TemplateType.Services,
                         ("PROXY_NAME", options.Name),
                         ("CONFIG_PATH", options.GetRelativeClientPath(settings)),
-                        ("PORT", settings.Clients[options.Name].ExternalPort.ToString()));
+                        ("PORT", settings.Clients[options.Name].ExternalPort.ToString()),
+                        ("UPSTREAM_PORT", settings.Clients[options.Name].Port.ToString()));
                 }
             }
 

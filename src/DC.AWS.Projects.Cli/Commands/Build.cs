@@ -56,9 +56,6 @@ namespace DC.AWS.Projects.Cli.Commands
                     Path.Combine(destination, $"{apiTemplate.Key}.api.yml"),
                     serializer.Serialize(apiTemplate.Value));
             }
-
-            foreach (var client in settings.Clients)
-                File.WriteAllText(Path.Combine(destination, $"{client.Key}.client"), Json.Serialize(client.Value));
         }
 
         private static void BuildPath(
