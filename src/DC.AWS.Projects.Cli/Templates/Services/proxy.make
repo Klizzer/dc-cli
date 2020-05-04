@@ -19,14 +19,14 @@ endif
 
 .PHONY: start
 start: stop
-ifeq(DETECTED_OS, Windows)
+ifeq($(DETECTED_OS), Windows)
 	if not exist "$(CURDIR)/.generated" mkdir "$(CURDIR)/.generated"
 	if not exist "$(CURDIR)/$(CONFIG_PATH)/_child_paths" mkdir "$(CURDIR)/$(CONFIG_PATH)/_child_paths"
 else
 	mkdir -p "$(CURDIR)/.generated"
 	mkdir -p "$(CURDIR)/$(CONFIG_PATH)/_child_paths"
 endif
-ifeq (DETECTED_OS, Linux)
+ifeq ($(DETECTED_OS), Linux)
 	$(eval LOCAL_IP=`ip route get 8.8.8.8 | sed -n '/src/{s/.*src *\([^ ]*\).*/\1/p;q}'`)
 	echo "upstream local-upstream { least_conn; server $(LOCAL_IP):$(UPSTREAM_PORT); }" >> "$(CURDIR)/.generated/$(CONTAINER_NAME)-upstream.conf"
 else
