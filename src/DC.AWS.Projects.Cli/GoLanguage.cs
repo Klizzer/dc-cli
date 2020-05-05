@@ -1,6 +1,7 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using DC.AWS.Projects.Cli.Components;
 
 namespace DC.AWS.Projects.Cli
 {
@@ -34,44 +35,27 @@ namespace DC.AWS.Projects.Cli
             public string Language { get; } = LanguageName;
             public string Name { get; }
             
-            public void Build(string path)
+            public async Task<BuildResult> Build(string path)
             {
-                Restore(path);
+                await Restore(path);
 
-                var buildProcess = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "go",
-                    Arguments = "build -o ./.out/main -v .",
-                    WorkingDirectory = path
-                });
+                var result = await ProcessExecutor.ExecuteBackground("go", "build -o ./.out/main -v .", path);
 
-                buildProcess?.WaitForExit();
+                return new BuildResult(result.ExitCode == 0, result.Output);
             }
 
-            public bool Test(string path)
+            public async Task<TestResult> Test(string path)
             {
-                var restoreProcess = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "go",
-                    Arguments = "test -run ''",
-                    WorkingDirectory = path
-                });
+                await Restore(path);
 
-                restoreProcess?.WaitForExit();
-
-                return (restoreProcess?.ExitCode ?? 127) == 0;
+                var result = await ProcessExecutor.ExecuteBackground("go", "test -run ''", path);
+                
+                return new TestResult(result.ExitCode == 0, result.Output);
             }
 
-            private static void Restore(string path)
+            private static Task Restore(string path)
             {
-                var restoreProcess = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "go",
-                    Arguments = "get -v -t -d ./...",
-                    WorkingDirectory = path
-                });
-
-                restoreProcess?.WaitForExit();
+                return ProcessExecutor.ExecuteBackground("go", "get -v -t -d ./...", path);
             }
 
             public string GetHandlerName()

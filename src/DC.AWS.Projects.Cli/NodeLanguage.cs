@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using DC.AWS.Projects.Cli.Components;
 
 namespace DC.AWS.Projects.Cli
 {
@@ -41,44 +42,35 @@ namespace DC.AWS.Projects.Cli
             public string Language { get; } = LanguageName;
             public string Name { get; }
             
-            public void Build(string path)
+            public async Task<BuildResult> Build(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
-                    return;
-            
-                var process = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "yarn",
-                    WorkingDirectory = path
-                });
+                    return new BuildResult(true, "");
 
-                process?.WaitForExit();    
+                var executionResult = await ProcessExecutor
+                    .ExecuteBackground("yarn", "", path);
+
+                return new BuildResult(executionResult.ExitCode == 0, executionResult.Output);
             }
 
-            public bool Test(string path)
+            public async Task<TestResult> Test(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
-                    return true;
+                    return new TestResult(true, "");
 
                 var packageData =
-                    Json.DeSerialize<PackageJsonData>(File.ReadAllText(Path.Combine(path, "package.json")));
+                    Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(path, "package.json")));
 
                 if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
                     .ContainsKey("test"))
                 {
-                    return true;
+                    return new TestResult(true, "");
                 }
+
+                var executionResult = await ProcessExecutor
+                    .ExecuteBackground("yarn", "run test", path);
                 
-                var process = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "yarn",
-                    Arguments = "run test",
-                    WorkingDirectory = path
-                });
-
-                process?.WaitForExit();
-
-                return (process?.ExitCode ?? 127) == 0;
+                return new TestResult(executionResult.ExitCode == 0, executionResult.Output);
             }
 
             public string GetHandlerName()

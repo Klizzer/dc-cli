@@ -21,14 +21,8 @@ namespace DC.AWS.Projects.Cli.Commands
             
             Directory.CreateDirectory(options.GetRootedClientPath(settings));
             
-            var url = options.BaseUrl;
-
-            if (url.StartsWith("/"))
-                url = url.Substring(1);
-
-            if (url.EndsWith("/"))
-                url = url.Substring(0, url.Length - 1);
-
+            var url = options.BaseUrl.MakeRelativeUrl();
+            
             if (!string.IsNullOrEmpty(options.Api))
             {
                 settings.AddClient(

@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
@@ -13,42 +9,14 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = ProjectSettings.Read();
 
-            var failures = TestPath(settings.GetRootedPath(options.Path));
+            var components = Components.Components.FindComponents(settings, options.Path);
 
-            if (failures.Any())
-                throw new TestsFailedException(failures.SelectMany(x => x.FailureLocations).Distinct().ToArray());
-        }
-
-        private static IImmutableList<TestsFailedException> TestPath(string path)
-        {
-            var dir = new DirectoryInfo(path);
+            var testResult = components.Test().Result;
             
-            var failures = new List<TestsFailedException>();
+            Console.Write(testResult.Output);
 
-            if (File.Exists(Path.Combine(dir.FullName, "function.infra.yml")))
-            {
-                try
-                {
-                    TestFunction.Execute(new TestFunction.Options
-                    {
-                        Path = path
-                    });
-                }
-                catch (TestsFailedException exception)
-                {
-                    failures.Add(exception);
-                }
-            }
-
-            foreach (var subDir in dir.GetDirectories())
-            {
-                if (subDir.Name == "node_modules")
-                    continue;
-                
-                failures.AddRange(TestPath(subDir.FullName));
-            }
-
-            return failures.ToImmutableList();
+            if (!testResult.Success)
+                throw new TestsFailedException(settings.GetRootedPath(options.Path));
         }
         
         [Verb("test", HelpText = "Run all tests.")]
@@ -56,6 +24,14 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             [Option('p', "path", HelpText = "Path to test")]
             public string Path { get; set; } = Environment.CurrentDirectory;
+        }
+        
+        private class TestsFailedException : Exception
+        {
+            public TestsFailedException(string path) : base($"Tests failed at: \"{path}\"")
+            {
+                
+            }
         }
     }
 }

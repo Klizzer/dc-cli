@@ -1,8 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
@@ -34,14 +31,8 @@ namespace DC.AWS.Projects.Cli.Commands
                 Templates.TemplateType.Infrastructure,
                 ("API_NAME", options.Name));
             
-            var url = options.BaseUrl;
+            var url = options.BaseUrl.MakeRelativeUrl();
 
-            if (url.StartsWith("/"))
-                url = url.Substring(1);
-
-            if (url.EndsWith("/"))
-                url = url.Substring(0, url.Length - 1);
-            
             Templates.Extract(
                 "proxy.conf",
                 Path.Combine(options.GetRootedApiPath(settings), "proxy.nginx.conf"),

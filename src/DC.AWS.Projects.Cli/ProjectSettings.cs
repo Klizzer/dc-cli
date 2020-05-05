@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Newtonsoft.Json;
 
@@ -186,6 +187,17 @@ namespace DC.AWS.Projects.Cli
             return Path.Combine(Environment.CurrentDirectory, path);
         }
         
+        public static string GetLocalIpAddress()
+        {
+            return (from item in NetworkInterface.GetAllNetworkInterfaces()
+                    where item.NetworkInterfaceType == NetworkInterfaceType.Ethernet &&
+                          item.OperationalStatus == OperationalStatus.Up
+                    from ip in item.GetIPProperties().UnicastAddresses
+                    where ip.Address.AddressFamily == AddressFamily.InterNetwork
+                    select ip.Address.ToString())
+                .FirstOrDefault();
+        }
+
         private (string path, string name) FindRoot(string path, string type)
         {
             var currentPath = GetRootedPath(path);
