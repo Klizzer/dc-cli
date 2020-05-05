@@ -28,16 +28,36 @@ namespace DC.AWS.Projects.Cli.Commands
                 options.GetRootedPath(),
                 ("PROJECT_NAME", projectDirectory.Name),
                 ("AWS_REGION", options.AwsRegion),
-                ("NUGET_FEED_URL", options.NugetFeed));
+                ("NUGET_FEED_URL", options.NugetFeed),
+                ("DC_CLI_VERSION", GetVersion()));
             
-            var process = Process.Start(new ProcessStartInfo
+            var makeInitProcess = Process.Start(new ProcessStartInfo
             {
                 FileName = "make",
                 Arguments = "init",
                 WorkingDirectory = projectDirectory.FullName
             });
 
-            process?.WaitForExit();
+            makeInitProcess?.WaitForExit();
+
+            var gitInitProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = "init",
+                WorkingDirectory = projectDirectory.FullName
+            });
+
+            gitInitProcess?.WaitForExit();
+        }
+
+        private static string GetVersion()
+        {
+            var assembly = Assembly
+                .GetExecutingAssembly();
+            
+            return assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? assembly.GetName().Version?.ToString() ?? "";
         }
         
         [Verb("init", HelpText = "Initialize a project here.")]

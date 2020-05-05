@@ -5,8 +5,10 @@ MAKEFLAGS += --no-builtin-rules
 
 ifeq ($(OS), Windows_NT)
     JJ_EXECUTABLE := ./.tools/jj.exe
+    DC_CLI_COMMAND := .\.tools\dc-aws.exe
 else
     JJ_EXECUTABLE := ./.tools/jj
+    DC_CLI_COMMAND := ./.tools/dc-aws
 endif
 
 LOCALSTACK_VERSION = latest
@@ -31,7 +33,7 @@ start: stop
 		-e LAMBDA_REMOTE_DOCKER=0 \
 		-e DEBUG=1 \
 		localstack/localstack:$(LOCALSTACK_VERSION)
-	dc-aws ensure-localstack -s $(LOCALSTACK_SERVICES)
+	$(DC_CLI_COMMAND) ensure-localstack -s $(LOCALSTACK_SERVICES)
 
 .PHONY: stop
 stop:

@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc-aws</AssemblyName>
-    <Version>0.14.0</Version>
+    <Version>0.15.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,5 +33,9 @@
     <EmbeddedResource Include="Templates\Services\api.make" />
     <EmbeddedResource Include="Templates\Services\proxy.make" />
     <EmbeddedResource Include="Templates\Services\client.make" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Project\.github\workflows" />
   </ItemGroup>
 </Project>
