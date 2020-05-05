@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using CommandLine;
 using Newtonsoft.Json;
 using YamlDotNet.Serialization;
@@ -21,12 +24,11 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = ProjectSettings.Read();
             
-            var destination = Path.Combine(settings.ProjectRoot, "infrastructure/environment/.generated");
+            var infrastructureDestination = Path.Combine(settings.ProjectRoot, "infrastructure/environment/.generated");
+            var proxyUpstreamConfigDestination = Path.Combine(settings.ProjectRoot, "config/.generated/proxy-upstreams");
 
-            if (Directory.Exists(destination))
-                Directory.Delete(destination, true);
-
-            Directory.CreateDirectory(destination);
+            Directories.Recreate(infrastructureDestination);
+            Directories.Recreate(proxyUpstreamConfigDestination);
             
             var templateData = new TemplateData();
             var apiTemplates = settings
@@ -48,14 +50,47 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var result = serializer.Serialize(templateData);
             
-            File.WriteAllText(Path.Combine(destination, "project.yml"), result);
+            File.WriteAllText(Path.Combine(infrastructureDestination, "project.yml"), result);
 
             foreach (var apiTemplate in apiTemplates)
             {
                 File.WriteAllText(
-                    Path.Combine(destination, $"{apiTemplate.Key}.api.yml"),
+                    Path.Combine(infrastructureDestination, $"{apiTemplate.Key}.api.yml"),
                     serializer.Serialize(apiTemplate.Value));
             }
+
+            foreach (var api in settings.Apis)
+            {
+                Templates.Extract(
+                    "proxy-upstream.conf",
+                    Path.Combine(proxyUpstreamConfigDestination, $"{api.Key}-api-upstream.conf"),
+                    Templates.TemplateType.Config,
+                    ("NAME", $"{api.Key}-api-upstream"),
+                    ("LOCAL_IP", RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? GetLocalIpAddress() : "host.docker.internal"),
+                    ("UPSTREAM_PORT", api.Value.Port.ToString()));
+            }
+
+            foreach (var client in settings.Clients)
+            {
+                Templates.Extract(
+                    "proxy-upstream.conf",
+                    Path.Combine(proxyUpstreamConfigDestination, $"{client.Key}-client-upstream.conf"),
+                    Templates.TemplateType.Config,
+                    ("NAME", $"{client.Key}-client-upstream"),
+                    ("LOCAL_IP", RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? GetLocalIpAddress() : "host.docker.internal"),
+                    ("UPSTREAM_PORT", client.Value.Port.ToString()));
+            }
+        }
+
+        private static string GetLocalIpAddress()
+        {
+            return (from item in NetworkInterface.GetAllNetworkInterfaces()
+                    where item.NetworkInterfaceType == NetworkInterfaceType.Ethernet &&
+                          item.OperationalStatus == OperationalStatus.Up
+                    from ip in item.GetIPProperties().UnicastAddresses
+                    where ip.Address.AddressFamily == AddressFamily.InterNetwork
+                    select ip.Address.ToString())
+                .FirstOrDefault();
         }
 
         private static void BuildPath(

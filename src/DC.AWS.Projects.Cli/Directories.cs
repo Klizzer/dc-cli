@@ -42,5 +42,13 @@ namespace DC.AWS.Projects.Cli
                 Copy(subdir.FullName, tempPath, variables);
             }
         }
+
+        public static void Recreate(string path)
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+
+            Directory.CreateDirectory(path);
+        }
     }
 }

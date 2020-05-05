@@ -46,7 +46,8 @@ namespace DC.AWS.Projects.Cli.Commands
                 "proxy.conf",
                 Path.Combine(options.GetRootedApiPath(settings), "proxy.nginx.conf"),
                 Templates.TemplateType.Config,
-                ("BASE_URL", url));
+                ("BASE_URL", url),
+                ("UPSTREAM_NAME", $"{options.Name}-api-upstream"));
 
             var apiServicePath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.api.make");
 
@@ -69,23 +70,11 @@ namespace DC.AWS.Projects.Cli.Commands
                     Templates.TemplateType.Services,
                     ("PROXY_NAME", options.Name),
                     ("CONFIG_PATH", options.GetRelativeApiPath(settings)),
-                    ("PORT", settings.Apis[options.Name].ExternalPort.ToString()),
-                    ("UPSTREAM_PORT", settings.Apis[options.Name].Port.ToString()));
+                    ("PORT", settings.Apis[options.Name].ExternalPort.ToString()));
             }
             
             settings.Save();
         }
-        
-        // public static string GetLocalIpAddress()
-        // {
-        //     return (from item in NetworkInterface.GetAllNetworkInterfaces()
-        //             where item.NetworkInterfaceType == NetworkInterfaceType.Ethernet &&
-        //                   item.OperationalStatus == OperationalStatus.Up
-        //             from ip in item.GetIPProperties().UnicastAddresses
-        //             where ip.Address.AddressFamily == AddressFamily.InterNetwork
-        //             select ip.Address.ToString())
-        //         .FirstOrDefault();
-        // }
         
         [Verb("api", HelpText = "Create a api.")]
         public class Options
