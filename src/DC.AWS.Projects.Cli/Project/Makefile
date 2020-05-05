@@ -4,6 +4,7 @@ SHELL := /bin/bash
 MAKEFLAGS += --no-builtin-rules
 
 JJ_VERSION = 1.2.3
+TERRAFORM_VERSION ?= 0.12.24
 DC_CLI_VERSION = [[DC_CLI_VERSION]]
 LOCALSTACK_VERSION = latest
 LOCALSTACK_SERVICES = 'edge,apigateway,cloudformation,dynamodb,iam,lambda,logs,s3,sts'
@@ -12,9 +13,11 @@ PROJECT_NAME = [[PROJECT_NAME]]
 ifeq ($(OS), Windows_NT)
     DETECTED_OS := Windows
     DC_CLI_COMMAND := .\.tools\dc-aws.exe
+    TERRAFORM_CLI_COMMAND := .\.tools\terraform.exe
 else
     DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
     DC_CLI_COMMAND := ./.tools/dc-aws
+    TERRAFORM_CLI_COMMAND := ./.tools/terraform
 endif
 
 AWS_REGION ?= [[AWS_REGION]]
@@ -36,6 +39,10 @@ ifeq ($(DETECTED_OS), Windows)
 	(powershell -ExecutionPolicy Bypass -Command "& { iwr https://github.com/DigitalCreationAb/dc-aws-cli/releases/download/v$(DC_CLI_VERSION)/dc-aws-v$(DC_CLI_VERSION)-win-x64.zip -OutFile %cd%\dc-aws.zip }" && 7z.exe x dc-aws.zip -o"%cd%\.tools" && del dc-aws.zip)
 else
 	mkdir -p ./.tools
+	wget https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_linux_amd64.zip
+	rm -f ./.tools/terraform
+	unzip ./terraform_$(TERRAFORM_VERSION)_linux_amd64.zip -d ./.tools
+	rm ./terraform_$(TERRAFORM_VERSION)_linux_amd64.zip
 	wget https://github.com/tidwall/jj/releases/download/v$(JJ_VERSION)/jj-$(JJ_VERSION)-linux-amd64.tar.gz
 	tar -xvzf ./jj-$(JJ_VERSION)-linux-amd64.tar.gz -C ./.tools
 	rm -f ./.tools/jj
@@ -46,6 +53,7 @@ else
 	unzip ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip -d ./.tools
 	rm ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
 endif
+	$(TERRAFORM_CLI_COMMAND) init -backend=false ./infrastructure/environment
 ifeq ($(CONFIGURE), true)
 	$(foreach directory, $(wildcard ./infrastructure/containers/*), docker build -t "$(PROJECT_NAME)/$(notdir $(directory))" $(directory);)
 	$(DC_CLI_COMMAND) configure -s
@@ -57,6 +65,9 @@ build:
 
 .PHONY: test
 test: build
+	$(DC_CLI_COMMAND) test
+	$(TERRAFORM_CLI_COMMAND) validate ./infrastructure/environment
+	aws cloudformation validate-template --template-body file://./infrastructure/environment/.generated/project.yml
 
 .PHONY: start
 start: build

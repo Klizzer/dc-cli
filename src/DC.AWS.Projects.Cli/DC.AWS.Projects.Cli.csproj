@@ -35,8 +35,4 @@
     <EmbeddedResource Include="Templates\Services\client.make" />
     <EmbeddedResource Include="Templates\Config\proxy-upstream.conf" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <Folder Include="Project\.github\workflows" />
-  </ItemGroup>
 </Project>

@@ -36,14 +36,7 @@ namespace DC.AWS.Projects.Cli
             
             public void Build(string path)
             {
-                var restoreProcess = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "go",
-                    Arguments = "get -v -t -d ./...",
-                    WorkingDirectory = path
-                });
-
-                restoreProcess?.WaitForExit();
+                Restore(path);
 
                 var buildProcess = Process.Start(new ProcessStartInfo
                 {
@@ -53,6 +46,32 @@ namespace DC.AWS.Projects.Cli
                 });
 
                 buildProcess?.WaitForExit();
+            }
+
+            public bool Test(string path)
+            {
+                var restoreProcess = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "go",
+                    Arguments = "test -run ''",
+                    WorkingDirectory = path
+                });
+
+                restoreProcess?.WaitForExit();
+
+                return (restoreProcess?.ExitCode ?? 127) == 0;
+            }
+
+            private static void Restore(string path)
+            {
+                var restoreProcess = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "go",
+                    Arguments = "get -v -t -d ./...",
+                    WorkingDirectory = path
+                });
+
+                restoreProcess?.WaitForExit();
             }
 
             public string GetHandlerName()
