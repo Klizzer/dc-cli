@@ -72,13 +72,19 @@ namespace DC.AWS.Projects.Cli.Commands
 
             foreach (var client in settings.Clients)
             {
-                Templates.Extract(
-                    "proxy-upstream.conf",
-                    Path.Combine(proxyUpstreamConfigDestination, $"{client.Key}-client-upstream.conf"),
-                    Templates.TemplateType.Config,
-                    ("NAME", $"{client.Key}-client-upstream"),
-                    ("LOCAL_IP", RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? GetLocalIpAddress() : "host.docker.internal"),
-                    ("UPSTREAM_PORT", client.Value.Port.ToString()));
+                if (!string.IsNullOrEmpty(client.Value.Api))
+                {
+                    Templates.Extract(
+                        "proxy-upstream.conf",
+                        Path.Combine(proxyUpstreamConfigDestination, $"{client.Key}-client-upstream.conf"),
+                        Templates.TemplateType.Config,
+                        ("NAME", $"{client.Key}-client-upstream"),
+                        ("LOCAL_IP",
+                            RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                                ? GetLocalIpAddress()
+                                : "host.docker.internal"),
+                        ("UPSTREAM_PORT", client.Value.Port.ToString()));
+                }
             }
         }
 

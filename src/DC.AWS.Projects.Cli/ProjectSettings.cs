@@ -41,6 +41,12 @@ namespace DC.AWS.Projects.Cli
             int externalPort,
             int? port = null)
         {
+            if (Clients.Any(x => x.Value.ExternalPort == externalPort) ||
+                Apis.Any(x => x.Value.ExternalPort == externalPort))
+            {
+                throw new InvalidOperationException($"The port {externalPort} is already in use.");
+            }
+            
             Apis[name] = new ApiConfiguration
             {
                 BaseUrl = baseUrl,
@@ -59,6 +65,12 @@ namespace DC.AWS.Projects.Cli
             int externalPort,
             int? port = null)
         {
+            if (Clients.Any(x => x.Value.ExternalPort == externalPort) ||
+                Apis.Any(x => x.Value.ExternalPort == externalPort))
+            {
+                throw new InvalidOperationException($"The port {externalPort} is already in use.");
+            }
+            
             Clients[name] = new ClientConfiguration
             {
                 BaseUrl = baseUrl,

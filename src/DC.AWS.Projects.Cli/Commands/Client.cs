@@ -65,27 +65,8 @@ namespace DC.AWS.Projects.Cli.Commands
                     options.BaseUrl,
                     options.GetRelativeClientPath(settings),
                     options.ClientType,
+                    options.ExternalPort,
                     options.ExternalPort);
-                
-                Templates.Extract(
-                    "proxy.conf",
-                    Path.Combine(options.GetRootedClientPath(settings), "proxy.nginx.conf"),
-                    Templates.TemplateType.Config,
-                    ("BASE_URL", url),
-                    ("UPSTREAM_NAME", $"{options.Name}-client-upstream"));
-                
-                var apiProxyPath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.proxy.make");
-
-                if (!File.Exists(apiProxyPath))
-                {
-                    Templates.Extract(
-                        "proxy.make",
-                        apiProxyPath,
-                        Templates.TemplateType.Services,
-                        ("PROXY_NAME", options.Name),
-                        ("CONFIG_PATH", options.GetRelativeClientPath(settings)),
-                        ("PORT", settings.Clients[options.Name].ExternalPort.ToString()));
-                }
             }
 
             var clientServicePath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.client.make");

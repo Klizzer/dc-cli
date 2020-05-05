@@ -27,7 +27,7 @@ endif
 	docker run --name $(CONTAINER_NAME) -d \
 		-v "$(CURDIR)/$(CONFIG_PATH)/proxy.nginx.conf:/etc/nginx/nginx.conf" \
 		-v "$(CURDIR)/$(CONFIG_PATH)/_child_paths:/etc/nginx/_child_paths" \
-		-v "$(CURDIR)/config/.generated/proxy-upstreams:/etc/nginx/upstreams"
+		-v "$(CURDIR)/config/.generated/proxy-upstreams:/etc/nginx/upstreams" \
 		-p $(PORT):80 nginx
 
 .PHONY: stop
