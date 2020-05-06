@@ -16,6 +16,7 @@ namespace DC.AWS.Projects.Cli.Components
             _fileName = fileName;
         }
 
+        public string Name => Path.Name;
         public DirectoryInfo Path { get; }
         
         public async Task<BuildResult> Build(IBuildContext context)

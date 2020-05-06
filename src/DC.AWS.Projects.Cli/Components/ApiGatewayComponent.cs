@@ -8,70 +8,61 @@ namespace DC.AWS.Projects.Cli.Components
 {
     public class ApiGatewayComponent : IComponent
     {
-        private ApiGatewayComponent(DirectoryInfo path)
+        public const string ConfigFileName = "api-gw.config.yml";
+
+        private readonly ApiConfiguration _configuration;
+        
+        private ApiGatewayComponent(DirectoryInfo path, ApiConfiguration configuration)
         {
             Path = path;
+            _configuration = configuration;
         }
 
+        public string Name => _configuration.Name;
         public DirectoryInfo Path { get; }
-
-        public static async Task<ApiGatewayComponent> InitAt(
+        
+        public static async Task InitAt(
             ProjectSettings settings,
             string path,
             string baseUrl,
             string language,
-            int externalPort)
+            int? port = null)
         {
             var dir = new DirectoryInfo(settings.GetRootedPath(path));
-            
-            if (settings.Apis.ContainsKey(dir.Name))
-                throw new InvalidOperationException($"There is already a api named: \"{dir.Name}\"");
-            
+
             if (Directory.Exists(settings.GetRootedPath(dir.FullName)))
                 throw new InvalidOperationException($"You can't add a new api at: \"{dir.FullName}\". It already exists.");
 
             dir.Create();
 
-            var runtime = FunctionLanguage.Parse(language);
-            
-            settings.AddApi(
-                dir.Name,
-                baseUrl,
-                settings.GetRelativePath(dir.FullName),
-                runtime, 
-                externalPort);
+            var apiPort = port ?? ProjectSettings.GetRandomUnusedPort();
             
             await Templates.Extract(
-                "api.infra.yml",
-                System.IO.Path.Combine(dir.FullName, "api.infra.yml"),
+                ConfigFileName,
+                System.IO.Path.Combine(dir.FullName, ConfigFileName),
                 Templates.TemplateType.Infrastructure,
-                ("API_NAME", dir.Name));
+                ("API_NAME", dir.Name),
+                ("PORT", apiPort.ToString()),
+                ("DEFAULT_LANGUAGE", language),
+                ("BASE_URL", baseUrl));
             
-            var apiServicePath = System.IO.Path.Combine(settings.ProjectRoot, $"services/{dir.Name}.api.make");
-
-            if (!File.Exists(apiServicePath))
-            {
-                await Templates.Extract(
-                    "api.make",
-                    apiServicePath,
-                    Templates.TemplateType.Services,
-                    ("API_NAME", dir.Name));   
-            }
-            
-            await settings.Save();
-            
-            return new ApiGatewayComponent(dir);
+            await Templates.Extract(
+                "api-gw.make",
+                settings.GetRootedPath("services/api-gw.make"),
+                Templates.TemplateType.Services,
+                false);
         }
         
         public async Task<BuildResult> Build(IBuildContext context)
         {
             var deserializer = new Deserializer();
 
-            var infraData =
-                deserializer.Deserialize<TemplateData>(await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, "api.infra.yml")));
+            var apiConfiguration =
+                deserializer.Deserialize<ApiConfiguration>(
+                    await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, ConfigFileName)));
             
             context.AddTemplate($"{Path.Name}.api.yml");
-            context.ExtendTemplate(infraData);
+            context.ExtendTemplate(apiConfiguration.Settings.Template);
  
             return new BuildResult(true, "");
         }
@@ -80,11 +71,47 @@ namespace DC.AWS.Projects.Cli.Components
         {
             return Task.FromResult(new TestResult(true, ""));
         }
+        
+        public ILanguageRuntime GetDefaultLanguage(ProjectSettings settings)
+        {
+            return FunctionLanguage.Parse(_configuration.Settings.DefaultLanguage) ?? settings.GetDefaultLanguage();
+        }
+
+        public string GetUrl(string path)
+        {
+            var url = _configuration.Settings.BaseUrl;
+            
+            url = url.Trim().TrimStart('/').TrimEnd('/');
+
+            path = path.Trim().TrimStart('/');
+
+            return $"/{url}/{path}";
+        }
 
         public static IEnumerable<ApiGatewayComponent> FindAtPath(DirectoryInfo path)
         {
-            if (File.Exists(System.IO.Path.Combine(path.FullName, "api.infra.yml")))
-                yield return new ApiGatewayComponent(path);
+            if (!File.Exists(System.IO.Path.Combine(path.FullName, ConfigFileName))) 
+                yield break;
+            
+            var deserializer = new Deserializer();
+            yield return new ApiGatewayComponent(
+                path,
+                deserializer.Deserialize<ApiConfiguration>(
+                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))));
+        }
+        
+        private class ApiConfiguration
+        {
+            public string Name { get; set; }
+            public ApiSettings Settings { get; set; }
+            
+            public class ApiSettings
+            {
+                public int Port { get; set; }
+                public string DefaultLanguage { get; set; }
+                public string BaseUrl { get; set; }
+                public TemplateData Template { get; set; }
+            }
         }
     }
 }

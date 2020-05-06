@@ -19,7 +19,10 @@ namespace DC.AWS.Projects.Cli
                 EnsureLocalstackRunning.Options,
                 EnsureInfra.Options,
                 Client.Options,
-                Test.Options>(args);
+                Test.Options,
+                AddProxy.Options,
+                AddProxyPath.Options,
+                AutoProxy.Options>(args);
 
             await parsedArguments.WithParsedAsync<New.Options>(New.Execute);
             await parsedArguments.WithParsedAsync<Init.Options>(Init.Execute);
@@ -33,6 +36,9 @@ namespace DC.AWS.Projects.Cli
             await parsedArguments.WithParsedAsync<Client.Options>(Client.Execute);
             await parsedArguments.WithParsedAsync<Test.Options>(Test.Execute);
             await parsedArguments.WithParsedAsync<New.Options>(New.Execute);
+            await parsedArguments.WithParsedAsync<AddProxy.Options>(AddProxy.Execute);
+            await parsedArguments.WithParsedAsync<AddProxyPath.Options>(AddProxyPath.Execute);
+            await parsedArguments.WithParsedAsync<AutoProxy.Options>(AutoProxy.Execute);
         }
     }
 }

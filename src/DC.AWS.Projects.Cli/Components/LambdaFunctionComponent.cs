@@ -13,39 +13,43 @@ namespace DC.AWS.Projects.Cli.Components
 {
     public class LambdaFunctionComponent : IComponent
     {
-        private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Task<ILanguageRuntime>>> TriggerHandlers =
-            new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Task<ILanguageRuntime>>>
+        private const string ConfigFileName = "lambda-func.config.yml";
+        
+        private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageRuntime>>> TriggerHandlers =
+            new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageRuntime>>>
             {
                 [FunctionTrigger.Api] = SetupApiTrigger
             }.ToImmutableDictionary();
+
+        private readonly FunctionConfiguration _configuration;
         
-        private LambdaFunctionComponent(DirectoryInfo path)
+        private LambdaFunctionComponent(DirectoryInfo path, FunctionConfiguration configuration)
         {
             Path = path;
+            _configuration = configuration;
         }
 
+        public string Name => _configuration.Name;
         public DirectoryInfo Path { get; }
 
-        public static async Task<LambdaFunctionComponent> InitAt(
-            ProjectSettings settings,
+        public static async Task InitAt(ProjectSettings settings,
             FunctionTrigger trigger,
             string language,
-            string path)
+            string path,
+            Components.ComponentTree componentTree)
         {
             if (Directory.Exists(path))
                 throw new InvalidOperationException($"You can't add a new function at: \"{path}\". It already exists.");
                 
             var dir = Directory.CreateDirectory(path);
 
-            var runtime = await TriggerHandlers[trigger](language, dir, settings);
+            var runtime = await TriggerHandlers[trigger](language, dir, settings, componentTree);
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
             await Directories.Copy(
                 System.IO.Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{runtime.Language}"), 
                 path);
-            
-            return new LambdaFunctionComponent(dir);
         }
         
         public async Task<BuildResult> Build(IBuildContext context)
@@ -114,34 +118,45 @@ namespace DC.AWS.Projects.Cli.Components
         {
             var deserializer = new Deserializer();
 
-            return deserializer.Deserialize<TemplateData>(
-                await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, "function.infra.yml")));
+            var functionConfig = deserializer.Deserialize<FunctionConfiguration>(
+                await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, ConfigFileName)));
+
+            return functionConfig.Settings.Template;
         }
 
         private static async Task<ILanguageRuntime> SetupApiTrigger(
             string language,
             DirectoryInfo path,
-            ProjectSettings settings)
+            ProjectSettings settings,
+            Components.ComponentTree componentTree)
         {
-            var apiRoot = settings.FindApiRoot(path.FullName);
+            var apiComponent = componentTree
+                .Parent?
+                .FindFirst<ApiGatewayComponent>(Components.Direction.Out);
+            
+            if (apiComponent == null)
+                throw new InvalidOperationException("Can't add a api-function outside of any api.");
+            
             var functionPath = settings.GetRelativePath(path.FullName);
-            var runtime = FunctionLanguage.Parse(language) ?? settings.GetLanguage(apiRoot.name);
+            var runtime = FunctionLanguage.Parse(language) ?? apiComponent.GetDefaultLanguage(settings);
 
             Console.WriteLine("Enter url:");
-            var url = settings.GetApiFunctionUrl(apiRoot.name, Console.ReadLine());
+            var url = apiComponent.GetUrl(Console.ReadLine());
 
             Console.WriteLine("Enter method:");
             var method = Console.ReadLine();
             
             await Templates.Extract(
-                "api-function.infra.yml",
-                System.IO.Path.Combine(path.FullName, "function.infra.yml"),
+                "api-lambda-function.config.yml",
+                settings.GetRootedPath(System.IO.Path.Combine(path.FullName, ConfigFileName)),
                 Templates.TemplateType.Infrastructure,
                 ("FUNCTION_NAME", path.Name),
+                ("FUNCTION_TYPE", "api"),
+                ("LANGUAGE_RUNTIME", runtime.ToString()),
                 ("FUNCTION_RUNTIME", runtime.Name),
                 ("FUNCTION_METHOD", method),
                 ("FUNCTION_PATH", runtime.GetFunctionOutputPath(functionPath)),
-                ("API_NAME", apiRoot.name),
+                ("API_NAME", apiComponent.Name),
                 ("URL", url),
                 ("FUNCTION_HANDLER", runtime.GetHandlerName()));
 
@@ -259,8 +274,27 @@ namespace DC.AWS.Projects.Cli.Components
         
         public static IEnumerable<LambdaFunctionComponent> FindAtPath(DirectoryInfo path)
         {
-            if (File.Exists(System.IO.Path.Combine(path.FullName, "function.infra.yml")))
-                yield return new LambdaFunctionComponent(path);
+            if (!File.Exists(System.IO.Path.Combine(path.FullName, ConfigFileName))) 
+                yield break;
+            
+            var deserializer = new Deserializer();
+            yield return new LambdaFunctionComponent(
+                path,
+                deserializer.Deserialize<FunctionConfiguration>(
+                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))));
+        }
+        
+        private class FunctionConfiguration
+        {
+            public string Name { get; set; }
+            public FunctionSettings Settings { get; set; }
+            
+            public class FunctionSettings
+            {
+                public string Type { get; set; }
+                public string Runtime { get; set; }
+                public TemplateData Template { get; set; }
+            }
         }
     }
 }

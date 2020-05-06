@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
@@ -17,19 +16,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 options.GetRootedClientPath(settings),
                 options.BaseUrl,
                 options.ClientType,
-                !string.IsNullOrEmpty(options.Api) ? (int?) null : options.ExternalPort);
-
-            if (!string.IsNullOrEmpty(options.Api))
-            {
-                if (!settings.Apis.ContainsKey(options.Api))
-                    throw new InvalidOperationException($"There is no api named: {options.Api}");
-
-                await LocalProxyComponent.AddChildTo(
-                    settings,
-                    settings.GetRootedPath(settings.Apis[options.Api].RelativePath),
-                    options.BaseUrl,
-                    $"{options.Name}-client-upstream");
-            }
+                options.Port);
         }
         
         [Verb("client", HelpText = "Create a client application.")]
@@ -47,11 +34,8 @@ namespace DC.AWS.Projects.Cli.Commands
             [Option('t', "type", Default = ClientType.VueNuxt, HelpText = "Client type.")]
             public ClientType ClientType { get; set; }
             
-            [Option('o', "port", Default = 3000, HelpText = "Port to run client on.")]
-            public int ExternalPort { get; set; }
-
-            [Option('a', "api", HelpText = "Api to add client to.")]
-            public string Api { get; set; }
+            [Option('o', "port", HelpText = "Port to run client on.")]
+            public int? Port { get; set; }
             
             public string GetRelativeClientPath(ProjectSettings settings)
             {

@@ -21,7 +21,7 @@ namespace DC.AWS.Projects.Cli.Commands
             Directories.Recreate(infrastructureDestination);
             Directories.Recreate(configDestination);
 
-            var components = Components.Components.FindComponents(settings, options.Path);
+            var components = Components.Components.BuildTree(settings, options.Path);
 
             var context = BuildContext.New(settings);
 

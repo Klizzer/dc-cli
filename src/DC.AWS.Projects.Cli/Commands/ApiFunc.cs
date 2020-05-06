@@ -1,6 +1,8 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
+using DC.AWS.Projects.Cli.Components;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -10,13 +12,25 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            var apiRoot = settings.FindApiPath(options.Api);
-            
+            var components = Components.Components.BuildTree(
+                settings,
+                settings.GetRootedPath(options.Root));
+
+            var apiComponent = components.FindFirst<ApiGatewayComponent>(
+                Components.Components.Direction.In,
+                options.Api);
+
+            if (apiComponent == null)
+            {
+                throw new InvalidOperationException(
+                    $"Can't find a api named {options.Api} at path {settings.GetRootedPath(options.Root)}");
+            }
+
             await Func.Execute(new Func.Options
             {
                 Language = options.Language,
                 Name = options.Name,
-                Path = Path.Combine(apiRoot, options.Path ?? ""),
+                Path = Path.Combine(apiComponent.Path.FullName, options.Path ?? ""),
                 Trigger = FunctionTrigger.Api
             });
         }
@@ -32,6 +46,9 @@ namespace DC.AWS.Projects.Cli.Commands
 
             [Option('p', "path", HelpText = "Relative path from api path.")]
             public string Path { get; set; }
+
+            [Option('r', "root", HelpText = "Root path to look for api.")]
+            public string Root { get; set; } = Environment.CurrentDirectory;
             
             [Option('l', "lang", HelpText = "Language to use for the function.")]
             public string Language { get; set; }

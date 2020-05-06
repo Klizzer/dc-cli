@@ -18,16 +18,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 apiPath,
                 options.BaseUrl,
                 options.DefaultLanguage,
-                options.ExternalPort);
-
-            await LocalProxyComponent.InitAt(
-                settings, 
-                apiPath,
-                options.BaseUrl,
-                LocalProxyComponent.ProxyType.Api,
-                settings.Apis[options.Name].ExternalPort);
-
-            await settings.Save();
+                options.Port);
         }
         
         [Verb("api", HelpText = "Create a api.")]
@@ -45,20 +36,8 @@ namespace DC.AWS.Projects.Cli.Commands
             [Option('l', "lang", HelpText = "Default language for api functions.")]
             public string DefaultLanguage { get; set; }
 
-            [Option('o', "port", Default = 4000, HelpText = "Port to run api on.")]
-            public int ExternalPort { get; set; }
-            
-            public string GetRootedApiPath(ProjectSettings projectSettings)
-            {
-                return System.IO.Path.Combine(projectSettings.GetRootedPath(Path), Name);
-            }
-            
-            public string GetRelativeApiPath(ProjectSettings settings)
-            {
-                var dir = new DirectoryInfo(GetRootedApiPath(settings).Substring(settings.ProjectRoot.Length));
-
-                return dir.FullName.Substring(1);
-            }
+            [Option('o', "port", HelpText = "Port to run api on.")]
+            public int? Port { get; set; }
         }
     }
 }

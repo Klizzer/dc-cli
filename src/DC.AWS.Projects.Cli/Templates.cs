@@ -7,12 +7,25 @@ namespace DC.AWS.Projects.Cli
 {
     public static class Templates
     {
-        public static async Task Extract(
+        public static Task Extract(
             string resourceName,
             string destination,
             TemplateType templateType,
             params (string name, string value)[] variables)
         {
+            return Extract(resourceName, destination, templateType, true, variables);
+        }
+        
+        public static async Task Extract(
+            string resourceName,
+            string destination,
+            TemplateType templateType,
+            bool overwrite,
+            params (string name, string value)[] variables)
+        {
+            if (!overwrite && File.Exists(destination))
+                return;
+            
             var directory = Path.GetDirectoryName(destination);
 
             if (!Directory.Exists(directory))

@@ -10,11 +10,16 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var projectSettings = await ProjectSettings.Read();
 
+            var components = Components.Components.BuildTree(
+                projectSettings,
+                projectSettings.GetRootedPath(options.Path));
+
             await LambdaFunctionComponent.InitAt(
                 projectSettings, 
                 options.Trigger ?? FunctionTrigger.Api,
                 options.Language,
-                projectSettings.GetRootedPath(options.Path));
+                projectSettings.GetRootedPath(options.Path),
+                components);
         }
         
         [Verb("func", HelpText = "Create a function.")]

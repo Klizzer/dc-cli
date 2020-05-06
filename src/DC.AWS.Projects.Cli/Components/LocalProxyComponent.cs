@@ -1,116 +1,90 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
     public class LocalProxyComponent : IComponent
     {
-        private readonly ProxyType _proxyType;
-        
-        private LocalProxyComponent(DirectoryInfo path, ProxyType proxyType)
+        private const string ConfigFileName = "proxy.config.yml";
+
+        private readonly ProxyConfiguration _configuration;
+
+        private LocalProxyComponent(DirectoryInfo path, ProxyConfiguration configuration)
         {
             Path = path;
-            _proxyType = proxyType;
+            _configuration = configuration;
         }
 
+        public string Name => _configuration.Name;
         public DirectoryInfo Path { get; }
 
-        public static Task AddChildTo(
-            ProjectSettings settings,
-            string path,
-            string baseUrl,
-            string upstreamName)
+        public static bool HasProxyAt(string path)
+        {
+            return File.Exists(System.IO.Path.Combine(path, ConfigFileName));
+        }
+
+        public static bool HasProxyPathFor(string path, int port)
+        {
+            return HasProxyAt(path) && File.Exists(System.IO.Path.Combine(path, $"_paths/{port}-path.conf"));
+        }
+        
+        public static async Task InitAt(ProjectSettings settings, string path, int? port)
         {
             var dir = new DirectoryInfo(settings.GetRootedPath(path));
             
-            var url = baseUrl.MakeRelativeUrl();
-                
-            return Templates.Extract(
-                "client-proxy.conf",
-                System.IO.Path.Combine(dir.FullName, $"_child_paths/{upstreamName}.conf"),
-                Templates.TemplateType.Config,
-                ("BASE_URL", url),
-                ("UPSTREAM_NAME", upstreamName));
-        }
-
-        public static async Task<LocalProxyComponent> InitAt(
-            ProjectSettings settings,
-            string path,
-            string baseUrl,
-            ProxyType proxyType,
-            int port)
-        {
-            var dir = new DirectoryInfo(settings.GetRootedPath(path));
+            if (File.Exists(System.IO.Path.Combine(dir.FullName, ConfigFileName)))
+                throw new InvalidCastException($"There is already a proxy configured at: {dir.FullName}");
             
             if (!dir.Exists)
                 dir.Create();
-            
-            var url = baseUrl.MakeRelativeUrl();
+
+            var proxyPort = port ?? ProjectSettings.GetRandomUnusedPort();
 
             await Templates.Extract(
                 "proxy.conf",
                 System.IO.Path.Combine(dir.FullName, "proxy.nginx.conf"),
-                Templates.TemplateType.Config,
-                ("BASE_URL", url),
-                ("UPSTREAM_NAME", $"{dir.Name}-{proxyType.ToString().ToLower()}-upstream"));
-            
-            var proxyPath = System.IO.Path.Combine(settings.ProjectRoot, $"services/{dir.Name}.proxy.make");
+                Templates.TemplateType.Config);
 
-            if (!File.Exists(proxyPath))
-            {
-                await Templates.Extract(
-                    "proxy.make",
-                    proxyPath,
-                    Templates.TemplateType.Services,
-                    ("PROXY_NAME", dir.Name),
-                    ("CONFIG_PATH", settings.GetRelativePath(dir.FullName)),
-                    ("PORT", port.ToString()));
-            }
+            await Templates.Extract(
+                ConfigFileName,
+                System.IO.Path.Combine(dir.FullName, ConfigFileName),
+                Templates.TemplateType.Infrastructure,
+                ("PROXY_NAME", dir.Name),
+                ("PORT", proxyPort.ToString()));
+
+            await Templates.Extract(
+                "proxy.make",
+                settings.GetRootedPath("services/proxy.make"),
+                Templates.TemplateType.Services,
+                false);
+        }
+
+        public static async Task AddProxyPath(ProjectSettings settings, string path, string baseUrl, int port)
+        {
+            var dir = new DirectoryInfo(settings.GetRootedPath(path));
             
-            return new LocalProxyComponent(dir, proxyType);
+            if (!File.Exists(System.IO.Path.Combine(dir.FullName, ConfigFileName)))
+                throw new InvalidCastException($"There is no proxy configured at: {dir.FullName}");
+
+            var pathsPath = new DirectoryInfo(System.IO.Path.Combine(dir.FullName, "_paths"));
+            
+            if (!pathsPath.Exists)
+                pathsPath.Create();
+
+            await Templates.Extract(
+                "proxy-path.conf",
+                System.IO.Path.Combine(pathsPath.FullName, $"{port}-path.conf"),
+                Templates.TemplateType.Config,
+                ("BASE_URL", baseUrl),
+                ("PORT", port.ToString()));
         }
         
-        public async Task<BuildResult> Build(IBuildContext context)
+        public Task<BuildResult> Build(IBuildContext context)
         {
-            var configDestination =
-                System.IO.Path.Combine(context.ProjectSettings.ProjectRoot, "config/.generated/proxy-upstreams");
-
-            if (!Directory.Exists(configDestination))
-                Directory.CreateDirectory(configDestination);
-            
-            switch (_proxyType)
-            {
-                case ProxyType.Api:
-                    var api = context.ProjectSettings.Apis[Path.Name];
-                    
-                    await Templates.Extract(
-                        "proxy-upstream.conf",
-                        System.IO.Path.Combine(configDestination, $"{Path.Name}-api-upstream.conf"),
-                        Templates.TemplateType.Config,
-                        ("NAME", $"{Path.Name}-api-upstream"),
-                        ("LOCAL_IP", RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ProjectSettings.GetLocalIpAddress() : "host.docker.internal"),
-                        ("UPSTREAM_PORT", api.Port.ToString()));
-                    
-                    break;
-                case ProxyType.Client:
-                    var client = context.ProjectSettings.Clients[Path.Name];
-
-                    await Templates.Extract(
-                        "proxy-upstream.conf",
-                        System.IO.Path.Combine(configDestination, $"{Path.Name}-client-upstream.conf"),
-                        Templates.TemplateType.Config,
-                        ("NAME", $"{Path.Name}-client-upstream"),
-                        ("LOCAL_IP",
-                            RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                                ? ProjectSettings.GetLocalIpAddress()
-                                : "host.docker.internal"),
-                        ("UPSTREAM_PORT", client.Port.ToString()));
-                    break;
-            }
-
-            return new BuildResult(true, "");
+            return Task.FromResult(new BuildResult(true, ""));
         }
 
         public Task<TestResult> Test()
@@ -120,17 +94,25 @@ namespace DC.AWS.Projects.Cli.Components
         
         public static IEnumerable<LocalProxyComponent> FindAtPath(DirectoryInfo path)
         {
-            if (File.Exists(System.IO.Path.Combine(path.FullName, "api.infra.yml")))
-                yield return new LocalProxyComponent(path, ProxyType.Api);
+            if (!HasProxyAt(path.FullName)) 
+                yield break;
             
-            if (File.Exists(System.IO.Path.Combine(path.FullName, "client.infra.yml")))
-                yield return new LocalProxyComponent(path, ProxyType.Client);
+            var deserializer = new Deserializer();
+            yield return new LocalProxyComponent(
+                path,
+                deserializer.Deserialize<ProxyConfiguration>(
+                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))));
         }
         
-        public enum ProxyType
+        private class ProxyConfiguration
         {
-            Api,
-            Client
+            public string Name { get; set; }
+            public ProxySettings Settings { get; set; }
+            
+            public class ProxySettings
+            {
+                public int Port { get; set; }
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ SHELL := /bin/bash
 MAKEFLAGS += --no-builtin-rules
 
 JJ_VERSION = 1.2.3
+YQ_VERSION = 3.3.0
 TERRAFORM_VERSION ?= 0.12.24
 DC_CLI_VERSION = [[DC_CLI_VERSION]]
 LOCALSTACK_VERSION = latest
@@ -35,23 +36,31 @@ init:
 ifeq ($(DETECTED_OS), Windows)
 	if not exist .tools mkdir .tools
 	if exist .tools/jj.exe del .tools/jj.exe
+	if exist .tools/dc-aws.exe del .tools/dc-aws.exe
 	(powershell -ExecutionPolicy Bypass -Command "& { iwr https://github.com/tidwall/jj/releases/download/v$(JJ_VERSION)/jj-$(JJ_VERSION)-windows-amd64.zip -OutFile %cd%\jj.zip }" && 7z.exe x jj.zip -o"%cd%\.tools" && del jj.zip)
 	(powershell -ExecutionPolicy Bypass -Command "& { iwr https://github.com/DigitalCreationAb/dc-aws-cli/releases/download/v$(DC_CLI_VERSION)/dc-aws-v$(DC_CLI_VERSION)-win-x64.zip -OutFile %cd%\dc-aws.zip }" && 7z.exe x dc-aws.zip -o"%cd%\.tools" && del dc-aws.zip)
 else
 	mkdir -p ./.tools
+	
 	wget https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_linux_amd64.zip
 	rm -f ./.tools/terraform
 	unzip ./terraform_$(TERRAFORM_VERSION)_linux_amd64.zip -d ./.tools
 	rm ./terraform_$(TERRAFORM_VERSION)_linux_amd64.zip
 	wget https://github.com/tidwall/jj/releases/download/v$(JJ_VERSION)/jj-$(JJ_VERSION)-linux-amd64.tar.gz
 	tar -xvzf ./jj-$(JJ_VERSION)-linux-amd64.tar.gz -C ./.tools
+	
 	rm -f ./.tools/jj
 	mv ./.tools/jj-$(JJ_VERSION)-linux-amd64/jj ./.tools
 	rm -rf ./.tools/jj-$(JJ_VERSION)-linux-amd64
 	rm ./jj-$(JJ_VERSION)-linux-amd64.tar.gz
+	
+	rm -f ./.tools/dc-aws
 	wget https://github.com/DigitalCreationAb/dc-aws-cli/releases/download/v$(DC_CLI_VERSION)/dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
 	unzip ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip -d ./.tools
 	rm ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
+	
+	rm -f ./.tools/yq
+	wget -O ./.tools/yq https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_linux_amd64
 endif
 	$(TERRAFORM_CLI_COMMAND) init -backend=false ./infrastructure/environment
 ifeq ($(CONFIGURE), true)
