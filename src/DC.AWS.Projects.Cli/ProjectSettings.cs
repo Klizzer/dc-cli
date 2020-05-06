@@ -43,7 +43,7 @@ namespace DC.AWS.Projects.Cli
             int externalPort,
             int? port = null)
         {
-            if (Clients.Any(x => x.Value.ExternalPort == externalPort) ||
+            if (Clients.Any(x => x.Value.Port == externalPort) ||
                 Apis.Any(x => x.Value.ExternalPort == externalPort))
             {
                 throw new InvalidOperationException($"The port {externalPort} is already in use.");
@@ -64,44 +64,25 @@ namespace DC.AWS.Projects.Cli
             string baseUrl,
             string relativePath,
             ClientType clientType,
-            int externalPort,
             int? port = null)
         {
-            if (Clients.Any(x => x.Value.ExternalPort == externalPort) ||
-                Apis.Any(x => x.Value.ExternalPort == externalPort))
+            var clientPort = port ?? GetRandomUnusedPort();
+            
+            if (Clients.Any(x => x.Value.Port == clientPort) ||
+                Apis.Any(x => x.Value.ExternalPort == clientPort))
             {
-                throw new InvalidOperationException($"The port {externalPort} is already in use.");
+                throw new InvalidOperationException($"The port {clientPort} is already in use.");
             }
             
             Clients[name] = new ClientConfiguration
             {
                 BaseUrl = baseUrl,
                 ClientType = clientType,
-                Port = port ?? GetRandomUnusedPort(),
-                RelativePath = relativePath,
-                Api = null,
-                ExternalPort = externalPort
+                Port = clientPort,
+                RelativePath = relativePath
             };
         }
         
-        public void AddClient(
-            string name,
-            string baseUrl,
-            string relativePath,
-            ClientType clientType,
-            string api,
-            int? port = null)
-        {
-            Clients[name] = new ClientConfiguration
-            {
-                BaseUrl = baseUrl,
-                ClientType = clientType,
-                Port = port ?? GetRandomUnusedPort(),
-                RelativePath = relativePath,
-                Api = api
-            };
-        }
-
         public ILanguageRuntime GetLanguage(string api = null)
         {
             return FunctionLanguage.Parse(Apis.ContainsKey(api ?? "")
@@ -187,6 +168,11 @@ namespace DC.AWS.Projects.Cli
 
             return Path.Combine(Environment.CurrentDirectory, path);
         }
+
+        public string GetRelativePath(string path)
+        {
+            return GetRootedPath(path).Substring(ProjectRoot.Length).Substring(1);
+        }
         
         public static string GetLocalIpAddress()
         {
@@ -260,8 +246,6 @@ namespace DC.AWS.Projects.Cli
             public string RelativePath { get; set; }
             public ClientType ClientType { get; set; }
             public int Port { get; set; }
-            public string Api { get; set; }
-            public int? ExternalPort { get; set; }
         }
     }
 }

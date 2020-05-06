@@ -1,99 +1,35 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
+using DC.AWS.Projects.Cli.Components;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Client
     {
-        private static readonly IImmutableDictionary<ClientType, Action<ProjectSettings, Options>> TypeHandlers =
-            new Dictionary<ClientType, Action<ProjectSettings, Options>>
-            {
-                [ClientType.VueNuxt] = CreateVueNuxt
-            }.ToImmutableDictionary();
-        
         public static async Task Execute(Options options)
         {
             var settings = await ProjectSettings.Read();
-            
-            Directory.CreateDirectory(options.GetRootedClientPath(settings));
-            
-            var url = options.BaseUrl.MakeRelativeUrl();
-            
-            //TODO:Create file client.infra.yml
-            
+
+            await ClientComponent.InitAt(
+                settings,
+                options.GetRootedClientPath(settings),
+                options.BaseUrl,
+                options.ClientType,
+                !string.IsNullOrEmpty(options.Api) ? (int?) null : options.ExternalPort);
+
             if (!string.IsNullOrEmpty(options.Api))
             {
-                settings.AddClient(
-                    options.Name,
-                    options.BaseUrl,
-                    options.GetRelativeClientPath(settings),
-                    options.ClientType,
-                    options.Api);
-
                 if (!settings.Apis.ContainsKey(options.Api))
-                {
-                    await Api.Execute(new Api.Options
-                    {
-                        Name = options.Api,
-                        Path = options.Path,
-                        BaseUrl = options.BaseUrl,
-                        ExternalPort = options.ExternalPort
-                    });
+                    throw new InvalidOperationException($"There is no api named: {options.Api}");
 
-                    options.BaseUrl = "/";
-                }
-                
-                await Templates.Extract(
-                    "client-proxy.conf",
-                    Path.Combine(settings.ProjectRoot, settings.Apis[options.Api].RelativePath, $"_child_paths/{options.Name}.conf"),
-                    Templates.TemplateType.Config,
-                    ("BASE_URL", url),
-                    ("UPSTREAM_NAME", $"{options.Name}-client-upstream"));
-            }
-            else
-            {
-                settings.AddClient(
-                    options.Name,
+                await LocalProxyComponent.AddChildTo(
+                    settings,
+                    settings.GetRootedPath(settings.Apis[options.Api].RelativePath),
                     options.BaseUrl,
-                    options.GetRelativeClientPath(settings),
-                    options.ClientType,
-                    options.ExternalPort,
-                    options.ExternalPort);
+                    $"{options.Name}-client-upstream");
             }
-
-            var clientServicePath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.client.make");
-
-            if (!File.Exists(clientServicePath))
-            {
-                await Templates.Extract(
-                    "client.make",
-                    clientServicePath,
-                    Templates.TemplateType.Services,
-                    ("CLIENT_NAME", options.Name),
-                    ("PORT", settings.Clients[options.Name].Port.ToString()),
-                    ("CLIENT_PATH", options.GetRelativeClientPath(settings)));
-            }
-
-            TypeHandlers[options.ClientType](settings, options);
-            
-            await settings.Save();
-        }
-
-        private static void CreateVueNuxt(ProjectSettings settings, Options options)
-        {
-            var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = "yarn",
-                Arguments = $"create nuxt-app {options.Name}",
-                WorkingDirectory = settings.GetRootedPath(options.Path)
-            });
-
-            process?.WaitForExit();
         }
         
         [Verb("client", HelpText = "Create a client application.")]

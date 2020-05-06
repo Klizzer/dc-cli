@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -12,12 +13,40 @@ namespace DC.AWS.Projects.Cli.Components
 {
     public class LambdaFunctionComponent : IComponent
     {
+        private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Task<ILanguageRuntime>>> TriggerHandlers =
+            new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Task<ILanguageRuntime>>>
+            {
+                [FunctionTrigger.Api] = SetupApiTrigger
+            }.ToImmutableDictionary();
+        
         private LambdaFunctionComponent(DirectoryInfo path)
         {
             Path = path;
         }
 
         public DirectoryInfo Path { get; }
+
+        public static async Task<LambdaFunctionComponent> InitAt(
+            ProjectSettings settings,
+            FunctionTrigger trigger,
+            string language,
+            string path)
+        {
+            if (Directory.Exists(path))
+                throw new InvalidOperationException($"You can't add a new function at: \"{path}\". It already exists.");
+                
+            var dir = Directory.CreateDirectory(path);
+
+            var runtime = await TriggerHandlers[trigger](language, dir, settings);
+            
+            var executingAssembly = Assembly.GetExecutingAssembly();
+
+            await Directories.Copy(
+                System.IO.Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{runtime.Language}"), 
+                path);
+            
+            return new LambdaFunctionComponent(dir);
+        }
         
         public async Task<BuildResult> Build(IBuildContext context)
         {
@@ -87,6 +116,36 @@ namespace DC.AWS.Projects.Cli.Components
 
             return deserializer.Deserialize<TemplateData>(
                 await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, "function.infra.yml")));
+        }
+
+        private static async Task<ILanguageRuntime> SetupApiTrigger(
+            string language,
+            DirectoryInfo path,
+            ProjectSettings settings)
+        {
+            var apiRoot = settings.FindApiRoot(path.FullName);
+            var functionPath = settings.GetRelativePath(path.FullName);
+            var runtime = FunctionLanguage.Parse(language) ?? settings.GetLanguage(apiRoot.name);
+
+            Console.WriteLine("Enter url:");
+            var url = settings.GetApiFunctionUrl(apiRoot.name, Console.ReadLine());
+
+            Console.WriteLine("Enter method:");
+            var method = Console.ReadLine();
+            
+            await Templates.Extract(
+                "api-function.infra.yml",
+                System.IO.Path.Combine(path.FullName, "function.infra.yml"),
+                Templates.TemplateType.Infrastructure,
+                ("FUNCTION_NAME", path.Name),
+                ("FUNCTION_RUNTIME", runtime.Name),
+                ("FUNCTION_METHOD", method),
+                ("FUNCTION_PATH", runtime.GetFunctionOutputPath(functionPath)),
+                ("API_NAME", apiRoot.name),
+                ("URL", url),
+                ("FUNCTION_HANDLER", runtime.GetHandlerName()));
+
+            return runtime;
         }
 
         private static ILanguageRuntime FindRuntime(TemplateData.ResourceData resourceData)

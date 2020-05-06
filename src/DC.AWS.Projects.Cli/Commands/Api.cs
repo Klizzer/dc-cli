@@ -1,7 +1,7 @@
-using System;
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
+using DC.AWS.Projects.Cli.Components;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -10,61 +10,23 @@ namespace DC.AWS.Projects.Cli.Commands
         public static async Task Execute(Options options)
         {
             var settings = await ProjectSettings.Read();
-            
-            if (settings.Apis.ContainsKey(options.Name))
-                throw new InvalidOperationException($"There is already a api named: \"{options.Name}\"");
-            
-            if (Directory.Exists(options.GetRootedApiPath(settings)))
-                throw new InvalidOperationException($"You can't add a new api at: \"{options.GetRootedApiPath(settings)}\". It already exists.");
 
-            Directory.CreateDirectory(options.GetRootedApiPath(settings));
+            var apiPath = settings.GetRootedPath(Path.Combine(options.Path, options.Name));
             
-            settings.AddApi(
-                options.Name,
+            await ApiGatewayComponent.InitAt(
+                settings,
+                apiPath,
                 options.BaseUrl,
-                options.GetRelativeApiPath(settings),
-                options.GetLanguage(), 
+                options.DefaultLanguage,
                 options.ExternalPort);
 
-            await Templates.Extract(
-                "api.infra.yml",
-                Path.Combine(options.GetRootedApiPath(settings), "api.infra.yml"),
-                Templates.TemplateType.Infrastructure,
-                ("API_NAME", options.Name));
-            
-            var url = options.BaseUrl.MakeRelativeUrl();
+            await LocalProxyComponent.InitAt(
+                settings, 
+                apiPath,
+                options.BaseUrl,
+                LocalProxyComponent.ProxyType.Api,
+                settings.Apis[options.Name].ExternalPort);
 
-            await Templates.Extract(
-                "proxy.conf",
-                Path.Combine(options.GetRootedApiPath(settings), "proxy.nginx.conf"),
-                Templates.TemplateType.Config,
-                ("BASE_URL", url),
-                ("UPSTREAM_NAME", $"{options.Name}-api-upstream"));
-
-            var apiServicePath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.api.make");
-
-            if (!File.Exists(apiServicePath))
-            {
-                await Templates.Extract(
-                    "api.make",
-                    apiServicePath,
-                    Templates.TemplateType.Services,
-                    ("API_NAME", options.Name));   
-            }
-
-            var apiProxyPath = Path.Combine(settings.ProjectRoot, $"services/{options.Name}.proxy.make");
-
-            if (!File.Exists(apiProxyPath))
-            {
-                await Templates.Extract(
-                    "proxy.make",
-                    apiProxyPath,
-                    Templates.TemplateType.Services,
-                    ("PROXY_NAME", options.Name),
-                    ("CONFIG_PATH", options.GetRelativeApiPath(settings)),
-                    ("PORT", settings.Apis[options.Name].ExternalPort.ToString()));
-            }
-            
             await settings.Save();
         }
         
@@ -78,10 +40,10 @@ namespace DC.AWS.Projects.Cli.Commands
             public string BaseUrl { get; set; }
             
             [Option('p', "path", Default = "[[PROJECT_ROOT]]/src", HelpText = "Path where to put the api.")]
-            public string Path { private get; set; }
+            public string Path { get; set; }
 
             [Option('l', "lang", HelpText = "Default language for api functions.")]
-            public string DefaultLanguage { private get; set; }
+            public string DefaultLanguage { get; set; }
 
             [Option('o', "port", Default = 4000, HelpText = "Port to run api on.")]
             public int ExternalPort { get; set; }
@@ -96,11 +58,6 @@ namespace DC.AWS.Projects.Cli.Commands
                 var dir = new DirectoryInfo(GetRootedApiPath(settings).Substring(settings.ProjectRoot.Length));
 
                 return dir.FullName.Substring(1);
-            }
-
-            public ILanguageRuntime GetLanguage()
-            {
-                return string.IsNullOrEmpty(DefaultLanguage) ? null : FunctionLanguage.Parse(DefaultLanguage);
             }
         }
     }

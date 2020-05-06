@@ -24,7 +24,7 @@ namespace DC.AWS.Projects.Cli.Commands
             
             var projectDirectory = new DirectoryInfo(options.GetRootedPath());
 
-            await Directories.CopyAsync(
+            await Directories.Copy(
                 projectFilesSourcePath, 
                 options.GetRootedPath(),
                 ("PROJECT_NAME", projectDirectory.Name),

@@ -6,7 +6,7 @@ namespace DC.AWS.Projects.Cli
 {
     public static class Directories
     {
-        public static async Task CopyAsync(
+        public static async Task Copy(
             string sourceDirName,
             string destDirName,
             params (string name, string value)[] variables)
@@ -40,7 +40,7 @@ namespace DC.AWS.Projects.Cli
             {
                 var tempPath = Path.Combine(destDirName, subdir.Name);
                 
-                await CopyAsync(subdir.FullName, tempPath, variables);
+                await Copy(subdir.FullName, tempPath, variables);
             }
         }
 
