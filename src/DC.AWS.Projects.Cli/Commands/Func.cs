@@ -12,13 +12,13 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var components = Components.Components.BuildTree(
                 projectSettings,
-                projectSettings.GetRootedPath(options.Path));
+                projectSettings.GetRootedPath(options.GetBasePath(projectSettings)));
 
             await LambdaFunctionComponent.InitAt(
                 projectSettings, 
                 options.Trigger ?? FunctionTrigger.Api,
                 options.Language,
-                projectSettings.GetRootedPath(options.Path),
+                options.GetFunctionPath(projectSettings),
                 components);
         }
         
@@ -35,7 +35,17 @@ namespace DC.AWS.Projects.Cli.Commands
             public FunctionTrigger? Trigger { get; set; }
             
             [Option('p', "path", Default = "[[PROJECT_ROOT]]/src", HelpText = "Path where to put the function.")]
-            public string Path { get; set; }
+            public string Path { private get; set; }
+
+            public string GetFunctionPath(ProjectSettings settings)
+            {
+                return settings.GetRootedPath(System.IO.Path.Combine(Path, Name));
+            }
+
+            public string GetBasePath(ProjectSettings settings)
+            {
+                return settings.GetRootedPath(Path);
+            }
         }
     }
 }

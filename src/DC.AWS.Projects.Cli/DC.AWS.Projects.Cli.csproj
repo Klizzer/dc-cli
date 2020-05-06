@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc-aws</AssemblyName>
-    <Version>0.19.0</Version>
+    <Version>0.20.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,5 +34,6 @@
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\client.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-lambda-function.config.yml" />
+    <EmbeddedResource Include="Templates\Infrastructure\proxy.config.yml" />
   </ItemGroup>
 </Project>

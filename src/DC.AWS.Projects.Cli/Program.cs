@@ -35,7 +35,6 @@ namespace DC.AWS.Projects.Cli
             await parsedArguments.WithParsedAsync<EnsureInfra.Options>(EnsureInfra.Execute);
             await parsedArguments.WithParsedAsync<Client.Options>(Client.Execute);
             await parsedArguments.WithParsedAsync<Test.Options>(Test.Execute);
-            await parsedArguments.WithParsedAsync<New.Options>(New.Execute);
             await parsedArguments.WithParsedAsync<AddProxy.Options>(AddProxy.Execute);
             await parsedArguments.WithParsedAsync<AddProxyPath.Options>(AddProxyPath.Execute);
             await parsedArguments.WithParsedAsync<AutoProxy.Options>(AutoProxy.Execute);

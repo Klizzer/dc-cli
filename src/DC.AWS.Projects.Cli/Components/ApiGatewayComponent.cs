@@ -18,6 +18,8 @@ namespace DC.AWS.Projects.Cli.Components
             _configuration = configuration;
         }
 
+        public string BaseUrl => _configuration.Settings.BaseUrl;
+        public int Port => _configuration.Settings.Port;
         public string Name => _configuration.Name;
         public DirectoryInfo Path { get; }
         

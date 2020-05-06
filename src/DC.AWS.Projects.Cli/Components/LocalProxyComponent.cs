@@ -78,7 +78,7 @@ namespace DC.AWS.Projects.Cli.Components
                 "proxy-path.conf",
                 System.IO.Path.Combine(pathsPath.FullName, $"{port}-path.conf"),
                 Templates.TemplateType.Config,
-                ("BASE_URL", baseUrl),
+                ("BASE_URL", (baseUrl ?? "").TrimStart('/')),
                 ("PORT", port.ToString()));
         }
         

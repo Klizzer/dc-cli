@@ -54,7 +54,7 @@ namespace DC.AWS.Projects.Cli
                     .Aggregate(
                         templateData,
                         (current, variable) => current
-                            .Replace($"[[{variable.name}]]", variable.value.Trim()));
+                            .Replace($"[[{variable.name}]]", (variable.value ?? "").Trim()));
 
                 return templateData;
             }

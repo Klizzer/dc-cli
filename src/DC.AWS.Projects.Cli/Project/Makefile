@@ -61,6 +61,7 @@ else
 	
 	rm -f ./.tools/yq
 	wget -O ./.tools/yq https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_linux_amd64
+	chmod +x ./.tools/yq
 endif
 	$(TERRAFORM_CLI_COMMAND) init -backend=false ./infrastructure/environment
 ifeq ($(CONFIGURE), true)

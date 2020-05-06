@@ -107,7 +107,7 @@ namespace DC.AWS.Projects.Cli.Components
             {
                 FileName = "yarn",
                 Arguments = $"create nuxt-app {dir.Name}",
-                WorkingDirectory = dir.FullName
+                WorkingDirectory = dir.Parent?.FullName ?? ""
             });
 
             process?.WaitForExit();

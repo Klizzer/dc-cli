@@ -130,9 +130,7 @@ namespace DC.AWS.Projects.Cli.Components
             ProjectSettings settings,
             Components.ComponentTree componentTree)
         {
-            var apiComponent = componentTree
-                .Parent?
-                .FindFirst<ApiGatewayComponent>(Components.Direction.Out);
+            var apiComponent = componentTree.FindFirst<ApiGatewayComponent>(Components.Direction.Out);
             
             if (apiComponent == null)
                 throw new InvalidOperationException("Can't add a api-function outside of any api.");

@@ -33,6 +33,15 @@ namespace DC.AWS.Projects.Cli.Commands
                     await LocalProxyComponent.InitAt(settings, proxyPath, port);
                 }
 
+                if (!LocalProxyComponent.HasProxyPathFor(proxyPath, api.component.Port))
+                {
+                    await LocalProxyComponent.AddProxyPath(
+                        settings,
+                        proxyPath,
+                        api.component.BaseUrl,
+                        api.component.Port);
+                }
+
                 var clients = api.tree.FindAll<ClientComponent>(Components.Components.Direction.In);
 
                 foreach (var client in clients)
@@ -40,7 +49,10 @@ namespace DC.AWS.Projects.Cli.Commands
                     if (LocalProxyComponent.HasProxyPathFor(proxyPath, client.component.Port))
                         continue;
 
-                    await LocalProxyComponent.AddProxyPath(settings, proxyPath, client.component.BaseUrl,
+                    await LocalProxyComponent.AddProxyPath(
+                        settings, 
+                        proxyPath,
+                        client.component.BaseUrl,
                         client.component.Port);
                 }
             }
