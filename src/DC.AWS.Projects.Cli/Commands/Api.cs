@@ -1,14 +1,15 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Api
     {
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var settings = ProjectSettings.Read();
+            var settings = await ProjectSettings.Read();
             
             if (settings.Apis.ContainsKey(options.Name))
                 throw new InvalidOperationException($"There is already a api named: \"{options.Name}\"");
@@ -25,7 +26,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 options.GetLanguage(), 
                 options.ExternalPort);
 
-            Templates.Extract(
+            await Templates.Extract(
                 "api.infra.yml",
                 Path.Combine(options.GetRootedApiPath(settings), "api.infra.yml"),
                 Templates.TemplateType.Infrastructure,
@@ -33,7 +34,7 @@ namespace DC.AWS.Projects.Cli.Commands
             
             var url = options.BaseUrl.MakeRelativeUrl();
 
-            Templates.Extract(
+            await Templates.Extract(
                 "proxy.conf",
                 Path.Combine(options.GetRootedApiPath(settings), "proxy.nginx.conf"),
                 Templates.TemplateType.Config,
@@ -44,7 +45,7 @@ namespace DC.AWS.Projects.Cli.Commands
 
             if (!File.Exists(apiServicePath))
             {
-                Templates.Extract(
+                await Templates.Extract(
                     "api.make",
                     apiServicePath,
                     Templates.TemplateType.Services,
@@ -55,7 +56,7 @@ namespace DC.AWS.Projects.Cli.Commands
 
             if (!File.Exists(apiProxyPath))
             {
-                Templates.Extract(
+                await Templates.Extract(
                     "proxy.make",
                     apiProxyPath,
                     Templates.TemplateType.Services,
@@ -64,7 +65,7 @@ namespace DC.AWS.Projects.Cli.Commands
                     ("PORT", settings.Apis[options.Name].ExternalPort.ToString()));
             }
             
-            settings.Save();
+            await settings.Save();
         }
         
         [Verb("api", HelpText = "Create a api.")]

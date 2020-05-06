@@ -1,12 +1,13 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace DC.AWS.Projects.Cli
 {
     public static class Templates
     {
-        public static void Extract(
+        public static async Task Extract(
             string resourceName,
             string destination,
             TemplateType templateType,
@@ -17,12 +18,12 @@ namespace DC.AWS.Projects.Cli
             if (!Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
             
-            File.WriteAllText(
+            await File.WriteAllTextAsync(
                 destination, 
-                GetContent(resourceName, templateType, variables));
+                await GetContent(resourceName, templateType, variables));
         }
 
-        private static string GetContent(
+        private static async Task<string> GetContent(
             string resourceName,
             TemplateType templateType,
             params (string name, string value)[] variables)
@@ -31,10 +32,10 @@ namespace DC.AWS.Projects.Cli
                 .GetExecutingAssembly()
                 .GetManifestResourceStream($"DC.AWS.Projects.Cli.Templates.{templateType.ToString()}.{resourceName}");
 
-            using (infrastructureTemplateData)
+            await using (infrastructureTemplateData)
             using(var reader = new StreamReader(infrastructureTemplateData!))
             {
-                var templateData = reader.ReadToEnd();
+                var templateData = await reader.ReadToEndAsync();
 
                 templateData = variables
                     .Aggregate(

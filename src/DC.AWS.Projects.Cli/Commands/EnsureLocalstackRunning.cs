@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
@@ -12,7 +13,7 @@ namespace DC.AWS.Projects.Cli.Commands
     {
         private static readonly HttpClient HttpClient = new HttpClient();
         
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
             Console.WriteLine(options.GetRequiredServices().Any()
                 ? $"Ensuring localstack is running with services: {string.Join(", ", options.GetRequiredServices())}"
@@ -26,11 +27,11 @@ namespace DC.AWS.Projects.Cli.Commands
             {
                 try
                 {
-                    var response = HttpClient.GetAsync($"http://localhost:{options.Port}/health").Result;
+                    var response = await HttpClient.GetAsync($"http://localhost:{options.Port}/health");
 
                     if (response.IsSuccessStatusCode)
                     {
-                        var responseData = Json.DeSerialize<HealthResponse>(response.Content.ReadAsStringAsync().Result);
+                        var responseData = Json.DeSerialize<HealthResponse>(await response.Content.ReadAsStringAsync());
 
                         var requiredServices = options.GetRequiredServices().Any()
                             ? options.GetRequiredServices()

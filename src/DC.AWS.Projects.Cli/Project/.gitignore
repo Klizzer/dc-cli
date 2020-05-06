@@ -11,6 +11,6 @@ node_modules/
 .generated/
 .env/
 .packages/
-**/.terraform/*
+.terraform/
 *.tfstate
 *.tfstate.*

@@ -3,35 +3,36 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Func
     {
-        private static readonly IImmutableDictionary<FunctionTrigger, Func<Options, ProjectSettings, ILanguageRuntime>> TriggerHandlers =
-            new Dictionary<FunctionTrigger, Func<Options, ProjectSettings, ILanguageRuntime>>
+        private static readonly IImmutableDictionary<FunctionTrigger, Func<Options, ProjectSettings, Task<ILanguageRuntime>>> TriggerHandlers =
+            new Dictionary<FunctionTrigger, Func<Options, ProjectSettings, Task<ILanguageRuntime>>>
             {
                 [FunctionTrigger.Api] = SetupApiTrigger
             }.ToImmutableDictionary();
         
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var projectSettings = ProjectSettings.Read();
+            var projectSettings = await ProjectSettings.Read();
             
             if (Directory.Exists(options.GetRootedFunctionPath(projectSettings)))
                 throw new InvalidOperationException($"You can't add a new function at: \"{options.GetRootedFunctionPath(projectSettings)}\". It already exists.");
                 
             Directory.CreateDirectory(options.GetRootedFunctionPath(projectSettings));
 
-            var language = TriggerHandlers[options.Trigger ?? FunctionTrigger.Api](options, projectSettings);
+            var language = await TriggerHandlers[options.Trigger ?? FunctionTrigger.Api](options, projectSettings);
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
-            Directories.Copy(Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{language.Language}"), options.GetRootedFunctionPath(projectSettings));
+            await Directories.CopyAsync(Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{language.Language}"), options.GetRootedFunctionPath(projectSettings));
         }
 
-        private static ILanguageRuntime SetupApiTrigger(Options options, ProjectSettings settings)
+        private static async Task<ILanguageRuntime> SetupApiTrigger(Options options, ProjectSettings settings)
         {
             var apiRoot = settings.FindApiRoot(options.GetRootedFunctionPath(settings));
             var functionPath = options.GetRelativeFunctionPath(settings);
@@ -43,7 +44,7 @@ namespace DC.AWS.Projects.Cli.Commands
             Console.WriteLine("Enter method:");
             var method = Console.ReadLine();
             
-            Templates.Extract(
+            await Templates.Extract(
                 "api-function.infra.yml",
                 Path.Combine(options.GetRootedFunctionPath(settings), "function.infra.yml"),
                 Templates.TemplateType.Infrastructure,

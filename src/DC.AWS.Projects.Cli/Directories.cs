@@ -1,11 +1,12 @@
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DC.AWS.Projects.Cli
 {
     public static class Directories
     {
-        public static void Copy(
+        public static async Task CopyAsync(
             string sourceDirName,
             string destDirName,
             params (string name, string value)[] variables)
@@ -22,7 +23,7 @@ namespace DC.AWS.Projects.Cli
             var files = dir.GetFiles();
             foreach (var file in files)
             {
-                var fileContent = File.ReadAllText(file.FullName);
+                var fileContent = await File.ReadAllTextAsync(file.FullName);
 
                 fileContent = variables
                     .Aggregate(
@@ -32,14 +33,14 @@ namespace DC.AWS.Projects.Cli
 
                 var fileDestination = Path.Combine(destDirName, file.Name);
                 
-                File.WriteAllText(fileDestination, fileContent);
+                await File.WriteAllTextAsync(fileDestination, fileContent);
             }
 
             foreach (var subdir in dirs)
             {
                 var tempPath = Path.Combine(destDirName, subdir.Name);
                 
-                Copy(subdir.FullName, tempPath, variables);
+                await CopyAsync(subdir.FullName, tempPath, variables);
             }
         }
 

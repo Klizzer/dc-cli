@@ -1,14 +1,15 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Configure
     {
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var settings = ProjectSettings.Read();
+            var settings = await ProjectSettings.Read();
 
             if (File.Exists(Path.Combine(settings.ProjectRoot, ".settings.json")))
             {
@@ -19,6 +20,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 {
                     Console.WriteLine(
                         "This project is already configured. Do you want to overwrite the current configuration? (yes, no)");
+                    
                     var overwrite = Console.ReadLine() == "yes";
 
                     if (!overwrite)
@@ -40,7 +42,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 LocalstackApiKey = localstackApiKey
             };
             
-            File.WriteAllText(Path.Combine(settings.ProjectRoot, ".settings.json"), Json.Serialize(config));
+            await File.WriteAllTextAsync(Path.Combine(settings.ProjectRoot, ".settings.json"), Json.Serialize(config));
         }
         
         [Verb("configure", HelpText = "Configure your environment.")]

@@ -1,12 +1,13 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class New
     {
-        public static void Execute(Options options)
+        public static Task Execute(Options options)
         {
             var directory = Path.Combine(Environment.CurrentDirectory, options.Name);
 
@@ -21,7 +22,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 AwsRegion = options.AwsRegion
             };
             
-            Init.Execute(initOptions);
+            return Init.Execute(initOptions);
         }
         
         [Verb("new", HelpText = "Create a new project.")]

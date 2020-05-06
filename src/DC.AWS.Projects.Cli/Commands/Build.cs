@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Threading.Tasks;
 using CommandLine;
 using DC.AWS.Projects.Cli.Components;
 using YamlDotNet.Serialization;
@@ -10,9 +11,9 @@ namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Build
     {
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var settings = ProjectSettings.Read();
+            var settings = await ProjectSettings.Read();
             
             var infrastructureDestination = Path.Combine(settings.ProjectRoot, "infrastructure/environment/.generated");
             var configDestination = Path.Combine(settings.ProjectRoot, "config/.generated");
@@ -24,7 +25,7 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var context = BuildContext.New(settings);
 
-            var result = components.Build(context).Result;
+            var result = await components.Build(context);
             
             Console.Write(result.Output);
 
@@ -44,7 +45,7 @@ namespace DC.AWS.Projects.Cli.Commands
             
             foreach (var template in templates)
             {
-                File.WriteAllText(Path.Combine(infrastructureDestination, template.Key),
+                await File.WriteAllTextAsync(Path.Combine(infrastructureDestination, template.Key),
                     serializer.Serialize(template.Value));
             }
         }
@@ -63,6 +64,5 @@ namespace DC.AWS.Projects.Cli.Commands
                 
             }
         }
-
     }
 }

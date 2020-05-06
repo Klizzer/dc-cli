@@ -2,20 +2,21 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Init
     {
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
             if (File.Exists(Path.Combine(options.GetRootedPath(), ".project.settings")))
                 throw new InvalidOperationException("This project is already initialized.");
 
             var projectSettings = ProjectSettings.New(options.GetLanguage(), options.GetRootedPath());
 
-            projectSettings.Save();
+            await projectSettings.Save();
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
@@ -23,7 +24,7 @@ namespace DC.AWS.Projects.Cli.Commands
             
             var projectDirectory = new DirectoryInfo(options.GetRootedPath());
 
-            Directories.Copy(
+            await Directories.CopyAsync(
                 projectFilesSourcePath, 
                 options.GetRootedPath(),
                 ("PROJECT_NAME", projectDirectory.Name),

@@ -17,7 +17,7 @@ namespace DC.AWS.Projects.Cli.Components
 
         public DirectoryInfo Path { get; }
         
-        public Task<BuildResult> Build(IBuildContext context)
+        public async Task<BuildResult> Build(IBuildContext context)
         {
             var configDestination =
                 System.IO.Path.Combine(context.ProjectSettings.ProjectRoot, "config/.generated/proxy-upstreams");
@@ -30,7 +30,7 @@ namespace DC.AWS.Projects.Cli.Components
                 case ProxyType.Api:
                     var api = context.ProjectSettings.Apis[Path.Name];
                     
-                    Templates.Extract(
+                    await Templates.Extract(
                         "proxy-upstream.conf",
                         System.IO.Path.Combine(configDestination, $"{Path.Name}-api-upstream.conf"),
                         Templates.TemplateType.Config,
@@ -42,10 +42,10 @@ namespace DC.AWS.Projects.Cli.Components
                 case ProxyType.Client:
                     var client = context.ProjectSettings.Clients[Path.Name];
                     
-                    if (!string.IsNullOrEmpty(client.Api))
+                    if (string.IsNullOrEmpty(client.Api))
                         break;
                     
-                    Templates.Extract(
+                    await Templates.Extract(
                         "proxy-upstream.conf",
                         System.IO.Path.Combine(configDestination, $"{Path.Name}-client-upstream.conf"),
                         Templates.TemplateType.Config,
@@ -58,7 +58,7 @@ namespace DC.AWS.Projects.Cli.Components
                     break;
             }
 
-            return Task.FromResult(new BuildResult(true, ""));
+            return new BuildResult(true, "");
         }
 
         public Task<TestResult> Test()

@@ -1,17 +1,18 @@
 using System.IO;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class ApiFunc
     {
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var settings = ProjectSettings.Read();
+            var settings = await ProjectSettings.Read();
 
             var apiRoot = settings.FindApiPath(options.Api);
             
-            Func.Execute(new Func.Options
+            await Func.Execute(new Func.Options
             {
                 Language = options.Language,
                 Name = options.Name,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
@@ -13,36 +14,36 @@ namespace DC.AWS.Projects.Cli.Commands
 {
     public static class EnsureInfra
     {
-        private static readonly IImmutableDictionary<string, Action<string, TemplateData, TemplateData.ResourceData, ProjectSettings>> TypeHandlers =
-            new Dictionary<string, Action<string, TemplateData, TemplateData.ResourceData, ProjectSettings>>
+        private static readonly IImmutableDictionary<string, Func<string, TemplateData, TemplateData.ResourceData, ProjectSettings, Task>> TypeHandlers =
+            new Dictionary<string, Func<string, TemplateData, TemplateData.ResourceData, ProjectSettings, Task>>
             {
                 ["AWS::DynamoDB::Table"] = HandleTable
             }.ToImmutableDictionary();
         
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var settings = ProjectSettings.Read();
+            var settings = await ProjectSettings.Read();
             
             var deserializer = new Deserializer();
 
             var templateData = deserializer.Deserialize<TemplateData>(
-                File.ReadAllText(
+                await File.ReadAllTextAsync(
                     Path.Combine(settings.ProjectRoot, "infrastructure/environment/.generated/project.yml")));
 
             foreach (var resource in templateData.Resources)
             {
                 if (TypeHandlers.ContainsKey(resource.Value.Type))
-                    TypeHandlers[resource.Value.Type](resource.Key, templateData, resource.Value, settings);
+                    await TypeHandlers[resource.Value.Type](resource.Key, templateData, resource.Value, settings);
             }
         }
 
-        private static void HandleTable(
+        private static async Task HandleTable(
             string name,
             TemplateData template, 
             TemplateData.ResourceData tableNode,
             ProjectSettings settings)
         {
-            EnsureLocalstackRunning.Execute(new EnsureLocalstackRunning.Options
+            await EnsureLocalstackRunning.Execute(new EnsureLocalstackRunning.Options
             {
                 RequiredServices = "dynamodb"
             });
@@ -60,18 +61,18 @@ namespace DC.AWS.Projects.Cli.Commands
                     ScalarAttributeType.FindValue(x["AttributeType"])))
                 .ToList();
 
-            if (client.TableExists(name).Result)
+            if (await client.TableExists(name))
             {
-                client.UpdateTableAsync(new UpdateTableRequest
+                await client.UpdateTableAsync(new UpdateTableRequest
                 {
                     TableName = name,
                     AttributeDefinitions = attributeDefinitions,
                     BillingMode = billingMode
-                }).Wait();
+                });
             }
             else
             {
-                client.CreateTableAsync(new CreateTableRequest
+                await client.CreateTableAsync(new CreateTableRequest
                 {
                     TableName = name,
                     KeySchema = ((IEnumerable<IDictionary<string, string>>)tableNode.Properties["KeySchema"])
@@ -81,7 +82,7 @@ namespace DC.AWS.Projects.Cli.Commands
                         .ToList(),
                     AttributeDefinitions = attributeDefinitions,
                     BillingMode = billingMode
-                }).Wait();
+                });
             }
         }
         

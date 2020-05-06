@@ -1,35 +1,38 @@
-﻿using CommandLine;
+﻿using System.Threading.Tasks;
+using CommandLine;
 using DC.AWS.Projects.Cli.Commands;
 
 namespace DC.AWS.Projects.Cli
 {
     public static class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            Parser.Default.ParseArguments<
-                    New.Options,
-                    Init.Options,
-                    Func.Options,
-                    Build.Options,
-                    Api.Options,
-                    ApiFunc.Options,
-                    Configure.Options,
-                    EnsureLocalstackRunning.Options,
-                    EnsureInfra.Options,
-                    Client.Options,
-                    Test.Options>(args)
-                .WithParsed<New.Options>(New.Execute)
-                .WithParsed<Init.Options>(Init.Execute)
-                .WithParsed<Func.Options>(Func.Execute)
-                .WithParsed<Build.Options>(Build.Execute)
-                .WithParsed<Api.Options>(Api.Execute)
-                .WithParsed<ApiFunc.Options>(ApiFunc.Execute)
-                .WithParsed<Configure.Options>(Configure.Execute)
-                .WithParsed<EnsureLocalstackRunning.Options>(EnsureLocalstackRunning.Execute)
-                .WithParsed<EnsureInfra.Options>(EnsureInfra.Execute)
-                .WithParsed<Client.Options>(Client.Execute)
-                .WithParsed<Test.Options>(Test.Execute);
+            var parsedArguments = Parser.Default.ParseArguments<
+                New.Options,
+                Init.Options,
+                Func.Options,
+                Build.Options,
+                Api.Options,
+                ApiFunc.Options,
+                Configure.Options,
+                EnsureLocalstackRunning.Options,
+                EnsureInfra.Options,
+                Client.Options,
+                Test.Options>(args);
+
+            await parsedArguments.WithParsedAsync<New.Options>(New.Execute);
+            await parsedArguments.WithParsedAsync<Init.Options>(Init.Execute);
+            await parsedArguments.WithParsedAsync<Func.Options>(Func.Execute);
+            await parsedArguments.WithParsedAsync<Build.Options>(Build.Execute);
+            await parsedArguments.WithParsedAsync<Api.Options>(Api.Execute);
+            await parsedArguments.WithParsedAsync<ApiFunc.Options>(ApiFunc.Execute);
+            await parsedArguments.WithParsedAsync<Configure.Options>(Configure.Execute);
+            await parsedArguments.WithParsedAsync<EnsureLocalstackRunning.Options>(EnsureLocalstackRunning.Execute);
+            await parsedArguments.WithParsedAsync<EnsureInfra.Options>(EnsureInfra.Execute);
+            await parsedArguments.WithParsedAsync<Client.Options>(Client.Execute);
+            await parsedArguments.WithParsedAsync<Test.Options>(Test.Execute);
+            await parsedArguments.WithParsedAsync<New.Options>(New.Execute);
         }
     }
 }

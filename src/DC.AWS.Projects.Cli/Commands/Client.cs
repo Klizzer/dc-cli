@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
@@ -12,16 +13,18 @@ namespace DC.AWS.Projects.Cli.Commands
         private static readonly IImmutableDictionary<ClientType, Action<ProjectSettings, Options>> TypeHandlers =
             new Dictionary<ClientType, Action<ProjectSettings, Options>>
             {
-                [ClientType.VueNuxt] = BuildVueNuxt
+                [ClientType.VueNuxt] = CreateVueNuxt
             }.ToImmutableDictionary();
         
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var settings = ProjectSettings.Read();
+            var settings = await ProjectSettings.Read();
             
             Directory.CreateDirectory(options.GetRootedClientPath(settings));
             
             var url = options.BaseUrl.MakeRelativeUrl();
+            
+            //TODO:Create file client.infra.yml
             
             if (!string.IsNullOrEmpty(options.Api))
             {
@@ -34,7 +37,7 @@ namespace DC.AWS.Projects.Cli.Commands
 
                 if (!settings.Apis.ContainsKey(options.Api))
                 {
-                    Api.Execute(new Api.Options
+                    await Api.Execute(new Api.Options
                     {
                         Name = options.Api,
                         Path = options.Path,
@@ -45,7 +48,7 @@ namespace DC.AWS.Projects.Cli.Commands
                     options.BaseUrl = "/";
                 }
                 
-                Templates.Extract(
+                await Templates.Extract(
                     "client-proxy.conf",
                     Path.Combine(settings.ProjectRoot, settings.Apis[options.Api].RelativePath, $"_child_paths/{options.Name}.conf"),
                     Templates.TemplateType.Config,
@@ -67,7 +70,7 @@ namespace DC.AWS.Projects.Cli.Commands
 
             if (!File.Exists(clientServicePath))
             {
-                Templates.Extract(
+                await Templates.Extract(
                     "client.make",
                     clientServicePath,
                     Templates.TemplateType.Services,
@@ -78,10 +81,10 @@ namespace DC.AWS.Projects.Cli.Commands
 
             TypeHandlers[options.ClientType](settings, options);
             
-            settings.Save();
+            await settings.Save();
         }
 
-        private static void BuildVueNuxt(ProjectSettings settings, Options options)
+        private static void CreateVueNuxt(ProjectSettings settings, Options options)
         {
             var process = Process.Start(new ProcessStartInfo
             {

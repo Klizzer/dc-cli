@@ -1,17 +1,18 @@
 using System;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
     public static class Test
     {
-        public static void Execute(Options options)
+        public static async Task Execute(Options options)
         {
-            var settings = ProjectSettings.Read();
+            var settings = await ProjectSettings.Read();
 
             var components = Components.Components.FindComponents(settings, options.Path);
 
-            var testResult = components.Test().Result;
+            var testResult = await components.Test();
             
             Console.Write(testResult.Output);
 

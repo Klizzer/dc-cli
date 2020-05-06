@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace DC.AWS.Projects.Cli
@@ -110,7 +111,7 @@ namespace DC.AWS.Projects.Cli
                    ?? FunctionLanguage.Parse(FunctionLanguage.DefaultLanguage);
         }
 
-        public static ProjectSettings Read()
+        public static async Task<ProjectSettings> Read()
         {
             var currentPath = Environment.CurrentDirectory;
             
@@ -119,7 +120,7 @@ namespace DC.AWS.Projects.Cli
                 if (File.Exists(Path.Combine(currentPath, ".project.settings")))
                 {
                     var settings = Json.DeSerialize<ProjectSettings>(
-                        File.ReadAllText(Path.Combine(currentPath, ".project.settings")));
+                        await File.ReadAllTextAsync(Path.Combine(currentPath, ".project.settings")));
 
                     settings.ProjectRoot = currentPath;
 
@@ -130,9 +131,9 @@ namespace DC.AWS.Projects.Cli
             }
         }
 
-        public void Save()
+        public Task Save()
         {
-            File.WriteAllText(Path.Combine(ProjectRoot, ".project.settings"), Json.Serialize(this));
+            return File.WriteAllTextAsync(Path.Combine(ProjectRoot, ".project.settings"), Json.Serialize(this));
         }
         
         public (string path, string name) FindApiRoot(string path)
