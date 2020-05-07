@@ -58,7 +58,8 @@ namespace DC.AWS.Projects.Cli.Components
                 "client.make",
                 settings.GetRootedPath("services/client.make"),
                 Templates.TemplateType.Services,
-                false);
+                false,
+                ("DOCKER_IMAGE", "node"));
             
             await TypeHandlers[clientType](dir);
         }

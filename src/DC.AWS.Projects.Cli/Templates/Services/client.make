@@ -9,6 +9,8 @@ else
     YQ_EXECUTABLE := ./.tools/yq
 endif
 
+DOCKER_IMAGE := [[DOCKER_IMAGE]]
+
 PROJECT_NAME ?=
 
 .PHONY: start
@@ -20,7 +22,10 @@ start: stop
 		$(eval CONTAINER_NAME = "$(PROJECT_NAME)-client-$(CLIENT_NAME)") \
 		docker run --name $(CONTAINER_NAME) -d \
 			-v "$(CURDIR)/$(CLIENT_PATH):/usr/src/app" \
-			-p $(CLIENT_PORT):3000 $(PROJECT_NAME)/node-client run dev --hostname 0.0.0.0;)
+			-p $(CLIENT_PORT):3000 \
+			--workdir /usr/src/app \
+			--entrypoint yarn \
+			$(DOCKER_IMAGE) run dev --hostname 0.0.0.0;)
 
 .PHONY: stop
 stop:
