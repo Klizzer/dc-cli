@@ -16,41 +16,50 @@ namespace DC.AWS.Projects.Cli
         }
 
         public static ILanguage Instance { get; } = new NodeLanguage();
-        private static ILanguageRuntime Node10 { get; } = new NodeRuntime("nodejs10.x");
-        private static ILanguageRuntime Node12 { get; } = new NodeRuntime("nodejs12.x");
+        private static ILanguageVersion Node10 { get; } = new NodeVersion("10", "nodejs10.x", "10");
+        private static ILanguageVersion Node12 { get; } = new NodeVersion("12", "nodejs12.x", "12");
 
         public string Name { get; } = LanguageName;
 
-        public IEnumerable<ILanguageRuntime> GetRuntimes()
+        public IEnumerable<ILanguageVersion> GetVersions()
         {
             yield return Node10;
             yield return Node12;
         }
 
-        public ILanguageRuntime GetDefaultRuntime()
+        public ILanguageVersion GetDefaultVersion()
         {
             return Node12;
         }
         
-        private class NodeRuntime : ILanguageRuntime
+        private class NodeVersion : ILanguageVersion
         {
-            public NodeRuntime(string runtime)
+            private readonly string _runtimeName;
+            private readonly Docker.Container _dockerContainer;
+            
+            public NodeVersion(string version, string runtimeName, string dockerImageTag)
             {
-                Name = runtime;
+                Version = version;
+                _runtimeName = runtimeName;
+
+                _dockerContainer = Docker
+                    .CreateContainer($"node:{dockerImageTag}")
+                    .EntryPoint("yarn");
             }
 
             public string Language { get; } = LanguageName;
-            public string Name { get; }
+            public string Version { get; }
             
             public async Task<BuildResult> Build(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
                     return new BuildResult(true, "");
 
-                var executionResult = await ProcessExecutor
-                    .ExecuteBackground("yarn", "", path);
+                var result = await _dockerContainer
+                    .WithVolume(path, "/usr/src/app", true)
+                    .Run("");
 
-                return new BuildResult(executionResult.ExitCode == 0, executionResult.Output);
+                return new BuildResult(result.exitCode == 0, result.output);
             }
 
             public async Task<TestResult> Test(string path)
@@ -66,11 +75,12 @@ namespace DC.AWS.Projects.Cli
                 {
                     return new TestResult(true, "");
                 }
-
-                var executionResult = await ProcessExecutor
-                    .ExecuteBackground("yarn", "run test", path);
                 
-                return new TestResult(executionResult.ExitCode == 0, executionResult.Output);
+                var result = await _dockerContainer
+                    .WithVolume(path, "/usr/src/app", true)
+                    .Run("run test");
+
+                return new TestResult(result.exitCode == 0, result.output);
             }
 
             public string GetHandlerName()
@@ -83,9 +93,14 @@ namespace DC.AWS.Projects.Cli
                 return functionPath;
             }
 
+            public string GetRuntimeName()
+            {
+                return _runtimeName;
+            }
+
             public override string ToString()
             {
-                return $"{Language}:{Name}";
+                return $"{Language}:{Version}";
             }
             
             private class PackageJsonData

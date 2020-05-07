@@ -88,7 +88,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 return System.IO.Path.Combine(Environment.CurrentDirectory, path);
             }
 
-            public ILanguageRuntime GetLanguage()
+            public ILanguageVersion GetLanguage()
             {
                 return FunctionLanguage.Parse(Language);
             }

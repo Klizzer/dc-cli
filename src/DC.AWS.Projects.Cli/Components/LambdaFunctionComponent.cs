@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using YamlDotNet.Serialization;
@@ -15,8 +14,8 @@ namespace DC.AWS.Projects.Cli.Components
     {
         private const string ConfigFileName = "lambda-func.config.yml";
         
-        private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageRuntime>>> TriggerHandlers =
-            new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageRuntime>>>
+        private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageVersion>>> TriggerHandlers =
+            new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageVersion>>>
             {
                 [FunctionTrigger.Api] = SetupApiTrigger
             }.ToImmutableDictionary();
@@ -60,9 +59,6 @@ namespace DC.AWS.Projects.Cli.Components
 
             var functionResources = FindAllFunctions(infraData);
 
-            var buildSuccess = true;
-            var buildOutput = new StringBuilder();
-
             foreach (var functionResource in functionResources)
             {
                 HandleFunctionTemplate(
@@ -70,48 +66,18 @@ namespace DC.AWS.Projects.Cli.Components
                     infraData,
                     functionResource.Value,
                     context.ProjectSettings);
-
-                var languageRuntime = FindRuntime(functionResource.Value);
-
-                if (languageRuntime == null)
-                    continue;
-                
-                var buildResult = await languageRuntime.Build(Path.FullName);
-
-                if (!buildResult.Success)
-                    buildSuccess = buildResult.Success;
-
-                buildOutput.Append(buildResult.Output);
             }
-            
-            return new BuildResult(buildSuccess, buildOutput.ToString());
+
+            var languageVersion = _configuration.GetLanguage();
+
+            return await languageVersion.Build(Path.FullName);
         }
 
-        public async Task<TestResult> Test()
+        public Task<TestResult> Test()
         {
-            var infraData = await LoadTemplate();
-            
-            var functionResources = FindAllFunctions(infraData);
+            var languageVersion = _configuration.GetLanguage();
 
-            var testSuccess = true;
-            var testOutput = new StringBuilder();
-
-            foreach (var functionResource in functionResources)
-            {
-                var languageRuntime = FindRuntime(functionResource.Value);
-
-                if (languageRuntime == null)
-                    continue;
-
-                var testResult = await languageRuntime.Test(Path.FullName);
-                
-                if (!testResult.Success)
-                    testSuccess = testResult.Success;
-
-                testOutput.Append(testResult.Output);
-            }
-            
-            return new TestResult(testSuccess, testOutput.ToString());
+            return languageVersion.Test(Path.FullName);
         }
 
         private async Task<TemplateData> LoadTemplate()
@@ -124,7 +90,7 @@ namespace DC.AWS.Projects.Cli.Components
             return functionConfig.Settings.Template;
         }
 
-        private static async Task<ILanguageRuntime> SetupApiTrigger(
+        private static async Task<ILanguageVersion> SetupApiTrigger(
             string language,
             DirectoryInfo path,
             ProjectSettings settings,
@@ -136,7 +102,7 @@ namespace DC.AWS.Projects.Cli.Components
                 throw new InvalidOperationException("Can't add a api-function outside of any api.");
             
             var functionPath = settings.GetRelativePath(path.FullName);
-            var runtime = FunctionLanguage.Parse(language) ?? apiComponent.GetDefaultLanguage(settings);
+            var languageVersion = FunctionLanguage.Parse(language) ?? apiComponent.GetDefaultLanguage(settings);
 
             Console.WriteLine("Enter url:");
             var url = apiComponent.GetUrl(Console.ReadLine());
@@ -150,22 +116,15 @@ namespace DC.AWS.Projects.Cli.Components
                 Templates.TemplateType.Infrastructure,
                 ("FUNCTION_NAME", path.Name),
                 ("FUNCTION_TYPE", "api"),
-                ("LANGUAGE_RUNTIME", runtime.ToString()),
-                ("FUNCTION_RUNTIME", runtime.Name),
+                ("LANGUAGE", languageVersion.ToString()),
+                ("FUNCTION_RUNTIME", languageVersion.GetRuntimeName()),
                 ("FUNCTION_METHOD", method),
-                ("FUNCTION_PATH", runtime.GetFunctionOutputPath(functionPath)),
+                ("FUNCTION_PATH", languageVersion.GetFunctionOutputPath(functionPath)),
                 ("API_NAME", apiComponent.Name),
                 ("URL", url),
-                ("FUNCTION_HANDLER", runtime.GetHandlerName()));
+                ("FUNCTION_HANDLER", languageVersion.GetHandlerName()));
 
-            return runtime;
-        }
-
-        private static ILanguageRuntime FindRuntime(TemplateData.ResourceData resourceData)
-        {
-            var runtime = resourceData.Properties["Runtime"].ToString();
-
-            return FunctionLanguage.ParseFromRuntime(runtime);
+            return languageVersion;
         }
         
         private static IImmutableDictionary<string, TemplateData.ResourceData> FindAllFunctions(TemplateData templateData)
@@ -286,11 +245,16 @@ namespace DC.AWS.Projects.Cli.Components
         {
             public string Name { get; set; }
             public FunctionSettings Settings { get; set; }
+
+            public ILanguageVersion GetLanguage()
+            {
+                return FunctionLanguage.Parse(Settings.Language);
+            }
             
             public class FunctionSettings
             {
                 public string Type { get; set; }
-                public string Runtime { get; set; }
+                public string Language { get; set; }
                 public TemplateData Template { get; set; }
             }
         }

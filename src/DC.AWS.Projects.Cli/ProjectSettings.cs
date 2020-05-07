@@ -19,12 +19,12 @@ namespace DC.AWS.Projects.Cli
         [JsonIgnore]
         public string ProjectRoot { get; set; }
 
-        public ILanguageRuntime GetDefaultLanguage()
+        public ILanguageVersion GetDefaultLanguage()
         {
             return FunctionLanguage.Parse(DefaultLanguage);
         }
 
-        public static ProjectSettings New(ILanguageRuntime defaultLanguage, string path)
+        public static ProjectSettings New(ILanguageVersion defaultLanguage, string path)
         {
             return new ProjectSettings
             {

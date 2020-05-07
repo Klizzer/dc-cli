@@ -74,7 +74,7 @@ namespace DC.AWS.Projects.Cli.Components
             return Task.FromResult(new TestResult(true, ""));
         }
         
-        public ILanguageRuntime GetDefaultLanguage(ProjectSettings settings)
+        public ILanguageVersion GetDefaultLanguage(ProjectSettings settings)
         {
             return FunctionLanguage.Parse(_configuration.Settings.DefaultLanguage) ?? settings.GetDefaultLanguage();
         }

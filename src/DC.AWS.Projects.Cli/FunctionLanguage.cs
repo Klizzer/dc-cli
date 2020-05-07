@@ -15,7 +15,7 @@ namespace DC.AWS.Projects.Cli
         
         public const string DefaultLanguage = NodeLanguage.LanguageName;
         
-        public static ILanguageRuntime Parse(string language)
+        public static ILanguageVersion Parse(string language)
         {
             if (string.IsNullOrEmpty(language))
                 return null;
@@ -28,24 +28,17 @@ namespace DC.AWS.Projects.Cli
                 throw new InvalidOperationException($"We don't support language: {parts[0]}");
 
             if (parts.Length == 1)
-                return availableLanguage.GetDefaultRuntime();
+                return availableLanguage.GetDefaultVersion();
 
-            var availableRuntimes = availableLanguage.GetRuntimes().ToImmutableList();
+            var availableVersions = availableLanguage.GetVersions().ToImmutableList();
 
-            var availableRuntime = availableRuntimes.FirstOrDefault(x => x.Name == parts[1]);
+            var availableVersion = availableVersions.FirstOrDefault(x => x.Version == parts[1]);
 
-            if (availableRuntime != null)
-                return availableRuntime;
+            if (availableVersion != null)
+                return availableVersion;
 
             throw new InvalidOperationException(
-                $"We don't support runtime: {parts[1]} for language: {parts[0]}. Available runtimes are: {string.Join(", ", availableRuntimes.Select(x => x.Name))}");
-        }
-
-        public static ILanguageRuntime ParseFromRuntime(string runtime)
-        {
-            return AvailableLanguages
-                .SelectMany(x => x.GetRuntimes())
-                .FirstOrDefault(x => x.Name == runtime);
+                $"We don't support version: {parts[1]} for language: {parts[0]}. Available versions are: {string.Join(", ", availableVersions.Select(x => x.Version))}");
         }
     }
 }

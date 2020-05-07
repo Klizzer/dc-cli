@@ -2,7 +2,7 @@ Name: [[FUNCTION_NAME]]
 
 Settings:
   Type: [[FUNCTION_TYPE]]
-  Runtime: [[LANGUAGE_RUNTIME]]
+  Language: [[LANGUAGE]]
   Template:
     Resources:
       [[FUNCTION_NAME]]Function:

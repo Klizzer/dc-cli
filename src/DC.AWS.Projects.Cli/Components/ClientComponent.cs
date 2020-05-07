@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
@@ -12,8 +11,8 @@ namespace DC.AWS.Projects.Cli.Components
     {
         private const string ConfigFileName = "client.config.yml";
         
-        private static readonly IImmutableDictionary<ClientType, Action<DirectoryInfo>> TypeHandlers =
-            new Dictionary<ClientType, Action<DirectoryInfo>>
+        private static readonly IImmutableDictionary<ClientType, Func<DirectoryInfo, Task>> TypeHandlers =
+            new Dictionary<ClientType, Func<DirectoryInfo, Task>>
             {
                 [ClientType.VueNuxt] = CreateVueNuxt
             }.ToImmutableDictionary();
@@ -61,7 +60,7 @@ namespace DC.AWS.Projects.Cli.Components
                 Templates.TemplateType.Services,
                 false);
             
-            TypeHandlers[clientType](dir);
+            await TypeHandlers[clientType](dir);
         }
         
         public Task<BuildResult> Build(IBuildContext context)
@@ -82,11 +81,14 @@ namespace DC.AWS.Projects.Cli.Components
             {
                 return new TestResult(true, "");
             }
-
-            var executionResult = await ProcessExecutor
-                .ExecuteBackground("yarn", "run test", Path.FullName);
+            
+            var testResult = await Docker
+                .CreateContainer("node")
+                .EntryPoint("yarn")
+                .WithVolume(Path.FullName, "/usr/local/src", true)
+                .Run("run test");
                 
-            return new TestResult(executionResult.ExitCode == 0, executionResult.Output);
+            return new TestResult(testResult.exitCode == 0, testResult.output);
         }
         
         public static IEnumerable<ClientComponent> FindAtPath(DirectoryInfo path)
@@ -101,16 +103,14 @@ namespace DC.AWS.Projects.Cli.Components
                     File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))));
         }
         
-        private static void CreateVueNuxt(DirectoryInfo dir)
+        private static Task CreateVueNuxt(DirectoryInfo dir)
         {
-            var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = "yarn",
-                Arguments = $"create nuxt-app {dir.Name}",
-                WorkingDirectory = dir.Parent?.FullName ?? ""
-            });
-
-            process?.WaitForExit();
+            return Docker
+                .CreateContainer("node")
+                .Interactive()
+                .EntryPoint("yarn")
+                .WithVolume(dir.Parent?.FullName ?? "", "/usr/local/src", true)
+                .Run($"create nuxt-app {dir.Name}");
         }
         
         private class PackageJsonData

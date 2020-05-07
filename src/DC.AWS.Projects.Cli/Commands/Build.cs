@@ -16,10 +16,8 @@ namespace DC.AWS.Projects.Cli.Commands
             var settings = await ProjectSettings.Read();
             
             var infrastructureDestination = Path.Combine(settings.ProjectRoot, "infrastructure/environment/.generated");
-            var configDestination = Path.Combine(settings.ProjectRoot, "config/.generated");
 
             Directories.Recreate(infrastructureDestination);
-            Directories.Recreate(configDestination);
 
             var components = Components.Components.BuildTree(settings, options.Path);
 
