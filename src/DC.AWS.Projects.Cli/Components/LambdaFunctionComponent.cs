@@ -9,8 +9,7 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class LambdaFunctionComponent : ICloudformationComponent, 
-        ISupplyCloudformationEnvironmentVariables,
+    public class LambdaFunctionComponent : ICloudformationComponent,
         IRestorableComponent,
         IBuildableComponent,
         ITestableComponent
@@ -68,29 +67,7 @@ namespace DC.AWS.Projects.Cli.Components
         {
             return _configuration.GetLanguage().Test(_path.FullName);
         }
-
-        public IImmutableDictionary<string, IImmutableDictionary<string, string>> GetResourceEnvironmentVariables(
-            ProjectSettings settings,
-            IImmutableDictionary<string, string> variableValues,
-            Func<string, string, string> askForValue)
-        {
-            var result = new Dictionary<string, IImmutableDictionary<string, string>>();
-            
-            foreach (var functionResource in _configuration.Settings.Template.Resources.Where(x => x.Value.Type == "AWS::Serverless::Function"))
-            {
-                var variables = GetFunctionEnvironmentVariables(
-                    functionResource.Key,
-                    _configuration.Settings.Template,
-                    functionResource.Value,
-                    variableValues,
-                    askForValue);
-
-                result[functionResource.Key] = variables;
-            }
-
-            return result.ToImmutableDictionary();
-        }
-
+        
         public Task<TemplateData> GetCloudformationData()
         {
             return Task.FromResult(_configuration.Settings.Template);
@@ -131,67 +108,6 @@ namespace DC.AWS.Projects.Cli.Components
                 ("FUNCTION_HANDLER", languageVersion.GetHandlerName()));
 
             return languageVersion;
-        }
-        
-        private static IImmutableDictionary<string, string> GetFunctionEnvironmentVariables(
-            string name,
-            TemplateData template,
-            TemplateData.ResourceData functionNode,
-            IImmutableDictionary<string, string> variableValues,
-            Func<string, string, string> askForValue)
-        {
-            if (!functionNode.Properties.ContainsKey("Environment") ||
-                !((IDictionary<object, object>) functionNode.Properties["Environment"]).ContainsKey("Variables"))
-            {
-                return new Dictionary<string, string>().ToImmutableDictionary();
-            }
-
-            var variables =
-                (IDictionary<object, object>) ((IDictionary<object, object>) functionNode.Properties["Environment"])[
-                    "Variables"];
-            
-            var resultVariables = new Dictionary<string, string>();
-
-            //TODO: Refactor
-            foreach (var variable in variables)
-            {
-                var variableName = variable.Key.ToString() ?? "";
-                
-                switch (variable.Value)
-                {
-                    case string variableValue:
-                        resultVariables[variableName] = variableValue;
-                        break;
-                    case IDictionary<object, object> objectVariableValue:
-                        if (objectVariableValue.ContainsKey("Ref"))
-                        {
-                            var refKey = objectVariableValue["Ref"].ToString() ?? "";
-
-                            if (template.Parameters.ContainsKey(refKey) &&
-                                     variableValues.ContainsKey(refKey))
-                            {
-                                resultVariables[variableName] = variableValues[refKey];
-                            }
-                            else if (template.Parameters.ContainsKey(refKey) &&
-                                     template.Parameters[refKey].ContainsKey("Default"))
-                            {
-                                resultVariables[variableName] = template.Parameters[refKey]["Default"];
-                            }
-                            else if (template.Parameters.ContainsKey(refKey))
-                            {
-                                resultVariables[variableName] =
-                                    askForValue($"Please enter value for parameter \"{refKey}\":", variableName);
-                            }
-                            else
-                            {
-                                resultVariables[variableName] = refKey;
-                            }
-                        }
-                        break;
-                }
-            }
-
-            return resultVariables.ToImmutableDictionary();
         }
         
         public static IEnumerable<LambdaFunctionComponent> FindAtPath(DirectoryInfo path)

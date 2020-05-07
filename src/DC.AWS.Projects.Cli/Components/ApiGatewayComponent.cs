@@ -83,35 +83,24 @@ namespace DC.AWS.Projects.Cli.Components
                     await File.ReadAllTextAsync(variableValuesFile))
                 : new Dictionary<string, string>().ToImmutableDictionary();
             
+            var template = (await components
+                    .FindAll<ICloudformationComponent>(Components.Direction.In)
+                    .Select(x => x.component.GetCloudformationData())
+                    .WhenAll())
+                .Merge();
+            
             var newVariables = new ConcurrentDictionary<string, string>();
-            var resourceEnvironmentVariables = new ConcurrentDictionary<string, ConcurrentDictionary<string, string>>();
-
-            foreach (var variableSupplier in 
-                components.FindAll<ISupplyCloudformationEnvironmentVariables>(Components.Direction.In))
-            {
-                var resources = variableSupplier
-                    .component
-                    .GetResourceEnvironmentVariables(
-                        _settings,
-                        currentVariables,
-                        (question, name) =>
-                        {
-                            var value = ConsoleInput.Ask(question);
-
-                            newVariables[name] = value;
-
-                            return value;
-                        });
-
-                foreach (var resource in resources)
+            var resourceEnvironmentVariables = template.FindEnvironmentVariables(
+                currentVariables,
+                (question, name) =>
                 {
-                    var variables =
-                        resourceEnvironmentVariables.GetOrAdd(resource.Key, new ConcurrentDictionary<string, string>());
+                    var value = ConsoleInput.Ask(question);
 
-                    foreach (var variable in resource.Value)
-                        variables.AddOrUpdate(variable.Key, variable.Value, (_, __) => variable.Value);
+                    newVariables[name] = value;
+
+                    return value;
                 }
-            }
+            );
 
             await File.WriteAllTextAsync(System.IO.Path.Combine(_tempPath.FullName, "environment.json"),
                 JsonConvert.SerializeObject(resourceEnvironmentVariables));
@@ -126,12 +115,6 @@ namespace DC.AWS.Projects.Cli.Components
 
             await File.WriteAllTextAsync(variableValuesFile, JsonConvert.SerializeObject(configuredVariables));
 
-            var template = (await components
-                    .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component.GetCloudformationData())
-                    .WhenAll())
-                .Merge();
-            
             var serializer = new Serializer();
 
             await File.WriteAllTextAsync(

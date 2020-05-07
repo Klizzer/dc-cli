@@ -51,6 +51,7 @@ namespace DC.AWS.Projects.Cli.Components
             components.AddRange(LocalProxyComponent.FindAtPath(directory));
             components.AddRange(CloudformationStackComponent.FindAtPath(directory, settings));
             components.AddRange(TerraformRootComponent.FindAtPath(directory));
+            components.AddRange(TerraformResourceComponent.FindAtPath(directory, settings));
 
             return new ComponentTree(components.ToImmutableList(), directory);
         }

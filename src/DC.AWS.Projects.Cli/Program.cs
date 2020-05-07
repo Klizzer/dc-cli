@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
 using DC.AWS.Projects.Cli.Commands;
@@ -9,8 +10,8 @@ namespace DC.AWS.Projects.Cli
     {
         public static async Task Main(string[] args)
         {
-            var command = args.Take(1).ToArray();
-            var commandArgs = args.Skip(1).ToArray();
+            var command = args.Take(1);
+            var commandArgs = args.Skip(1);
             
             var parsedArguments = Parser.Default.ParseArguments<
                 InfraSubCommand.Options,
@@ -22,7 +23,7 @@ namespace DC.AWS.Projects.Cli
         
         private static class InfraSubCommand
         {
-            public static async Task Setup(string[] args)
+            public static async Task Setup(IEnumerable<string> args)
             {
                 var parsedArguments = Parser.Default.ParseArguments<
                     AddProxy.Options,
@@ -47,7 +48,7 @@ namespace DC.AWS.Projects.Cli
         
         private static class ProjectSubCommand
         {
-            public static async Task Setup(string[] args)
+            public static async Task Setup(IEnumerable<string> args)
             {
                 var parsedArguments = Parser.Default.ParseArguments<
                     New.Options,
