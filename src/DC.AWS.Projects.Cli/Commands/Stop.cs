@@ -4,7 +4,7 @@ using CommandLine;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
-    public static class Restore
+    public static class Stop
     {
         public static async Task Execute(Options options)
         {
@@ -12,23 +12,24 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var components = Components.Components.BuildTree(settings, options.Path);
 
-            var restoreResult = await components.Restore();
+            var restoreResult = await components.Stop();
             
             Console.Write(restoreResult.Output);
 
             if (!restoreResult.Success)
-                throw new RestoreFailedException(settings.GetRootedPath(options.Path));
+                throw new StopFailedException(settings.GetRootedPath(options.Path));
         }
         
+        [Verb("stop", HelpText = "Stop the application.")]
         public class Options
         {
-            [Option('p', "path", HelpText = "Path to restore")]
+            [Option('p', "path", HelpText = "Path to stop")]
             public string Path { get; set; } = Environment.CurrentDirectory;
         }
         
-        private class RestoreFailedException : Exception
+        private class StopFailedException : Exception
         {
-            public RestoreFailedException(string path) : base($"Restore failed at: \"{path}\"")
+            public StopFailedException(string path) : base($"Stop failed at: \"{path}\"")
             {
                 
             }

@@ -6,39 +6,55 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class CloudformationComponent : IComponent
+    public class CloudformationComponent : ICloudformationComponent
     {
+        private readonly DirectoryInfo _path;
         private readonly string _fileName;
 
         private CloudformationComponent(DirectoryInfo path, string fileName)
         {
-            Path = path;
+            _path = path;
             _fileName = fileName;
         }
 
-        public string Name => Path.Name;
-        public DirectoryInfo Path { get; }
+        public string Name => _path.Name;
 
-        public Task<RestoreResult> Restore()
+        public Task<ComponentActionResult> Restore()
         {
-            return Task.FromResult(new RestoreResult(true, ""));
+            return Task.FromResult(new ComponentActionResult(true, ""));
         }
 
-        public async Task<BuildResult> Build(IBuildContext context)
+        public Task<ComponentActionResult> Build()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Test()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Start(Components.ComponentTree components)
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Stop()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Logs()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public async Task<TemplateData> GetCloudformationData()
         {
             var deserializer = new Deserializer();
 
-            var infraData =
-                deserializer.Deserialize<TemplateData>(await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, _fileName)));
-            
-            context.ExtendTemplate(infraData);
-
-            return new BuildResult(true, "");
-        }
-
-        public Task<TestResult> Test()
-        {
-            return Task.FromResult(new TestResult(true, ""));
+            return deserializer.Deserialize<TemplateData>(
+                await File.ReadAllTextAsync(Path.Combine(_path.FullName, _fileName)));
         }
 
         public static IEnumerable<CloudformationComponent> FindAtPath(DirectoryInfo path)

@@ -1,10 +1,8 @@
-using System.Collections.Immutable;
-
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class BuildResult : IComponentResult
+    public class ComponentActionResult
     {
-        public BuildResult(bool success, string output)
+        public ComponentActionResult(bool success, string output)
         {
             Success = success;
             Output = output;

@@ -8,9 +8,9 @@ namespace DC.AWS.Projects.Cli
         string Language { get; }
         string Version { get; }
 
-        Task<RestoreResult> Restore(string path);
-        Task<BuildResult> Build(string path);
-        Task<TestResult> Test(string path);
+        Task<ComponentActionResult> Restore(string path);
+        Task<ComponentActionResult> Build(string path);
+        Task<ComponentActionResult> Test(string path);
 
         string GetHandlerName();
         string GetFunctionOutputPath(string functionPath);

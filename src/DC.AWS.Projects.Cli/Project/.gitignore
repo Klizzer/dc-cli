@@ -9,6 +9,7 @@ obj/
 node_modules/
 .tools/
 .generated/
+.tmp/
 .env/
 .packages/
 .terraform/

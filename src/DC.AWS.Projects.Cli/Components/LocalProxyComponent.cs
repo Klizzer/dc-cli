@@ -11,31 +11,37 @@ namespace DC.AWS.Projects.Cli.Components
         private const string ConfigFileName = "proxy.config.yml";
 
         private readonly ProxyConfiguration _configuration;
+        private readonly Docker.Container _dockerContainer;
 
-        private LocalProxyComponent(DirectoryInfo path, ProxyConfiguration configuration)
+        private LocalProxyComponent(FileSystemInfo path, ProxyConfiguration configuration)
         {
-            Path = path;
             _configuration = configuration;
+
+            _dockerContainer = Docker
+                .ContainerFromImage("nginx", configuration.GetContainerName())
+                .Detached()
+                .Port(configuration.Settings.Port, 80)
+                .WithVolume(Path.Combine(path.FullName, "proxy.nginx.conf"), "/etc/nginx/nginx.conf")
+                .WithVolume(Path.Combine(path.FullName, "_paths"), "/etc/nginx/_paths");
         }
 
         public string Name => _configuration.Name;
-        public DirectoryInfo Path { get; }
 
         public static bool HasProxyAt(string path)
         {
-            return File.Exists(System.IO.Path.Combine(path, ConfigFileName));
+            return File.Exists(Path.Combine(path, ConfigFileName));
         }
 
         public static bool HasProxyPathFor(string path, int port)
         {
-            return HasProxyAt(path) && File.Exists(System.IO.Path.Combine(path, $"_paths/{port}-path.conf"));
+            return HasProxyAt(path) && File.Exists(Path.Combine(path, $"_paths/{port}-path.conf"));
         }
         
         public static async Task InitAt(ProjectSettings settings, string path, int? port)
         {
             var dir = new DirectoryInfo(settings.GetRootedPath(path));
             
-            if (File.Exists(System.IO.Path.Combine(dir.FullName, ConfigFileName)))
+            if (File.Exists(Path.Combine(dir.FullName, ConfigFileName)))
                 throw new InvalidCastException($"There is already a proxy configured at: {dir.FullName}");
             
             if (!dir.Exists)
@@ -45,58 +51,74 @@ namespace DC.AWS.Projects.Cli.Components
 
             await Templates.Extract(
                 "proxy.conf",
-                System.IO.Path.Combine(dir.FullName, "proxy.nginx.conf"),
+                Path.Combine(dir.FullName, "proxy.nginx.conf"),
                 Templates.TemplateType.Config);
 
             await Templates.Extract(
                 ConfigFileName,
-                System.IO.Path.Combine(dir.FullName, ConfigFileName),
+                Path.Combine(dir.FullName, ConfigFileName),
                 Templates.TemplateType.Infrastructure,
                 ("PROXY_NAME", dir.Name),
                 ("PORT", proxyPort.ToString()));
-
-            await Templates.Extract(
-                "proxy.make",
-                settings.GetRootedPath("services/proxy.make"),
-                Templates.TemplateType.Services,
-                false);
         }
 
         public static async Task AddProxyPath(ProjectSettings settings, string path, string baseUrl, int port)
         {
             var dir = new DirectoryInfo(settings.GetRootedPath(path));
             
-            if (!File.Exists(System.IO.Path.Combine(dir.FullName, ConfigFileName)))
+            if (!File.Exists(Path.Combine(dir.FullName, ConfigFileName)))
                 throw new InvalidCastException($"There is no proxy configured at: {dir.FullName}");
 
-            var pathsPath = new DirectoryInfo(System.IO.Path.Combine(dir.FullName, "_paths"));
+            var pathsPath = new DirectoryInfo(Path.Combine(dir.FullName, "_paths"));
             
             if (!pathsPath.Exists)
                 pathsPath.Create();
 
             await Templates.Extract(
                 "proxy-path.conf",
-                System.IO.Path.Combine(pathsPath.FullName, $"{port}-path.conf"),
+                Path.Combine(pathsPath.FullName, $"{port}-path.conf"),
                 Templates.TemplateType.Config,
                 ("BASE_URL", (baseUrl ?? "").TrimStart('/')),
                 ("PORT", port.ToString()));
         }
 
-        public Task<RestoreResult> Restore()
+        public Task<ComponentActionResult> Restore()
         {
-            return Task.FromResult(new RestoreResult(true, ""));
+            return Task.FromResult(new ComponentActionResult(true, ""));
         }
 
-        public Task<BuildResult> Build(IBuildContext context)
+        public Task<ComponentActionResult> Build()
         {
-            return Task.FromResult(new BuildResult(true, ""));
+            return Task.FromResult(new ComponentActionResult(true, ""));
         }
 
-        public Task<TestResult> Test()
+        public Task<ComponentActionResult> Test()
         {
-            return Task.FromResult(new TestResult(true, ""));
+            return Task.FromResult(new ComponentActionResult(true, ""));
         }
-        
+
+        public async Task<ComponentActionResult> Start(Components.ComponentTree components)
+        {
+            var response = await _dockerContainer.Run("");
+
+            return new ComponentActionResult(response.exitCode == 0, response.output);
+        }
+
+        public Task<ComponentActionResult> Stop()
+        {
+            Docker.Stop(_dockerContainer.Name);
+            Docker.Remove(_dockerContainer.Name);
+
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public async Task<ComponentActionResult> Logs()
+        {
+            var result = await Docker.Logs(_dockerContainer.Name);
+
+            return new ComponentActionResult(true, result);
+        }
+
         public static IEnumerable<LocalProxyComponent> FindAtPath(DirectoryInfo path)
         {
             if (!HasProxyAt(path.FullName)) 
@@ -106,13 +128,18 @@ namespace DC.AWS.Projects.Cli.Components
             yield return new LocalProxyComponent(
                 path,
                 deserializer.Deserialize<ProxyConfiguration>(
-                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))));
+                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))));
         }
         
         private class ProxyConfiguration
         {
             public string Name { get; set; }
             public ProxySettings Settings { get; set; }
+            
+            public string GetContainerName()
+            {
+                return Name;
+            }
             
             public class ProxySettings
             {

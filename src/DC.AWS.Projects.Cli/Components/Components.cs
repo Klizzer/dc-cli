@@ -29,7 +29,7 @@ namespace DC.AWS.Projects.Cli.Components
 
             var directory = new DirectoryInfo(settings.GetRootedPath(path));
 
-            var componentTree = GetTreeAt(directory);
+            var componentTree = GetTreeAt(directory, settings);
 
             var children = directory
                 .GetDirectories()
@@ -40,15 +40,16 @@ namespace DC.AWS.Projects.Cli.Components
             return ComponentTree.WithChildren(componentTree, children);
         }
 
-        private static ComponentTree GetTreeAt(DirectoryInfo directory)
+        private static ComponentTree GetTreeAt(DirectoryInfo directory, ProjectSettings settings)
         {
             var components = new List<IComponent>();
 
-            components.AddRange(ApiGatewayComponent.FindAtPath(directory));
+            components.AddRange(ApiGatewayComponent.FindAtPath(directory, settings));
             components.AddRange(LambdaFunctionComponent.FindAtPath(directory));
             components.AddRange(ClientComponent.FindAtPath(directory));
             components.AddRange(CloudformationComponent.FindAtPath(directory));
             components.AddRange(LocalProxyComponent.FindAtPath(directory));
+            components.AddRange(CloudformationStackComponent.FindAtPath(directory, settings));
 
             return new ComponentTree(components.ToImmutableList(), directory.FullName);
         }
@@ -77,58 +78,55 @@ namespace DC.AWS.Projects.Cli.Components
                 return tree;
             }
             
-            public Task<BuildResult> Build(BuildContext context)
+            public Task<ComponentActionResult> Build()
             {
-                return Run<BuildResult, BuildContext>(
-                    context,
-                    (ctx, component) => component.Build(ctx),
-                    ctx => ctx.OpenChildContext(),
-                    (success, output) => new BuildResult(success, output));
+                return Run((component, _) => component.Build());
             }
 
-            public Task<TestResult> Test()
+            public Task<ComponentActionResult> Test()
             {
-                return Run<TestResult, object>(
-                    null,
-                    (_, component) => component.Test(),
-                    _ => null,
-                    (success, output) => new TestResult(success, output));
+                return Run((component, _) => component.Test());
             }
 
-            public Task<RestoreResult> Restore()
+            public Task<ComponentActionResult> Restore()
             {
-                return Run<RestoreResult, object>(
-                    null,
-                    (_, component) => component.Restore(),
-                    _ => null,
-                    (success, output) => new RestoreResult(success, output));
+                return Run((component, _) => component.Restore());
             }
 
-            private async Task<TResult> Run<TResult, TContext>(
-                TContext context,
-                Func<TContext, IComponent, Task<TResult>> execute,
-                Func<TContext, TContext> openChildContext,
-                Func<bool, string, TResult> getResult) 
-                where TResult : IComponentResult
+            public Task<ComponentActionResult> Start()
+            {
+                return Run((component, tree) => component.Start(tree));
+            }
+
+            public Task<ComponentActionResult> Stop()
+            {
+                return Run((component, _) => component.Stop());
+            }
+
+            public Task<ComponentActionResult> Logs()
+            {
+                return Run((component, tree) => component.Logs());
+            }
+
+            private async Task<ComponentActionResult> Run(
+                Func<IComponent, ComponentTree, Task<ComponentActionResult>> execute)
             {
                 var success = true;
                 var output = new StringBuilder();
 
                 foreach (var component in Components)
                 {
-                    var result = await execute(context, component);
+                    var result = await execute(component, this);
 
                     if (!result.Success)
                         success = false;
 
                     output.Append(result.Output);
                 }
-
-                var childContext = openChildContext(context);
 
                 foreach (var child in Children)
                 {
-                    var result = await child.Run(childContext, execute, openChildContext, getResult);
+                    var result = await child.Run(execute);
 
                     if (!result.Success)
                         success = false;
@@ -136,7 +134,7 @@ namespace DC.AWS.Projects.Cli.Components
                     output.Append(result.Output);
                 }
 
-                return getResult(success, output.ToString());
+                return new ComponentActionResult(success, output.ToString());
             }
 
             public ComponentTree Find(string path)
@@ -209,7 +207,7 @@ namespace DC.AWS.Projects.Cli.Components
                 return result.ToImmutableList();
             }
 
-            private TComponent FindComponent<TComponent>(string name = null) where TComponent : class, IComponent
+            public TComponent FindComponent<TComponent>(string name = null) where TComponent : class, IComponent
             {
                 return Components
                     .OfType<TComponent>()

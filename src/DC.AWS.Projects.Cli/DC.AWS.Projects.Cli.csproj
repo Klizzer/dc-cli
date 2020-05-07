@@ -28,9 +28,6 @@
   <ItemGroup>
     <EmbeddedResource Include="Templates\Config\proxy-path.conf" />
     <EmbeddedResource Include="Templates\Config\proxy.conf" />
-    <EmbeddedResource Include="Templates\Services\api-gw.make" />
-    <EmbeddedResource Include="Templates\Services\proxy.make" />
-    <EmbeddedResource Include="Templates\Services\client.make" />
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\client.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-lambda-function.config.yml" />

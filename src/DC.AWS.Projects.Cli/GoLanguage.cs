@@ -36,38 +36,38 @@ namespace DC.AWS.Projects.Cli
                 _runtimeName = runtimeName;
 
                 _dockerContainer = Docker
-                    .CreateContainer($"golang:{dockerImageTag}")
+                    .TemporaryContainerFromImage($"golang:{dockerImageTag}")
                     .EntryPoint("go");
             }
 
             public string Language { get; } = LanguageName;
             public string Version { get; }
             
-            public async Task<RestoreResult> Restore(string path)
+            public async Task<ComponentActionResult> Restore(string path)
             {
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("get -v -t -d ./...");
 
-                return new RestoreResult(result.exitCode == 0, result.output);
+                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
             
-            public async Task<BuildResult> Build(string path)
+            public async Task<ComponentActionResult> Build(string path)
             {
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("build -o ./.out/main -v .");
                 
-                return new BuildResult(result.exitCode == 0, result.output);
+                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
-            public async Task<TestResult> Test(string path)
+            public async Task<ComponentActionResult> Test(string path)
             {
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("test -run ''");
 
-                return new TestResult(result.exitCode == 0, result.output);
+                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
             public string GetHandlerName()

@@ -10,7 +10,7 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class LambdaFunctionComponent : IComponent
+    public class LambdaFunctionComponent : ICloudformationComponent, ISupplyCloudformationEnvironmentVariables
     {
         private const string ConfigFileName = "lambda-func.config.yml";
         
@@ -20,16 +20,16 @@ namespace DC.AWS.Projects.Cli.Components
                 [FunctionTrigger.Api] = SetupApiTrigger
             }.ToImmutableDictionary();
 
+        private readonly DirectoryInfo _path;
         private readonly FunctionConfiguration _configuration;
         
         private LambdaFunctionComponent(DirectoryInfo path, FunctionConfiguration configuration)
         {
-            Path = path;
+            _path = path;
             _configuration = configuration;
         }
 
         public string Name => _configuration.Name;
-        public DirectoryInfo Path { get; }
 
         public static async Task InitAt(ProjectSettings settings,
             FunctionTrigger trigger,
@@ -47,54 +47,65 @@ namespace DC.AWS.Projects.Cli.Components
             var executingAssembly = Assembly.GetExecutingAssembly();
 
             await Directories.Copy(
-                System.IO.Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{runtime.Language}"), 
+                Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{runtime.Language}"), 
                 path);
         }
 
-        public Task<RestoreResult> Restore()
+        public Task<ComponentActionResult> Restore()
         {
-            var languageVersion = _configuration.GetLanguage();
-
-            return languageVersion.Restore(Path.FullName);
+            return _configuration.GetLanguage().Restore(_path.FullName);
         }
 
-        public async Task<BuildResult> Build(IBuildContext context)
+        public async Task<ComponentActionResult> Build()
         {
-            var infraData = await LoadTemplate();
+            return await _configuration.GetLanguage().Build(_path.FullName);
+        }
+
+        public Task<ComponentActionResult> Test()
+        {
+            return _configuration.GetLanguage().Test(_path.FullName);
+        }
+
+        public Task<ComponentActionResult> Start(Components.ComponentTree components)
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Stop()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Logs()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public IImmutableDictionary<string, IImmutableDictionary<string, string>> GetResourceEnvironmentVariables(
+            ProjectSettings settings,
+            IImmutableDictionary<string, string> variableValues,
+            Func<string, string, string> askForValue)
+        {
+            var result = new Dictionary<string, IImmutableDictionary<string, string>>();
             
-            context.ExtendTemplate(infraData);
-
-            var functionResources = FindAllFunctions(infraData);
-
-            foreach (var functionResource in functionResources)
+            foreach (var functionResource in _configuration.Settings.Template.Resources.Where(x => x.Value.Type == "AWS::Serverless::Function"))
             {
-                HandleFunctionTemplate(
+                var variables = GetFunctionEnvironmentVariables(
                     functionResource.Key,
-                    infraData,
+                    _configuration.Settings.Template,
                     functionResource.Value,
-                    context.ProjectSettings);
+                    variableValues,
+                    askForValue);
+
+                result[functionResource.Key] = variables;
             }
 
-            var languageVersion = _configuration.GetLanguage();
-
-            return await languageVersion.Build(Path.FullName);
+            return result.ToImmutableDictionary();
         }
 
-        public Task<TestResult> Test()
+        public Task<TemplateData> GetCloudformationData()
         {
-            var languageVersion = _configuration.GetLanguage();
-
-            return languageVersion.Test(Path.FullName);
-        }
-
-        private async Task<TemplateData> LoadTemplate()
-        {
-            var deserializer = new Deserializer();
-
-            var functionConfig = deserializer.Deserialize<FunctionConfiguration>(
-                await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, ConfigFileName)));
-
-            return functionConfig.Settings.Template;
+            return Task.FromResult(_configuration.Settings.Template);
         }
 
         private static async Task<ILanguageVersion> SetupApiTrigger(
@@ -119,7 +130,7 @@ namespace DC.AWS.Projects.Cli.Components
             
             await Templates.Extract(
                 "api-lambda-function.config.yml",
-                settings.GetRootedPath(System.IO.Path.Combine(path.FullName, ConfigFileName)),
+                settings.GetRootedPath(Path.Combine(path.FullName, ConfigFileName)),
                 Templates.TemplateType.Infrastructure,
                 ("FUNCTION_NAME", path.Name),
                 ("FUNCTION_TYPE", "api"),
@@ -134,34 +145,17 @@ namespace DC.AWS.Projects.Cli.Components
             return languageVersion;
         }
         
-        private static IImmutableDictionary<string, TemplateData.ResourceData> FindAllFunctions(TemplateData templateData)
-        {
-            return templateData
-                .Resources
-                .Where(x => x.Value.Type == "AWS::Serverless::Function")
-                .ToImmutableDictionary(x => x.Key, x => x.Value);
-        }
-        
-        private static void HandleFunctionTemplate(
+        private static IImmutableDictionary<string, string> GetFunctionEnvironmentVariables(
             string name,
             TemplateData template,
             TemplateData.ResourceData functionNode,
-            ProjectSettings settings)
+            IImmutableDictionary<string, string> variableValues,
+            Func<string, string, string> askForValue)
         {
-            var variableValuesFileDirectory = System.IO.Path.Combine(settings.ProjectRoot, ".env");
-            
-            var environmentVariablesFilePath = System.IO.Path.Combine(variableValuesFileDirectory, "environment.variables.json");
-            
-            if (!Directory.Exists(variableValuesFileDirectory))
-                Directory.CreateDirectory(variableValuesFileDirectory);
-            
-            if (!File.Exists(environmentVariablesFilePath))
-                File.WriteAllText(environmentVariablesFilePath, "{}");
-            
             if (!functionNode.Properties.ContainsKey("Environment") ||
                 !((IDictionary<object, object>) functionNode.Properties["Environment"]).ContainsKey("Variables"))
             {
-                return;
+                return new Dictionary<string, string>().ToImmutableDictionary();
             }
 
             var variables =
@@ -169,13 +163,6 @@ namespace DC.AWS.Projects.Cli.Components
                     "Variables"];
             
             var resultVariables = new Dictionary<string, string>();
-
-            var variableValuesFilePath = System.IO.Path.Combine(variableValuesFileDirectory, "variables.json");
-
-            var variableValues = new Dictionary<string, string>();
-            
-            if (File.Exists(variableValuesFilePath))
-                variableValues = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(variableValuesFilePath));
 
             //TODO: Refactor
             foreach (var variable in variables)
@@ -192,15 +179,10 @@ namespace DC.AWS.Projects.Cli.Components
                         {
                             var refKey = objectVariableValue["Ref"].ToString() ?? "";
 
-                            if (variableValues.ContainsKey($"{name}.EnvironmentVariable.{refKey}"))
+                            if (template.Parameters.ContainsKey(refKey) &&
+                                     variableValues.ContainsKey(refKey))
                             {
-                                resultVariables[variableName] =
-                                    variableValues[$"{name}.EnvironmentVariable.{refKey}"];
-                            }
-                            else if (template.Parameters.ContainsKey(refKey) &&
-                                     variableValues.ContainsKey($"Variable.{refKey}"))
-                            {
-                                resultVariables[variableName] = variableValues[$"Variable.{refKey}"];
+                                resultVariables[variableName] = variableValues[refKey];
                             }
                             else if (template.Parameters.ContainsKey(refKey) &&
                                      template.Parameters[refKey].ContainsKey("Default"))
@@ -209,12 +191,8 @@ namespace DC.AWS.Projects.Cli.Components
                             }
                             else if (template.Parameters.ContainsKey(refKey))
                             {
-                                Console.WriteLine($"Please enter value for parameter \"{refKey}\":");
-                                var parameterValue = Console.ReadLine();
-
-                                resultVariables[variableName] = parameterValue;
-
-                                variableValues[$"Variable.{refKey}"] = parameterValue;
+                                resultVariables[variableName] =
+                                    askForValue($"Please enter value for parameter \"{refKey}\":", variableName);
                             }
                             else
                             {
@@ -224,28 +202,20 @@ namespace DC.AWS.Projects.Cli.Components
                         break;
                 }
             }
-            
-            File.WriteAllText(variableValuesFilePath, JsonConvert.SerializeObject(variableValues));
 
-            var currentEnvironmentVariables =
-                JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(
-                    File.ReadAllText(environmentVariablesFilePath));
-
-            currentEnvironmentVariables[name] = resultVariables;
-            
-            File.WriteAllText(environmentVariablesFilePath, JsonConvert.SerializeObject(currentEnvironmentVariables));
+            return resultVariables.ToImmutableDictionary();
         }
         
         public static IEnumerable<LambdaFunctionComponent> FindAtPath(DirectoryInfo path)
         {
-            if (!File.Exists(System.IO.Path.Combine(path.FullName, ConfigFileName))) 
+            if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
                 yield break;
             
             var deserializer = new Deserializer();
             yield return new LambdaFunctionComponent(
                 path,
                 deserializer.Deserialize<FunctionConfiguration>(
-                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))));
+                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))));
         }
         
         private class FunctionConfiguration

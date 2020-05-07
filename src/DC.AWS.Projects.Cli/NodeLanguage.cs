@@ -43,34 +43,34 @@ namespace DC.AWS.Projects.Cli
                 _runtimeName = runtimeName;
 
                 _dockerContainer = Docker
-                    .CreateContainer($"node:{dockerImageTag}")
+                    .TemporaryContainerFromImage($"node:{dockerImageTag}")
                     .EntryPoint("yarn");
             }
 
             public string Language { get; } = LanguageName;
             public string Version { get; }
 
-            public async Task<RestoreResult> Restore(string path)
+            public async Task<ComponentActionResult> Restore(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
-                    return new RestoreResult(true, "");
+                    return new ComponentActionResult(true, "");
                 
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
                     .Run("");
 
-                return new RestoreResult(result.exitCode == 0, result.output);
+                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
-            public Task<BuildResult> Build(string path)
+            public Task<ComponentActionResult> Build(string path)
             {
-                return Task.FromResult(new BuildResult(true, ""));
+                return Task.FromResult(new ComponentActionResult(true, ""));
             }
 
-            public async Task<TestResult> Test(string path)
+            public async Task<ComponentActionResult> Test(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
-                    return new TestResult(true, "");
+                    return new ComponentActionResult(true, "");
 
                 var packageData =
                     Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(path, "package.json")));
@@ -78,14 +78,14 @@ namespace DC.AWS.Projects.Cli
                 if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
                     .ContainsKey("test"))
                 {
-                    return new TestResult(true, "");
+                    return new ComponentActionResult(true, "");
                 }
                 
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
                     .Run("run test");
 
-                return new TestResult(result.exitCode == 0, result.output);
+                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
             public string GetHandlerName()

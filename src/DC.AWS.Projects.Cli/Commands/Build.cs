@@ -1,11 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
-using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -14,38 +9,15 @@ namespace DC.AWS.Projects.Cli.Commands
         public static async Task Execute(Options options)
         {
             var settings = await ProjectSettings.Read();
-            
-            var infrastructureDestination = Path.Combine(settings.ProjectRoot, "infrastructure/environment/.generated");
-
-            Directories.Recreate(infrastructureDestination);
 
             var components = Components.Components.BuildTree(settings, options.Path);
-
-            var context = BuildContext.New(settings);
-
-            var result = await components.Build(context);
+            
+            var result = await components.Build();
             
             Console.Write(result.Output);
 
             if (!result.Success)
                 throw new BuildFailedException(settings.GetRootedPath(options.Path));
-            
-            var initialTemplates = settings.GetRootedPath(options.Path) == settings.ProjectRoot
-                ? new List<string>
-                {
-                    "project.yml"
-                }
-                : new List<string>();
-
-            var templates = context.GetTemplates(initialTemplates.ToImmutableList());
-
-            var serializer = new Serializer();
-            
-            foreach (var template in templates)
-            {
-                await File.WriteAllTextAsync(Path.Combine(infrastructureDestination, template.Key),
-                    serializer.Serialize(template.Value));
-            }
         }
         
         [Verb("build", HelpText = "Build the project.")]

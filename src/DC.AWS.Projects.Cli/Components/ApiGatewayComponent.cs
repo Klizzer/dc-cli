@@ -1,21 +1,41 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class ApiGatewayComponent : IComponent
+    public class ApiGatewayComponent : ICloudformationComponent
     {
-        public const string ConfigFileName = "api-gw.config.yml";
+        private const string ConfigFileName = "api-gw.config.yml";
 
         private readonly ApiConfiguration _configuration;
+        private readonly Docker.Container _dockerContainer;
+        private readonly DirectoryInfo _tempPath;
+        private readonly ProjectSettings _settings;
         
-        private ApiGatewayComponent(DirectoryInfo path, ApiConfiguration configuration)
+        private ApiGatewayComponent(DirectoryInfo path, ApiConfiguration configuration, ProjectSettings settings)
         {
             Path = path;
             _configuration = configuration;
+            _settings = settings;
+            _dockerContainer = Docker
+                .ContainerFromFile(
+                    settings.GetRootedPath("infrastructure/containers/sam"),
+                    configuration.GetContainerImageName(),
+                    configuration.GetContainerName())
+                .WithDockerSocket()
+                .WithVolume(path.FullName, $"/usr/src/app/${settings.GetRelativePath(path.FullName)}")
+                .WithVolume(System.IO.Path.Combine(path.FullName, ".tmp/environment.json"), "/usr/src/app/environment.json")
+                .WithVolume(System.IO.Path.Combine(path.FullName, ".tmp/template.yml"), "/usr/src/app/template.yml")
+                .Port(configuration.Settings.Port, 3000);
+
+            _tempPath = new DirectoryInfo(System.IO.Path.Combine(path.FullName, ".tmp"));
         }
 
         public string BaseUrl => _configuration.Settings.BaseUrl;
@@ -47,38 +67,122 @@ namespace DC.AWS.Projects.Cli.Components
                 ("PORT", apiPort.ToString()),
                 ("DEFAULT_LANGUAGE", language),
                 ("BASE_URL", baseUrl));
+        }
+
+        public Task<ComponentActionResult> Restore()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Build()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public Task<ComponentActionResult> Test()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
+        }
+
+        public async Task<ComponentActionResult> Start(Components.ComponentTree components)
+        {
+            if (_tempPath.Exists)
+                _tempPath.Delete();
+                
+            _tempPath.Create();
+
+            var variableValuesFile = _settings.GetRootedPath(".env/variables.json");
+
+            var currentVariables = File.Exists(variableValuesFile)
+                ? JsonConvert.DeserializeObject<IImmutableDictionary<string, string>>(
+                    await File.ReadAllTextAsync(variableValuesFile))
+                : new Dictionary<string, string>().ToImmutableDictionary();
             
-            await Templates.Extract(
-                "api-gw.make",
-                settings.GetRootedPath("services/api-gw.make"),
-                Templates.TemplateType.Services,
-                false);
-        }
+            var newVariables = new ConcurrentDictionary<string, string>();
+            var resourceEnvironmentVariables = new ConcurrentDictionary<string, ConcurrentDictionary<string, string>>();
 
-        public Task<RestoreResult> Restore()
-        {
-            return Task.FromResult(new RestoreResult(true, ""));
-        }
+            foreach (var variableSupplier in 
+                components.FindAll<ISupplyCloudformationEnvironmentVariables>(Components.Direction.In))
+            {
+                var resources = variableSupplier
+                    .component
+                    .GetResourceEnvironmentVariables(
+                        _settings,
+                        currentVariables,
+                        (question, name) =>
+                        {
+                            var value = ConsoleInput.Ask(question);
 
-        public async Task<BuildResult> Build(IBuildContext context)
-        {
-            var deserializer = new Deserializer();
+                            newVariables[name] = value;
 
-            var apiConfiguration =
-                deserializer.Deserialize<ApiConfiguration>(
-                    await File.ReadAllTextAsync(System.IO.Path.Combine(Path.FullName, ConfigFileName)));
+                            return value;
+                        });
+
+                foreach (var resource in resources)
+                {
+                    var variables =
+                        resourceEnvironmentVariables.GetOrAdd(resource.Key, new ConcurrentDictionary<string, string>());
+
+                    foreach (var variable in resource.Value)
+                        variables.AddOrUpdate(variable.Key, variable.Value, (_, __) => variable.Value);
+                }
+            }
+
+            await File.WriteAllTextAsync(System.IO.Path.Combine(_tempPath.FullName, "environment.json"),
+                JsonConvert.SerializeObject(resourceEnvironmentVariables));
+
+            var configuredVariables = currentVariables.ToDictionary(x => x.Key, x => x.Value);
+
+            foreach (var newVariable in newVariables)
+                configuredVariables[newVariable.Key] = newVariable.Value;
+
+            if (!Directory.Exists(_settings.GetRootedPath(".env")))
+                Directory.CreateDirectory(_settings.GetRootedPath(".env"));
+
+            await File.WriteAllTextAsync(variableValuesFile, JsonConvert.SerializeObject(configuredVariables));
+
+            var template = (await components
+                    .FindAll<ICloudformationComponent>(Components.Direction.In)
+                    .Select(x => x.component.GetCloudformationData())
+                    .WhenAll())
+                .Merge();
             
-            context.AddTemplate($"{Path.Name}.api.yml");
-            context.ExtendTemplate(apiConfiguration.Settings.Template);
- 
-            return new BuildResult(true, "");
+            var serializer = new Serializer();
+
+            await File.WriteAllTextAsync(
+                System.IO.Path.Combine(_tempPath.FullName, "template.yml"),
+                serializer.Serialize(template));
+            
+            var result = await _dockerContainer
+                .Detached()
+                .Run($"local start-api --env-vars ./environment.json --docker-volume-basedir \"{Path.FullName}\" --host 0.0.0.0");
+
+            return new ComponentActionResult(result.exitCode == 0, result.output);
         }
 
-        public Task<TestResult> Test()
+        public Task<ComponentActionResult> Stop()
         {
-            return Task.FromResult(new TestResult(true, ""));
+            Docker.Stop(_dockerContainer.Name);
+            Docker.Remove(_dockerContainer.Name);
+            
+            if (_tempPath.Exists)
+                _tempPath.Delete();
+
+            return Task.FromResult(new ComponentActionResult(true, ""));
         }
-        
+
+        public async Task<ComponentActionResult> Logs()
+        {
+            var result = await Docker.Logs(_dockerContainer.Name);
+
+            return new ComponentActionResult(true, result);
+        }
+
+        public Task<TemplateData> GetCloudformationData()
+        {
+            return Task.FromResult(_configuration.Settings.Template);
+        }
+
         public ILanguageVersion GetDefaultLanguage(ProjectSettings settings)
         {
             return FunctionLanguage.Parse(_configuration.Settings.DefaultLanguage) ?? settings.GetDefaultLanguage();
@@ -95,7 +199,7 @@ namespace DC.AWS.Projects.Cli.Components
             return $"/{url}/{path}";
         }
 
-        public static IEnumerable<ApiGatewayComponent> FindAtPath(DirectoryInfo path)
+        public static IEnumerable<ApiGatewayComponent> FindAtPath(DirectoryInfo path, ProjectSettings settings)
         {
             if (!File.Exists(System.IO.Path.Combine(path.FullName, ConfigFileName))) 
                 yield break;
@@ -104,13 +208,26 @@ namespace DC.AWS.Projects.Cli.Components
             yield return new ApiGatewayComponent(
                 path,
                 deserializer.Deserialize<ApiConfiguration>(
-                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))));
+                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))),
+                settings);
         }
         
         private class ApiConfiguration
         {
             public string Name { get; set; }
             public ApiSettings Settings { get; set; }
+
+            public string GetContainerImageName()
+            {
+                //TODO:Use better name
+                return Name;
+            }
+
+            public string GetContainerName()
+            {
+                //TODO: Use better name
+                return Name;
+            }
             
             public class ApiSettings
             {
