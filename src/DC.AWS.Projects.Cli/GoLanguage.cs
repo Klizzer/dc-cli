@@ -43,10 +43,17 @@ namespace DC.AWS.Projects.Cli
             public string Language { get; } = LanguageName;
             public string Version { get; }
             
+            public async Task<RestoreResult> Restore(string path)
+            {
+                var result = await _dockerContainer
+                    .WithVolume(path, "/usr/local/src", true)
+                    .Run("get -v -t -d ./...");
+
+                return new RestoreResult(result.exitCode == 0, result.output);
+            }
+            
             public async Task<BuildResult> Build(string path)
             {
-                await Restore(path);
-
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("build -o ./.out/main -v .");
@@ -56,20 +63,11 @@ namespace DC.AWS.Projects.Cli
 
             public async Task<TestResult> Test(string path)
             {
-                await Restore(path);
-                
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("test -run ''");
 
                 return new TestResult(result.exitCode == 0, result.output);
-            }
-
-            private Task Restore(string path)
-            {
-                return _dockerContainer
-                    .WithVolume(path, "/usr/local/src", true)
-                    .Run("get -v -t -d ./...");
             }
 
             public string GetHandlerName()

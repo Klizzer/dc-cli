@@ -69,6 +69,10 @@ ifeq ($(CONFIGURE), true)
 	$(DC_CLI_COMMAND) configure -s
 endif
 
+.PHONY: restore
+restore:
+	$(DC_CLI_COMMAND) restore
+
 .PHONY: build
 build:
 	$(DC_CLI_COMMAND) build

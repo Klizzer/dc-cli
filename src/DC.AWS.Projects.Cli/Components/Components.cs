@@ -77,62 +77,66 @@ namespace DC.AWS.Projects.Cli.Components
                 return tree;
             }
             
-            public async Task<BuildResult> Build(BuildContext context)
+            public Task<BuildResult> Build(BuildContext context)
             {
-                var buildSuccess = true;
-                var buildOutput = new StringBuilder();
-
-                foreach (var component in Components)
-                {
-                    var buildResult = await component.Build(context);
-
-                    if (!buildResult.Success)
-                        buildSuccess = false;
-
-                    buildOutput.Append(buildResult.Output);
-                }
-
-                var childBuildContext = context.OpenChildContext();
-
-                foreach (var child in Children)
-                {
-                    var buildResult = await child.Build(childBuildContext);
-
-                    if (!buildResult.Success)
-                        buildSuccess = false;
-
-                    buildOutput.Append(buildResult.Output);
-                }
-
-                return new BuildResult(buildSuccess, buildOutput.ToString());
+                return Run<BuildResult, BuildContext>(
+                    context,
+                    (ctx, component) => component.Build(ctx),
+                    ctx => ctx.OpenChildContext(),
+                    (success, output) => new BuildResult(success, output));
             }
 
-            public async Task<TestResult> Test()
+            public Task<TestResult> Test()
             {
-                var testSuccess = true;
-                var testOutput = new StringBuilder();
+                return Run<TestResult, object>(
+                    null,
+                    (_, component) => component.Test(),
+                    _ => null,
+                    (success, output) => new TestResult(success, output));
+            }
+
+            public Task<RestoreResult> Restore()
+            {
+                return Run<RestoreResult, object>(
+                    null,
+                    (_, component) => component.Restore(),
+                    _ => null,
+                    (success, output) => new RestoreResult(success, output));
+            }
+
+            private async Task<TResult> Run<TResult, TContext>(
+                TContext context,
+                Func<TContext, IComponent, Task<TResult>> execute,
+                Func<TContext, TContext> openChildContext,
+                Func<bool, string, TResult> getResult) 
+                where TResult : IComponentResult
+            {
+                var success = true;
+                var output = new StringBuilder();
 
                 foreach (var component in Components)
                 {
-                    var testResult = await component.Test();
+                    var result = await execute(context, component);
 
-                    if (!testResult.Success)
-                        testSuccess = false;
+                    if (!result.Success)
+                        success = false;
 
-                    testOutput.Append(testResult.Output);
+                    output.Append(result.Output);
                 }
+
+                var childContext = openChildContext(context);
 
                 foreach (var child in Children)
                 {
-                    var testResult = await child.Test();
+                    var result = await child.Run(childContext, execute, openChildContext, getResult);
 
-                    if (!testResult.Success)
-                        testSuccess = false;
+                    if (!result.Success)
+                        success = false;
 
-                    testOutput.Append(testResult.Output);
+                    output.Append(result.Output);
                 }
 
-                return new TestResult(testSuccess, testOutput.ToString());
+                return getResult(success, output.ToString());
             }
 
             public ComponentTree Find(string path)

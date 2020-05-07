@@ -8,6 +8,7 @@ namespace DC.AWS.Projects.Cli
         string Language { get; }
         string Version { get; }
 
+        Task<RestoreResult> Restore(string path);
         Task<BuildResult> Build(string path);
         Task<TestResult> Test(string path);
 

@@ -7,6 +7,7 @@ namespace DC.AWS.Projects.Cli.Components
     {
         string Name { get; }
         DirectoryInfo Path { get; }
+        Task<RestoreResult> Restore();
         Task<BuildResult> Build(IBuildContext context);
         Task<TestResult> Test();
     }

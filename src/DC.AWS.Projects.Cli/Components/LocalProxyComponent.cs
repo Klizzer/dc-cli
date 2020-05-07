@@ -81,7 +81,12 @@ namespace DC.AWS.Projects.Cli.Components
                 ("BASE_URL", (baseUrl ?? "").TrimStart('/')),
                 ("PORT", port.ToString()));
         }
-        
+
+        public Task<RestoreResult> Restore()
+        {
+            return Task.FromResult(new RestoreResult(true, ""));
+        }
+
         public Task<BuildResult> Build(IBuildContext context)
         {
             return Task.FromResult(new BuildResult(true, ""));

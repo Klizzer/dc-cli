@@ -49,17 +49,22 @@ namespace DC.AWS.Projects.Cli
 
             public string Language { get; } = LanguageName;
             public string Version { get; }
-            
-            public async Task<BuildResult> Build(string path)
+
+            public async Task<RestoreResult> Restore(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
-                    return new BuildResult(true, "");
-
+                    return new RestoreResult(true, "");
+                
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
                     .Run("");
 
-                return new BuildResult(result.exitCode == 0, result.output);
+                return new RestoreResult(result.exitCode == 0, result.output);
+            }
+
+            public Task<BuildResult> Build(string path)
+            {
+                return Task.FromResult(new BuildResult(true, ""));
             }
 
             public async Task<TestResult> Test(string path)

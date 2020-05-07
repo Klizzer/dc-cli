@@ -22,7 +22,8 @@ namespace DC.AWS.Projects.Cli
                 Test.Options,
                 AddProxy.Options,
                 AddProxyPath.Options,
-                AutoProxy.Options>(args);
+                AutoProxy.Options,
+                Restore.Options>(args);
 
             await parsedArguments.WithParsedAsync<New.Options>(New.Execute);
             await parsedArguments.WithParsedAsync<Init.Options>(Init.Execute);
@@ -38,6 +39,7 @@ namespace DC.AWS.Projects.Cli
             await parsedArguments.WithParsedAsync<AddProxy.Options>(AddProxy.Execute);
             await parsedArguments.WithParsedAsync<AddProxyPath.Options>(AddProxyPath.Execute);
             await parsedArguments.WithParsedAsync<AutoProxy.Options>(AutoProxy.Execute);
+            await parsedArguments.WithParsedAsync<Restore.Options>(Restore.Execute);
         }
     }
 }

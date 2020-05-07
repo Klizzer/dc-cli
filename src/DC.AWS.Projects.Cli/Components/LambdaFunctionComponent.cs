@@ -50,7 +50,14 @@ namespace DC.AWS.Projects.Cli.Components
                 System.IO.Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{runtime.Language}"), 
                 path);
         }
-        
+
+        public Task<RestoreResult> Restore()
+        {
+            var languageVersion = _configuration.GetLanguage();
+
+            return languageVersion.Restore(Path.FullName);
+        }
+
         public async Task<BuildResult> Build(IBuildContext context)
         {
             var infraData = await LoadTemplate();

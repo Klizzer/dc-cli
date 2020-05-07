@@ -18,7 +18,12 @@ namespace DC.AWS.Projects.Cli.Components
 
         public string Name => Path.Name;
         public DirectoryInfo Path { get; }
-        
+
+        public Task<RestoreResult> Restore()
+        {
+            return Task.FromResult(new RestoreResult(true, ""));
+        }
+
         public async Task<BuildResult> Build(IBuildContext context)
         {
             var deserializer = new Deserializer();

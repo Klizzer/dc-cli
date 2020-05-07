@@ -18,11 +18,17 @@ namespace DC.AWS.Projects.Cli.Components
             }.ToImmutableDictionary();
 
         private readonly ClientConfiguration _configuration;
+        private readonly Docker.Container _dockerContainer;
         
         private ClientComponent(DirectoryInfo path, ClientConfiguration configuration)
         {
             Path = path;
             _configuration = configuration;
+
+            _dockerContainer = Docker
+                .CreateContainer("node")
+                .EntryPoint("yarn")
+                .WithVolume(Path.FullName, "/usr/local/src", true);
         }
 
         public string BaseUrl => _configuration.Settings.BaseUrl;
@@ -63,9 +69,17 @@ namespace DC.AWS.Projects.Cli.Components
             
             await TypeHandlers[clientType](dir);
         }
-        
+
+        public async Task<RestoreResult> Restore()
+        {
+            var result = await _dockerContainer.Run("");
+
+            return new RestoreResult(result.exitCode == 0, result.output);
+        }
+
         public Task<BuildResult> Build(IBuildContext context)
         {
+            //TODO: Build in prod
             return Task.FromResult(new BuildResult(true, ""));
         }
 
