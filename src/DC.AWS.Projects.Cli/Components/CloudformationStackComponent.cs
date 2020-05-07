@@ -14,7 +14,7 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class CloudformationStackComponent : IComponent
+    public class CloudformationStackComponent : IStartableComponent, ISupplyLogs, IHavePackageResources
     {
         private static readonly HttpClient HttpClient = new HttpClient();
         
@@ -23,18 +23,24 @@ namespace DC.AWS.Projects.Cli.Components
             {
                 ["AWS::DynamoDB::Table"] = HandleTable
             }.ToImmutableDictionary();
-
-        private static readonly IImmutableDictionary<string, int> InternalPorts = new Dictionary<string, int>().ToImmutableDictionary();
         
         private const string ConfigFileName = "cloudformation-stack.config.yml";
 
         private readonly CloudformationStackConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
+        private readonly DirectoryInfo _path;
+        private readonly ProjectSettings _projectSettings;
 
-        private CloudformationStackComponent(CloudformationStackConfiguration configuration, ProjectSettings settings)
+        private CloudformationStackComponent(
+            CloudformationStackConfiguration configuration,
+            ProjectSettings settings,
+            DirectoryInfo path, 
+            ProjectSettings projectSettings)
         {
             _configuration = configuration;
-            
+            _path = path;
+            _projectSettings = projectSettings;
+
             var dataDir = new DirectoryInfo(configuration.GetDataDir(settings));
             
             if (!dataDir.Exists)
@@ -57,7 +63,6 @@ namespace DC.AWS.Projects.Cli.Components
         }
 
         public string Name => _configuration.Name;
-        public int MainPort => _configuration.Settings.MainPort;
 
         public static async Task InitAt(
             ProjectSettings settings,
@@ -80,11 +85,12 @@ namespace DC.AWS.Projects.Cli.Components
             var configuration = new CloudformationStackConfiguration
             {
                 Name = name,
-                Settings = new CloudformationStackConfiguration.LocalstackSettings
+                Settings = new CloudformationStackConfiguration.CloudformationStackSettings
                 {
                     Services = services,
                     MainPort = mainPort,
-                    ServicesPort = servicesPort
+                    ServicesPort = servicesPort,
+                    DeploymentBucketName = $"{name}-deployments"
                 }
             };
 
@@ -92,22 +98,7 @@ namespace DC.AWS.Projects.Cli.Components
                 Path.Combine(dir.FullName, ConfigFileName),
                 serializer.Serialize(configuration));
         }
-
-        public Task<ComponentActionResult> Restore()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Build()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Test()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
+        
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
             var startResult = await _dockerContainer.Run("");
@@ -150,6 +141,76 @@ namespace DC.AWS.Projects.Cli.Components
             var result = await Docker.Logs(_dockerContainer.Name);
 
             return new ComponentActionResult(true, result);
+        }
+        
+        public async Task<IImmutableList<PackageResource>> GetPackageResources(
+            Components.ComponentTree components,
+            string version)
+        {
+            var tempDir = new DirectoryInfo(Path.Combine(_path.FullName, ".tmp"));
+            
+            if (tempDir.Exists)
+                tempDir.Delete(true);
+            
+            tempDir.Create();
+            
+            var outputDir = new DirectoryInfo(Path.Combine(tempDir.FullName, "output"));
+            
+            outputDir.Create();
+            
+            var template = (await components
+                    .FindAll<ICloudformationComponent>(Components.Direction.In)
+                    .Select(x => x.component.GetCloudformationData())
+                    .WhenAll())
+                .Merge();
+            
+            var serializer = new Serializer();
+
+            await File.WriteAllTextAsync(
+                Path.Combine(tempDir.FullName, "template.yml"),
+                serializer.Serialize(template));
+
+            var cliDocker = Docker.TemporaryContainerFromImage("amazon/aws-cli")
+                .WithVolume("~/.aws", "/root/.aws")
+                .WithVolume(
+                    _projectSettings.GetRootedPath(""),
+                    $"/usr/src/app/${_projectSettings.GetRelativePath(_path.FullName)}")
+                .WorkDir("/usr/src/app");
+
+            await cliDocker
+                .WithVolume(
+                    _projectSettings.GetRootedPath("infrastructure/deployment-bucket.yml"),
+                    "/usr/src/app/template.yml")
+                .WithVolume(tempDir.FullName, "/usr/src/app/output")
+                .Run(@$"cloudformation deploy 
+                                        --stack-name {_configuration.GetDeploymentStackName()} 
+                                        --parameter-overrides DeploymentBucketName={_configuration.Settings.DeploymentBucketName} 
+                                        --no-fail-on-empty-changeset 
+                                        --region {_projectSettings.AwsRegion}");
+
+            await cliDocker
+                .WithVolume(
+                    _projectSettings.GetRootedPath(""),
+                    $"/usr/src/app/${_projectSettings.GetRelativePath(_path.FullName)}")
+                .WithVolume(outputDir.FullName, "/usr/src/app/output")
+                .WithVolume(Path.Combine(tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
+                .Run(@$"cloudformation package 
+                                        --output-template-file ./output/template.yml
+                                        --s3-bucket {_configuration.Settings.DeploymentBucketName}
+                                        --s3-prefix {version}");
+            
+            var result = new List<PackageResource>();
+
+            foreach (var file in outputDir.EnumerateFiles())
+            {
+                result.Add(new PackageResource(
+                    _projectSettings.GetRelativePath(file.FullName, components.Path.FullName),
+                    await File.ReadAllBytesAsync(file.FullName)));
+            }
+            
+            tempDir.Delete();
+
+            return result.ToImmutableList();
         }
 
         private async Task<bool> WaitForStart(TimeSpan timeout)
@@ -245,6 +306,8 @@ namespace DC.AWS.Projects.Cli.Components
             yield return new CloudformationStackComponent(
                 deserializer.Deserialize<CloudformationStackConfiguration>(
                     File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))),
+                settings,
+                path,
                 settings);
         }
         
@@ -265,7 +328,7 @@ namespace DC.AWS.Projects.Cli.Components
                 }.ToImmutableDictionary();
             
             public string Name { get; set; }
-            public LocalstackSettings Settings { get; set; }
+            public CloudformationStackSettings Settings { get; set; }
 
             public string GetContainerName()
             {
@@ -278,6 +341,11 @@ namespace DC.AWS.Projects.Cli.Components
                 return settings.GetRootedPath($"./localstack/{Name}");
             }
 
+            public string GetDeploymentStackName()
+            {
+                return $"{Name}-deployments";
+            }
+            
             public IImmutableList<string> GetConfiguredServices()
             {
                 var services = new List<string>();
@@ -293,12 +361,13 @@ namespace DC.AWS.Projects.Cli.Components
                 return services.ToImmutableList();
             }
             
-            public class LocalstackSettings
+            public class CloudformationStackSettings
             {
                 public int MainPort { get; set; }
                 public int ServicesPort { get; set; }
                 public string LocalstackVersion { get; set; } = "latest";
                 public IImmutableList<string> Services { get; set; }
+                public string DeploymentBucketName { get; set; }
             }
         }
         

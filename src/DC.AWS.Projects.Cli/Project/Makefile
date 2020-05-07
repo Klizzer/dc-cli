@@ -15,10 +15,6 @@ else
 endif
 
 CONFIGURE ?= true
-AWS_REGION ?= [[AWS_REGION]]
-DEPLOYMENT_BUCKET_NAME ?= $(PROJECT_NAME)-deployments
-DEPLOYMENT_STACK_NAME ?= $(DEPLOYMENT_BUCKET_NAME)
-VERSION_NUMBER ?= $(shell date +%Y.%m.%d.%H%M%S)
 NUGET_FEED_URL ?= [[NUGET_FEED_URL]]
 NUGET_API_KEY ?=
 
@@ -38,57 +34,39 @@ else
 	rm ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
 endif
 ifeq ($(CONFIGURE), true)
-	$(DC_CLI_COMMAND) configure -s
+	$(DC_CLI_COMMAND) project configure -s
 endif
 
 .PHONY: restore
 restore:
-	$(DC_CLI_COMMAND) restore
+	$(DC_CLI_COMMAND) project restore
 
 .PHONY: build
 build:
-	$(DC_CLI_COMMAND) build
+	$(DC_CLI_COMMAND) project build
 
 .PHONY: test
 test: build
-	$(DC_CLI_COMMAND) test
+	$(DC_CLI_COMMAND) project test
 
 .PHONY: start
 start: build
-	$(DC_CLI_COMMAND) start
+	$(DC_CLI_COMMAND) project start
 
 .PHONY: stop
 stop:
-	$(DC_CLI_COMMAND) stop
+	$(DC_CLI_COMMAND) project stop
 
 .PHONY: package
 package: build
 ifeq ($(DETECTED_OS), Windows)
 	if exist .packages del .packages
 	mkdir .packages
-	copy /B /Y .\infrastructure\environment\.generated\project.yml .\project.$(VERSION_NUMBER).yml
 else
 	rm -rf ./.packages
 	mkdir ./.packages
-	cp ./infrastructure/environment/.generated/project.yml ./project.$(VERSION_NUMBER).yml
 endif
-	aws cloudformation deploy \
-		--template-file ./infrastructure/deployment-bucket.yml \
-		--stack-name $(DEPLOYMENT_STACK_NAME) \
-		--parameter-overrides DeploymentBucketName=$(DEPLOYMENT_BUCKET_NAME) \
-		--no-fail-on-empty-changeset \
-		--region $(AWS_REGION)
-	aws cloudformation package \
-		--template-file ./project.$(VERSION_NUMBER).yml \
-		--output-template-file ./infrastructure/environment/.generated/project.packaged.yml \
-		--s3-bucket $(DEPLOYMENT_BUCKET_NAME) \
-		--s3-prefix $(VERSION_NUMBER)
-ifeq ($(DETECTED_OS), Windows)
-	del .\project.$(VERSION_NUMBER).yml
-else
-	zip -r ./.packages/$(PROJECT_NAME).$(VERSION_NUMBER).zip ./infrastructure/environment/
-	rm ./project.$(VERSION_NUMBER).yml
-endif
+	$(DC_CLI_COMMAND) infra package
 ifdef NUGET_FEED_URL
 	$(foreach file, $(wildcard ./.packages/*), dotnet nuget push $(file) --skip-duplicate  -k $(NUGET_API_KEY) -s $(NUGET_FEED_URL);)
 endif

@@ -12,22 +12,19 @@ namespace DC.AWS.Projects.Cli
     {
         public static Container TemporaryContainerFromImage(string image)
         {
-            var initialArguments = new List<string>();
-            
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                initialArguments.Add("--user \"$(id -u):$(id -g)\"");
-            
-            return new Container(Guid.NewGuid().ToString(), image, initialArguments.ToImmutableList());
+            return ContainerFromImage(image, null);
         }
         
         public static Container ContainerFromImage(string image, string name)
         {
-            var initialArguments = new List<string>();
-            
+            Pull(image);
+
+            var container = new Container(name, image);
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                initialArguments.Add("--user \"$(id -u):$(id -g)\"");
-            
-            return new Container(name, image, initialArguments.ToImmutableList());
+                container = container.WithArgument("--user \"$(id -u):$(id -g)\"");
+
+            return container;
         }
         
         public static Container ContainerFromFile(string path, string imageName, string containerName)
@@ -43,6 +40,19 @@ namespace DC.AWS.Projects.Cli
             process?.WaitForExit();
             
             return ContainerFromImage(imageName, containerName);
+        }
+
+        public static void Pull(string image)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = $"pull {image}"
+            };
+            
+            var process = Process.Start(startInfo);
+
+            process?.WaitForExit();
         }
 
         public static void Stop(string name)
@@ -142,7 +152,7 @@ namespace DC.AWS.Projects.Cli
             {
                 var container = WithArgument($"-v \"{source}:{destination}\"");
                 
-                return useAsWorkDir ? container.EntryPoint(destination) : container;
+                return useAsWorkDir ? container.WorkDir(destination) : container;
             }
 
             public Container WorkDir(string path)
@@ -157,10 +167,10 @@ namespace DC.AWS.Projects.Cli
 
             public Container Temporary()
             {
-                return new Container(Guid.NewGuid().ToString(), _image, _interactive, _dockerArguments);
+                return new Container(null, _image, _interactive, _dockerArguments);
             }
             
-            private Container WithArgument(string argument)
+            public Container WithArgument(string argument)
             {
                 var newArguments = !_dockerArguments.Contains(argument) 
                     ? _dockerArguments.Add(argument)
@@ -172,11 +182,14 @@ namespace DC.AWS.Projects.Cli
             public async Task<(int exitCode, string output)> Run(string command)
             {
                 var arguments = string.Join(" ", _dockerArguments);
+
+                if (!string.IsNullOrEmpty(Name))
+                    arguments = $"--name {Name} {arguments}";
                 
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "docker",
-                    Arguments = $"run --name {Name} {arguments} {_image} {command}"
+                    Arguments = $"run {arguments} {_image} {command}"
                 };
 
                 Func<Process, Task<string>> getOutput = x => Task.FromResult("");

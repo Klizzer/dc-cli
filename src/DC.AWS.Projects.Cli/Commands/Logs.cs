@@ -12,7 +12,7 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var components = Components.Components.BuildTree(settings, options.Path);
 
-            var restoreResult = await components.Stop();
+            var restoreResult = await components.Logs();
             
             Console.Write(restoreResult.Output);
         }

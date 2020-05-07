@@ -5,12 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class LambdaFunctionComponent : ICloudformationComponent, ISupplyCloudformationEnvironmentVariables
+    public class LambdaFunctionComponent : ICloudformationComponent, 
+        ISupplyCloudformationEnvironmentVariables,
+        IRestorableComponent,
+        IBuildableComponent,
+        ITestableComponent
     {
         private const string ConfigFileName = "lambda-func.config.yml";
         
@@ -64,21 +67,6 @@ namespace DC.AWS.Projects.Cli.Components
         public Task<ComponentActionResult> Test()
         {
             return _configuration.GetLanguage().Test(_path.FullName);
-        }
-
-        public Task<ComponentActionResult> Start(Components.ComponentTree components)
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Stop()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Logs()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
         }
 
         public IImmutableDictionary<string, IImmutableDictionary<string, string>> GetResourceEnvironmentVariables(

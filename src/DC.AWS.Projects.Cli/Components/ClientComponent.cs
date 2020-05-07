@@ -7,7 +7,11 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class ClientComponent : IComponent
+    public class ClientComponent : IBuildableComponent, 
+        ITestableComponent,
+        IRestorableComponent,
+        IStartableComponent,
+        ISupplyLogs
     {
         private const string ConfigFileName = "client.config.yml";
         

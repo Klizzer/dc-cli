@@ -6,7 +6,7 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class LocalProxyComponent : IComponent
+    public class LocalProxyComponent : IStartableComponent, ISupplyLogs
     {
         private const string ConfigFileName = "proxy.config.yml";
 
@@ -80,21 +80,6 @@ namespace DC.AWS.Projects.Cli.Components
                 Templates.TemplateType.Config,
                 ("BASE_URL", (baseUrl ?? "").TrimStart('/')),
                 ("PORT", port.ToString()));
-        }
-
-        public Task<ComponentActionResult> Restore()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Build()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Test()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
         }
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)

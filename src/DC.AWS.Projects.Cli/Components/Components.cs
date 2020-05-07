@@ -50,23 +50,23 @@ namespace DC.AWS.Projects.Cli.Components
             components.AddRange(CloudformationComponent.FindAtPath(directory));
             components.AddRange(LocalProxyComponent.FindAtPath(directory));
             components.AddRange(CloudformationStackComponent.FindAtPath(directory, settings));
+            components.AddRange(TerraformRootComponent.FindAtPath(directory));
 
-            return new ComponentTree(components.ToImmutableList(), directory.FullName);
+            return new ComponentTree(components.ToImmutableList(), directory);
         }
 
         public class ComponentTree
         {
-            private readonly string _path;
-            
-            public ComponentTree(IImmutableList<IComponent> components, string path)
+            public ComponentTree(IImmutableList<IComponent> components, DirectoryInfo path)
             {
                 Components = components;
-                _path = path;
+                Path = path;
             }
 
             public ComponentTree Parent { get; private set; }
             public IImmutableList<IComponent> Components { get; }
             public IImmutableList<ComponentTree> Children { get; private set; }
+            public DirectoryInfo Path { get; }
             
             public static ComponentTree WithChildren(ComponentTree tree, IImmutableList<ComponentTree> children)
             {
@@ -80,41 +80,65 @@ namespace DC.AWS.Projects.Cli.Components
             
             public Task<ComponentActionResult> Build()
             {
-                return Run((component, _) => component.Build());
+                return Run<IBuildableComponent>((component, _) => component.Build());
             }
 
             public Task<ComponentActionResult> Test()
             {
-                return Run((component, _) => component.Test());
+                return Run<ITestableComponent>((component, _) => component.Test());
             }
 
             public Task<ComponentActionResult> Restore()
             {
-                return Run((component, _) => component.Restore());
+                return Run<IRestorableComponent>((component, _) => component.Restore());
             }
 
             public Task<ComponentActionResult> Start()
             {
-                return Run((component, tree) => component.Start(tree));
+                return Run<IStartableComponent>((component, tree) => component.Start(tree));
             }
 
             public Task<ComponentActionResult> Stop()
             {
-                return Run((component, _) => component.Stop());
+                return Run<IStartableComponent>((component, _) => component.Stop());
             }
 
             public Task<ComponentActionResult> Logs()
             {
-                return Run((component, tree) => component.Logs());
+                return Run<ISupplyLogs>((component, tree) => component.Logs());
             }
 
-            private async Task<ComponentActionResult> Run(
-                Func<IComponent, ComponentTree, Task<ComponentActionResult>> execute)
+            public async Task<IImmutableList<PackageResult>> Package(string version)
+            {
+                var results = new List<PackageResult>();
+
+                foreach (var package in Components.OfType<IPackageApplication>())
+                {
+                    var resources = (await FindAll<IHavePackageResources>(Direction.In)
+                            .Select(x => x.component.GetPackageResources(this, version))
+                            .WhenAll())
+                        .SelectMany(x => x)
+                        .ToImmutableList();
+
+                    var result = await package.Package(resources, version);
+                    
+                    results.Add(result);
+                }
+
+                foreach (var child in Children)
+                    results.AddRange(await child.Package(version));
+
+                return results.ToImmutableList();
+            }
+
+            private async Task<ComponentActionResult> Run<TComponentType>(
+                Func<TComponentType, ComponentTree, Task<ComponentActionResult>> execute) 
+                where TComponentType : IComponent
             {
                 var success = true;
                 var output = new StringBuilder();
 
-                foreach (var component in Components)
+                foreach (var component in Components.OfType<TComponentType>())
                 {
                     var result = await execute(component, this);
 
@@ -139,7 +163,7 @@ namespace DC.AWS.Projects.Cli.Components
 
             public ComponentTree Find(string path)
             {
-                if (_path == path)
+                if (Path.FullName == path)
                     return this;
 
                 return Children

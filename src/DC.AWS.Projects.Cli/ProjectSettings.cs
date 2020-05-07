@@ -15,6 +15,7 @@ namespace DC.AWS.Projects.Cli
         }
         
         public string DefaultLanguage { private get; set; }
+        public string AwsRegion { get; set; }
 
         [JsonIgnore]
         public string ProjectRoot { get; set; }
@@ -24,12 +25,13 @@ namespace DC.AWS.Projects.Cli
             return FunctionLanguage.Parse(DefaultLanguage);
         }
 
-        public static ProjectSettings New(ILanguageVersion defaultLanguage, string path)
+        public static ProjectSettings New(ILanguageVersion defaultLanguage, string awsRegion, string path)
         {
             return new ProjectSettings
             {
                 DefaultLanguage = defaultLanguage?.ToString(),
-                ProjectRoot = path
+                ProjectRoot = path,
+                AwsRegion = awsRegion
             };
         }
         
@@ -71,9 +73,9 @@ namespace DC.AWS.Projects.Cli
             return Path.Combine(Environment.CurrentDirectory, path);
         }
 
-        public string GetRelativePath(string path)
+        public string GetRelativePath(string path, string fromPath = null)
         {
-            return GetRootedPath(path).Substring(ProjectRoot.Length).Substring(1);
+            return GetRootedPath(path).Substring(GetRootedPath(fromPath ?? "").Length).Substring(1);
         }
         
         public static int GetRandomUnusedPort()

@@ -19,36 +19,6 @@ namespace DC.AWS.Projects.Cli.Components
 
         public string Name => _path.Name;
 
-        public Task<ComponentActionResult> Restore()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Build()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Test()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Start(Components.ComponentTree components)
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Stop()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Logs()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
         public async Task<TemplateData> GetCloudformationData()
         {
             var deserializer = new Deserializer();

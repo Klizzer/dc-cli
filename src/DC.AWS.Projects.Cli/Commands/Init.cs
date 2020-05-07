@@ -14,7 +14,7 @@ namespace DC.AWS.Projects.Cli.Commands
             if (File.Exists(Path.Combine(options.GetRootedPath(), ".project.settings")))
                 throw new InvalidOperationException("This project is already initialized.");
 
-            var projectSettings = ProjectSettings.New(options.GetLanguage(), options.GetRootedPath());
+            var projectSettings = ProjectSettings.New(options.GetLanguage(), options.AwsRegion, options.GetRootedPath());
 
             await projectSettings.Save();
             

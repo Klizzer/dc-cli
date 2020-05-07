@@ -10,7 +10,7 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class ApiGatewayComponent : ICloudformationComponent
+    public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, ISupplyLogs
     {
         private const string ConfigFileName = "api-gw.config.yml";
 
@@ -69,25 +69,10 @@ namespace DC.AWS.Projects.Cli.Components
                 ("BASE_URL", baseUrl));
         }
 
-        public Task<ComponentActionResult> Restore()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Build()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
-        public Task<ComponentActionResult> Test()
-        {
-            return Task.FromResult(new ComponentActionResult(true, ""));
-        }
-
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
             if (_tempPath.Exists)
-                _tempPath.Delete();
+                _tempPath.Delete(true);
                 
             _tempPath.Create();
 
@@ -166,7 +151,7 @@ namespace DC.AWS.Projects.Cli.Components
             Docker.Remove(_dockerContainer.Name);
             
             if (_tempPath.Exists)
-                _tempPath.Delete();
+                _tempPath.Delete(true);
 
             return Task.FromResult(new ComponentActionResult(true, ""));
         }
