@@ -15,7 +15,7 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           strategy: regex
           tag_prefix: "v"
-          root: "src/DC.AWS.Projects.Cli/DC.Cli.csproj"
+          root: "src/DC.Cli/DC.Cli.csproj"
           regex_pattern: "<Version>((0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?)</Version>"
       - name: Build Packages
         if: steps.tag_release.outputs.tagname
