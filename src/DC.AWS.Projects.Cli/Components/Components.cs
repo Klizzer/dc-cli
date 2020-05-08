@@ -12,6 +12,7 @@ using DC.AWS.Projects.Cli.Components.Aws.LambdaFunction;
 using DC.AWS.Projects.Cli.Components.Client;
 using DC.AWS.Projects.Cli.Components.Nginx;
 using DC.AWS.Projects.Cli.Components.Terraform;
+using MAB.DotIgnore;
 
 namespace DC.AWS.Projects.Cli.Components
 {
@@ -35,26 +36,31 @@ namespace DC.AWS.Projects.Cli.Components
             
             if (!dir.Exists)
                 dir.Create();
+
+            var ignoreFile = settings.GetRootedPath(".dcignore");
+            var ignores = new List<string>();
+
+            if (File.Exists(ignoreFile))
+                ignores = (await File.ReadAllLinesAsync(ignoreFile)).ToList();
             
-            return (await BuildTreeFrom(settings, settings.ProjectRoot)).Find(dir.FullName);
+            var ignoreList = new IgnoreList(ignores);
+            
+            return (await BuildTreeFrom(settings, settings.ProjectRoot, ignoreList)).Find(dir.FullName);
         }
         
-        private static async Task<ComponentTree> BuildTreeFrom(ProjectSettings settings, string path)
+        private static async Task<ComponentTree> BuildTreeFrom(
+            ProjectSettings settings,
+            string path,
+            IgnoreList ignoreList)
         {
-            var directoriesToIgnore = new List<string>
-            {
-                "node_modules",
-                ".localstack"
-            };
-
             var directory = new DirectoryInfo(settings.GetRootedPath(path));
 
             var componentTree = await GetTreeAt(directory, settings);
 
             var children = (await directory
                 .GetDirectories()
-                .Where(x => !directoriesToIgnore.Any(y => x.Name == y || x.FullName == y || x.FullName.StartsWith(y)))
-                .Select(childDirectory => BuildTreeFrom(settings, childDirectory.FullName))
+                .Where(x => !ignoreList.IsIgnored(new DirectoryInfo(settings.GetRelativePath(x.FullName))))
+                .Select(childDirectory => BuildTreeFrom(settings, childDirectory.FullName, ignoreList))
                 .WhenAll())
                 .ToImmutableList();
 
@@ -75,23 +81,24 @@ namespace DC.AWS.Projects.Cli.Components
 
         public class ComponentTree
         {
+            private ComponentTree _parent;
+            private IImmutableList<IComponent> _components;
+            private IImmutableList<ComponentTree> _children;
+            
             public ComponentTree(IImmutableList<IComponent> components, DirectoryInfo path)
             {
-                Components = components;
+                _components = components;
                 Path = path;
             }
-
-            public ComponentTree Parent { get; private set; }
-            public IImmutableList<IComponent> Components { get; private set; }
-            public IImmutableList<ComponentTree> Children { get; private set; }
+            
             public DirectoryInfo Path { get; }
             
             public static ComponentTree WithChildren(ComponentTree tree, IImmutableList<ComponentTree> children)
             {
-                tree.Children = children;
+                tree._children = children;
 
                 foreach (var child in children)
-                    child.Parent = tree;
+                    child._parent = tree;
 
                 return tree;
             }
@@ -113,7 +120,7 @@ namespace DC.AWS.Projects.Cli.Components
                         newComponents.Add(component);
                 }
 
-                Components = Components.AddRange(newComponents);
+                _components = _components.AddRange(newComponents);
 
                 if (newComponents.OfType<INeedConfiguration>().Any())
                 {
@@ -127,7 +134,7 @@ namespace DC.AWS.Projects.Cli.Components
             {
                 var newConfigurations = new Dictionary<string, (string value, INeedConfiguration.ConfigurationType configurationType)>();
 
-                var requiredConfigurations = Components
+                var requiredConfigurations = _components
                     .OfType<INeedConfiguration>()
                     .SelectMany(x => x.GetRequiredConfigurations())
                     .ToImmutableList();
@@ -164,7 +171,7 @@ namespace DC.AWS.Projects.Cli.Components
                 if (!recursive) 
                     return;
                 
-                foreach (var child in Children)
+                foreach (var child in _children)
                     child.Configure(settings, true, overwrite);
             }
             
@@ -202,7 +209,7 @@ namespace DC.AWS.Projects.Cli.Components
             {
                 var results = new List<PackageResult>();
 
-                foreach (var package in Components.OfType<IPackageApplication>())
+                foreach (var package in _components.OfType<IPackageApplication>())
                 {
                     var resources = (await FindAll<IHavePackageResources>(Direction.In)
                             .Select(x => x.component.GetPackageResources(this, version))
@@ -215,7 +222,7 @@ namespace DC.AWS.Projects.Cli.Components
                     results.Add(result);
                 }
 
-                foreach (var child in Children)
+                foreach (var child in _children)
                     results.AddRange(await child.Package(version));
 
                 return results.ToImmutableList();
@@ -228,7 +235,7 @@ namespace DC.AWS.Projects.Cli.Components
                 var success = true;
                 var output = new StringBuilder();
 
-                foreach (var component in Components.OfType<TComponentType>())
+                foreach (var component in _components.OfType<TComponentType>())
                 {
                     var result = await execute(component, this);
 
@@ -238,7 +245,7 @@ namespace DC.AWS.Projects.Cli.Components
                     output.Append(result.Output);
                 }
 
-                foreach (var child in Children)
+                foreach (var child in _children)
                 {
                     var result = await child.Run(execute);
 
@@ -256,7 +263,7 @@ namespace DC.AWS.Projects.Cli.Components
                 if (Path.FullName == path)
                     return this;
 
-                return Children
+                return _children
                     .Select(x => x.Find(path))
                     .FirstOrDefault(x => x != null);
             }
@@ -280,14 +287,14 @@ namespace DC.AWS.Projects.Cli.Components
                             if (matchingComponent != null)
                                 return matchingComponent;
 
-                            foreach (var child in tree.Children)
+                            foreach (var child in tree._children)
                                 queue.Enqueue(child);
                         }
 
                         return null;
 
                     case Direction.Out:
-                        return FindComponent<TComponent>(name) ?? Parent?.FindComponent<TComponent>(name);
+                        return FindComponent<TComponent>(name) ?? _parent?.FindComponent<TComponent>(name);
 
                     default:
                         throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
@@ -297,7 +304,7 @@ namespace DC.AWS.Projects.Cli.Components
             public IImmutableList<(ComponentTree tree, TComponent component)> FindAll<TComponent>(Direction direction)
                 where TComponent : IComponent
             {
-                var result = Components
+                var result = _components
                     .OfType<TComponent>()
                     .Select(x => (this, x))
                     .ToList();
@@ -305,12 +312,12 @@ namespace DC.AWS.Projects.Cli.Components
                 switch (direction)
                 {
                     case Direction.In:
-                        foreach (var child in Children)
+                        foreach (var child in _children)
                             result.AddRange(child.FindAll<TComponent>(direction));
                         
                         break;
                     case Direction.Out:
-                        result.AddRange(Parent?.FindAll<TComponent>(direction) ??
+                        result.AddRange(_parent?.FindAll<TComponent>(direction) ??
                                         Enumerable.Empty<(ComponentTree, TComponent)>());
                         
                         break;
@@ -323,7 +330,7 @@ namespace DC.AWS.Projects.Cli.Components
 
             public IImmutableList<(ComponentTree tree, TComponent component)> FindAllFirstLevel<TComponent>()
             {
-                var result = Components
+                var result = _components
                     .OfType<TComponent>()
                     .Select(x => (this, x))
                     .ToList();
@@ -331,15 +338,15 @@ namespace DC.AWS.Projects.Cli.Components
                 if (result.Any())
                     return result.ToImmutableList();
 
-                foreach (var child in Children)
+                foreach (var child in _children)
                     result.AddRange(child.FindAllFirstLevel<TComponent>());
 
                 return result.ToImmutableList();
             }
 
-            public TComponent FindComponent<TComponent>(string name = null) where TComponent : class, IComponent
+            private TComponent FindComponent<TComponent>(string name = null) where TComponent : class, IComponent
             {
-                return Components
+                return _components
                     .OfType<TComponent>()
                     .FirstOrDefault(x => string.IsNullOrEmpty(name) || x.Name == name);
             }
