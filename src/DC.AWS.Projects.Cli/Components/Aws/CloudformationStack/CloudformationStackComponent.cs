@@ -154,11 +154,15 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
                     $"/usr/src/app/{_projectSettings.GetRelativePath(_path.FullName)}")
                 .WorkDir("/usr/src/app");
 
+            await Templates.Extract(
+                "deployment-bucket.yml",
+                Path.Combine(tempDir.FullName, "deployment-bucket.yml"),
+                Templates.TemplateType.Infrastructure);
+            
             await cliDocker
                 .WithVolume(
-                    _projectSettings.GetRootedPath("infrastructure/deployment-bucket.yml"),
+                    Path.Combine(tempDir.FullName, "deployment-bucket.yml"),
                     "/usr/src/app/template.yml")
-                .WithVolume(tempDir.FullName, "/usr/src/app/output")
                 .Run($"cloudformation deploy --template-file ./template.yml --stack-name {_configuration.Settings.DeploymentStackName} --parameter-overrides DeploymentBucketName={_configuration.Settings.DeploymentBucketName} --no-fail-on-empty-changeset --region {_configuration.Settings.AwsRegion}");
 
             await cliDocker

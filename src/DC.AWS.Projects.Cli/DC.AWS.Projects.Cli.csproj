@@ -32,7 +32,7 @@
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-lambda-function.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\proxy.config.yml" />
-    <None Remove="Containers\sam\Dockerfile" />
     <EmbeddedResource Include="Containers\sam\Dockerfile" />
+    <EmbeddedResource Include="Templates\Infrastructure\deployment-bucket.yml" />
   </ItemGroup>
 </Project>
