@@ -14,11 +14,11 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var components = Components.Components.BuildTree(settings, settings.GetRootedPath(options.Path));
 
-            var apis = components.FindAll<ApiGatewayComponent>(Components.Components.Direction.In);
+            var rootHttpEndpoints = components.FindAllFirstLevel<IHaveHttpEndpoint>();
 
-            foreach (var api in apis)
+            foreach (var endpoint in rootHttpEndpoints)
             {
-                var proxyPath = settings.GetRootedPath(Path.Combine($"proxy/api-{api.component.Name}"));
+                var proxyPath = settings.GetRootedPath(Path.Combine($"proxy/{endpoint.component.Name}"));
 
                 if (!LocalProxyComponent.HasProxyAt(proxyPath))
                 {
@@ -26,23 +26,23 @@ namespace DC.AWS.Projects.Cli.Commands
 
                     if (!options.AssignPorts)
                     {
-                        Console.WriteLine($"Adding proxy for api: {api.component.Name}. Please enter a port to use:");
+                        Console.WriteLine($"Adding proxy for component: {endpoint.component.Name}. Please enter a port to use:");
                         port = int.Parse(Console.ReadLine() ?? "");
                     }
 
                     await LocalProxyComponent.InitAt(settings, proxyPath, port);
                 }
 
-                if (!LocalProxyComponent.HasProxyPathFor(proxyPath, api.component.Port))
+                if (!LocalProxyComponent.HasProxyPathFor(proxyPath, endpoint.component.Port))
                 {
                     await LocalProxyComponent.AddProxyPath(
                         settings,
                         proxyPath,
-                        api.component.BaseUrl,
-                        api.component.Port);
+                        endpoint.component.BaseUrl,
+                        endpoint.component.Port);
                 }
 
-                var clients = api.tree.FindAll<ClientComponent>(Components.Components.Direction.In);
+                var clients = endpoint.tree.FindAll<IHaveHttpEndpoint>(Components.Components.Direction.In);
 
                 foreach (var client in clients)
                 {

@@ -11,7 +11,8 @@ namespace DC.AWS.Projects.Cli.Components
         ITestableComponent,
         IRestorableComponent,
         IStartableComponent,
-        ISupplyLogs
+        ISupplyLogs,
+        IHaveHttpEndpoint
     {
         private const string ConfigFileName = "client.config.yml";
         

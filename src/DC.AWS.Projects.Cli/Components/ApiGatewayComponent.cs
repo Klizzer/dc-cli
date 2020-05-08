@@ -10,7 +10,7 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, ISupplyLogs
+    public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, ISupplyLogs, IHaveHttpEndpoint
     {
         private const string ConfigFileName = "api-gw.config.yml";
 
@@ -24,18 +24,18 @@ namespace DC.AWS.Projects.Cli.Components
             Path = path;
             _configuration = configuration;
             _settings = settings;
+            _tempPath = new DirectoryInfo(System.IO.Path.Combine(path.FullName, ".tmp"));
+            
             _dockerContainer = Docker
                 .ContainerFromFile(
-                    settings.GetRootedPath("infrastructure/containers/sam"),
+                    "sam",
                     configuration.GetContainerImageName(),
                     configuration.GetContainerName())
                 .WithDockerSocket()
                 .WithVolume(path.FullName, $"/usr/src/app/${settings.GetRelativePath(path.FullName)}")
-                .WithVolume(System.IO.Path.Combine(path.FullName, ".tmp/environment.json"), "/usr/src/app/environment.json")
-                .WithVolume(System.IO.Path.Combine(path.FullName, ".tmp/template.yml"), "/usr/src/app/template.yml")
+                .WithVolume(System.IO.Path.Combine(_tempPath.FullName, "environment.json"), "/usr/src/app/environment.json")
+                .WithVolume(System.IO.Path.Combine(_tempPath.FullName, "template.yml"), "/usr/src/app/template.yml")
                 .Port(configuration.Settings.Port, 3000);
-
-            _tempPath = new DirectoryInfo(System.IO.Path.Combine(path.FullName, ".tmp"));
         }
 
         public string BaseUrl => _configuration.Settings.BaseUrl;

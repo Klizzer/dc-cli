@@ -23,6 +23,10 @@
     <None Include="Templates/Functions/**/*.*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    
+    <None Include="Containers/**/*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   
   <ItemGroup>

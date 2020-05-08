@@ -46,6 +46,12 @@ namespace DC.AWS.Projects.Cli.Components
             string version);
     }
 
+    public interface IHaveHttpEndpoint : IComponent
+    {
+        string BaseUrl { get; }
+        int Port { get; }
+    }
+
     public class PackageResult
     {
         public PackageResult(string packageName, IImmutableList<PackageResource> resources)

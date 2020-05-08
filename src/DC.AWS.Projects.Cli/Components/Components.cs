@@ -232,6 +232,22 @@ namespace DC.AWS.Projects.Cli.Components
                 return result.ToImmutableList();
             }
 
+            public IImmutableList<(ComponentTree tree, TComponent component)> FindAllFirstLevel<TComponent>()
+            {
+                var result = Components
+                    .OfType<TComponent>()
+                    .Select(x => (this, x))
+                    .ToList();
+
+                if (result.Any())
+                    return result.ToImmutableList();
+
+                foreach (var child in Children)
+                    result.AddRange(child.FindAllFirstLevel<TComponent>());
+
+                return result.ToImmutableList();
+            }
+
             public TComponent FindComponent<TComponent>(string name = null) where TComponent : class, IComponent
             {
                 return Components

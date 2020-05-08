@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -29,10 +31,19 @@ namespace DC.AWS.Projects.Cli
         
         public static Container ContainerFromFile(string path, string imageName, string containerName)
         {
+            var containerPath = path;
+
+            if (!Path.IsPathRooted(path))
+            {
+                containerPath = Path.Combine(
+                    Assembly.GetExecutingAssembly().GetPath(),
+                    $"Containers/{path}");
+            }
+            
             var startInfo = new ProcessStartInfo
             {
                 FileName = "docker",
-                Arguments = $"build -t \"{imageName}\" \"{path}\""
+                Arguments = $"build -t \"{imageName}\" \"{containerPath}\""
             };
             
             var process = Process.Start(startInfo);
