@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -12,7 +12,7 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            var components = Components.Components.BuildTree(
+            var components = await Components.Components.BuildTree(
                 settings,
                 settings.GetRootedPath(options.Root));
 

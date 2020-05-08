@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Nginx;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -10,11 +10,10 @@ namespace DC.AWS.Projects.Cli.Commands
         public static async Task Execute(Options options)
         {
             var settings = await ProjectSettings.Read();
+            var components = await Components.Components.BuildTree(settings, options.Path);
 
-            await LocalProxyComponent.InitAt(
-                settings,
-                options.GetProxyPath(settings),
-                options.Port);
+            await components.Initialize<LocalProxyComponent, LocalProxyComponentType.ComponentData>(
+                new LocalProxyComponentType.ComponentData(options.Name, options.Port), settings);
         }
         
         [Verb("add-proxy")]

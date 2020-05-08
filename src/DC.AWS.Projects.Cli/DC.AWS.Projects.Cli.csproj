@@ -33,7 +33,6 @@
     <EmbeddedResource Include="Templates\Config\proxy-path.conf" />
     <EmbeddedResource Include="Templates\Config\proxy.conf" />
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />
-    <EmbeddedResource Include="Templates\Infrastructure\client.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-lambda-function.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\proxy.config.yml" />
   </ItemGroup>

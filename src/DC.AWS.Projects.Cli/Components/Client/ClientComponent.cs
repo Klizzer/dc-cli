@@ -5,70 +5,35 @@ using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.AWS.Projects.Cli.Components.Client
 {
     public class ClientComponent : IBuildableComponent, 
         ITestableComponent,
         IRestorableComponent,
         IStartableComponent,
-        ISupplyLogs,
+        IComponentWithLogs,
         IHaveHttpEndpoint
     {
-        private const string ConfigFileName = "client.config.yml";
-        
-        private static readonly IImmutableDictionary<ClientType, Func<DirectoryInfo, ClientConfiguration, ProjectSettings, Task>> TypeHandlers =
-            new Dictionary<ClientType, Func<DirectoryInfo, ClientConfiguration, ProjectSettings, Task>>
-            {
-                [ClientType.VueNuxt] = CreateVueNuxt
-            }.ToImmutableDictionary();
+        public const string ConfigFileName = "client.config.yml";
 
         private readonly DirectoryInfo _path;
         private readonly ClientConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
         
-        private ClientComponent(DirectoryInfo path, ClientConfiguration configuration, ProjectSettings settings)
+        private ClientComponent(
+            DirectoryInfo path,
+            ClientConfiguration configuration,
+            Docker.Container dockerContainer)
         {
             _path = path;
             _configuration = configuration;
-
-            _dockerContainer = CreateBaseContainer(path, configuration, settings);
+            _dockerContainer = dockerContainer;
         }
 
         public string BaseUrl => _configuration.Settings.BaseUrl;
         public int Port => _configuration.Settings.Port;
         public string Name => _configuration.Name;
-
-        public static async Task InitAt(ProjectSettings settings,
-            string path,
-            string baseUrl,
-            ClientType clientType,
-            int? port)
-        {
-            var dir = new DirectoryInfo(settings.GetRootedPath(path));
-            
-            if (dir.Exists)
-                throw new InvalidOperationException($"You can't create a client at \"{dir.FullName}\". It already exists.");
-            
-            dir.Create();
-
-            var clientPort = port ?? ProjectSettings.GetRandomUnusedPort();
-
-            await Templates.Extract(
-                ConfigFileName,
-                Path.Combine(dir.FullName, ConfigFileName),
-                Templates.TemplateType.Infrastructure,
-                ("CLIENT_NAME", dir.Name),
-                ("PORT", clientPort.ToString()),
-                ("CLIENT_TYPE", clientType.ToString()),
-                ("BASE_URL", baseUrl));
-            
-            var deserializer = new Deserializer();
-            var configuration = deserializer.Deserialize<ClientConfiguration>(
-                await File.ReadAllTextAsync(Path.Combine(dir.FullName, ConfigFileName)));
-            
-            await TypeHandlers[clientType](dir, configuration, settings);
-        }
-
+        
         public async Task<ComponentActionResult> Restore()
         {
             if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
@@ -131,40 +96,20 @@ namespace DC.AWS.Projects.Cli.Components
             
             return new ComponentActionResult(true, result);
         }
-
-        public static IEnumerable<ClientComponent> FindAtPath(DirectoryInfo path, ProjectSettings settings)
+        
+        public static async Task<ClientComponent> Init(
+            DirectoryInfo path,
+            Func<ClientConfiguration, Docker.Container> getBaseContainer)
         {
             if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
-                yield break;
+                return null;
             
             var deserializer = new Deserializer();
-            yield return new ClientComponent(
-                path,
-                deserializer.Deserialize<ClientConfiguration>(
-                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))),
-                settings);
-        }
-        
-        private static Task CreateVueNuxt(
-            DirectoryInfo dir,
-            ClientConfiguration configuration,
-            ProjectSettings settings)
-        {
-            return CreateBaseContainer(dir.Parent, configuration, settings)
-                .Interactive()
-                .Run($"create nuxt-app {dir.Name}");
-        }
 
-        private static Docker.Container CreateBaseContainer(
-            FileSystemInfo path,
-            ClientConfiguration configuration,
-            ProjectSettings settings)
-        {
-            return Docker
-                .ContainerFromImage("node", configuration.GetContainerName(settings))
-                .EntryPoint("yarn")
-                .Port(configuration.Settings.Port, 3000)
-                .WithVolume(path.FullName, "/usr/local/src", true);
+            var configuration = deserializer.Deserialize<ClientConfiguration>(
+                await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName)));
+            
+            return new ClientComponent(path, configuration, getBaseContainer(configuration));
         }
         
         private class PackageJsonData
@@ -172,7 +117,7 @@ namespace DC.AWS.Projects.Cli.Components
             public IImmutableDictionary<string, string> Scripts { get; set; }
         }
         
-        private class ClientConfiguration
+        public class ClientConfiguration
         {
             public string Name { get; set; }
             public ClientSettings Settings { get; set; }

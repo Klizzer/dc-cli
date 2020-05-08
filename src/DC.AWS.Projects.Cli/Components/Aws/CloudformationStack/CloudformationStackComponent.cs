@@ -12,11 +12,11 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
 {
     public class CloudformationStackComponent : 
         IStartableComponent, 
-        ISupplyLogs,
+        IComponentWithLogs,
         IHavePackageResources,
         INeedConfiguration
     {
@@ -28,7 +28,7 @@ namespace DC.AWS.Projects.Cli.Components
                 ["AWS::DynamoDB::Table"] = HandleTable
             }.ToImmutableDictionary();
         
-        private const string ConfigFileName = "cloudformation-stack.config.yml";
+        public const string ConfigFileName = "cloudformation-stack.config.yml";
 
         private readonly CloudformationStackConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
@@ -74,44 +74,6 @@ namespace DC.AWS.Projects.Cli.Components
                 INeedConfiguration.ConfigurationType.User);
         }
 
-        public static async Task InitAt(
-            ProjectSettings settings,
-            string path,
-            string name,
-            int mainPort,
-            int servicesPort,
-            IImmutableList<string> services,
-            string awsRegion)
-        {
-            var dir = new DirectoryInfo(settings.GetRootedPath(path));
-            
-            if (!dir.Exists)
-                dir.Create();
-            
-            if (File.Exists(Path.Combine(dir.FullName, ConfigFileName)))
-                throw new InvalidCastException($"There is already a cloudformation stack configured at: \"{dir.FullName}\"");
-            
-            var serializer = new Serializer();
-            
-            var configuration = new CloudformationStackConfiguration
-            {
-                Name = name,
-                Settings = new CloudformationStackConfiguration.CloudformationStackSettings
-                {
-                    Services = services,
-                    MainPort = mainPort,
-                    ServicesPort = servicesPort,
-                    DeploymentBucketName = $"{name}-deployments",
-                    DeploymentStackName = $"{name}-deployments",
-                    AwsRegion = awsRegion
-                }
-            };
-
-            await File.WriteAllTextAsync(
-                Path.Combine(dir.FullName, ConfigFileName),
-                serializer.Serialize(configuration));
-        }
-        
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
             var startResult = await _dockerContainer.Run("");
@@ -309,22 +271,22 @@ namespace DC.AWS.Projects.Cli.Components
                 });
             }
         }
-
-        public static IEnumerable<CloudformationStackComponent> FindAtPath(DirectoryInfo path, ProjectSettings settings)
+        
+        public static async Task<CloudformationStackComponent> Init(DirectoryInfo path, ProjectSettings settings)
         {
-            if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
-                yield break;
+            if (!File.Exists(Path.Combine(path.FullName, ConfigFileName)))
+                return null;
             
             var deserializer = new Deserializer();
-            yield return new CloudformationStackComponent(
+            return new CloudformationStackComponent(
                 deserializer.Deserialize<CloudformationStackConfiguration>(
-                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))),
+                    await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName))),
                 settings,
                 path,
                 settings);
         }
         
-        private class CloudformationStackConfiguration
+        public class CloudformationStackConfiguration
         {
             private static readonly IImmutableDictionary<string, IImmutableList<string>> ServiceAliases = 
                 new Dictionary<string, IImmutableList<string>>

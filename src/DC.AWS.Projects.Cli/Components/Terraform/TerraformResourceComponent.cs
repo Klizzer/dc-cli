@@ -4,14 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.AWS.Projects.Cli.Components.Terraform
 {
     public class TerraformResourceComponent : IHavePackageResources
     {
         private readonly FileInfo _file;
         private readonly ProjectSettings _settings;
 
-        private TerraformResourceComponent(string name, FileInfo file, ProjectSettings settings)
+        public TerraformResourceComponent(string name, FileInfo file, ProjectSettings settings)
         {
             Name = name;
             _file = file;
@@ -32,13 +32,6 @@ namespace DC.AWS.Projects.Cli.Components
             {
                 resource
             }.ToImmutableList();
-        }
-        
-        public static IEnumerable<TerraformResourceComponent> FindAtPath(DirectoryInfo path, ProjectSettings settings)
-        {
-            return from file in path.EnumerateFiles()
-                where file.Name.EndsWith(".tf") && !file.Name.EndsWith(".main.tf")
-                select new TerraformResourceComponent(Path.GetFileNameWithoutExtension(file.Name), file, settings);
         }
     }
 }

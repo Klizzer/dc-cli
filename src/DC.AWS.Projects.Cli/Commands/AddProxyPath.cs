@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Nginx;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -11,7 +11,7 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            await LocalProxyComponent.AddProxyPath(
+            await LocalProxyComponentType.AddProxyPath(
                 settings,
                 settings.GetRootedPath(options.Path),
                 options.BaseUrl,

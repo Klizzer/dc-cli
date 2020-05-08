@@ -12,7 +12,7 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            var components = Components.Components.BuildTree(settings, settings.GetRootedPath(options.Path));
+            var components = await Components.Components.BuildTree(settings, settings.GetRootedPath(options.Path));
 
             var results = await components.Package(options.GetVersion());
 

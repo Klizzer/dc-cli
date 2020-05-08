@@ -1,6 +1,0 @@
-Name: [[CLIENT_NAME]]
-
-Settings:
-  Port: [[PORT]]
-  Type: [[CLIENT_TYPE]]
-  BaseUrl: [[BASE_URL]]

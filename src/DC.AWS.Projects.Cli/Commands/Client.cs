@@ -1,7 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Client;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -11,12 +11,11 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            await ClientComponent.InitAt(
-                settings,
-                options.GetRootedClientPath(settings),
-                options.BaseUrl,
-                options.ClientType,
-                options.Port);
+            var components = await Components.Components.BuildTree(settings, options.GetRootedClientPath(settings));
+
+            await components.Initialize<ClientComponent, ClientComponentType.ComponentData>(
+                new ClientComponentType.ComponentData(options.Name, options.Port, options.ClientType, options.BaseUrl),
+                settings);
         }
         
         [Verb("client", HelpText = "Create a client application.")]

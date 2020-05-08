@@ -1,7 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -12,13 +12,16 @@ namespace DC.AWS.Projects.Cli.Commands
             var settings = await ProjectSettings.Read();
 
             var apiPath = settings.GetRootedPath(Path.Combine(options.Path, options.Name));
-            
-            await ApiGatewayComponent.InitAt(
-                settings,
-                apiPath,
-                options.BaseUrl,
-                options.DefaultLanguage,
-                options.Port);
+
+            var components = await Components.Components.BuildTree(settings, apiPath);
+
+            await components.Initialize<ApiGatewayComponent, ApiGatewayComponentType.ComponentData>(
+                new ApiGatewayComponentType.ComponentData(
+                    options.Name,
+                    options.Port,
+                    options.DefaultLanguage,
+                    options.BaseUrl),
+                settings);
         }
         
         [Verb("api", HelpText = "Create a api.")]

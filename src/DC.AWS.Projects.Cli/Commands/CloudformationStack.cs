@@ -2,7 +2,7 @@ using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Aws.CloudformationStack;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -12,14 +12,16 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            await CloudformationStackComponent.InitAt(
-                settings,
-                settings.GetRootedPath(options.Path),
-                options.Name,
-                options.MainPort,
-                options.ServicesPort,
-                options.GetServices(),
-                options.AwsRegion);
+            var components = await Components.Components.BuildTree(settings, options.Path);
+
+            await components.Initialize<CloudformationStackComponent, CloudformationStackComponentType.ComponentData>(
+                new CloudformationStackComponentType.ComponentData(
+                    options.Name,
+                    options.GetServices(),
+                    options.MainPort,
+                    options.ServicesPort,
+                    options.AwsRegion),
+                settings);
         }
         
         [Verb("cf-stack", HelpText = "Setup a cloudformation stack environment.")]

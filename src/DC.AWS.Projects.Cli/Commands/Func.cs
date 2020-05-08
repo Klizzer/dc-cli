@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Aws.LambdaFunction;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -10,16 +10,16 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var projectSettings = await ProjectSettings.Read();
 
-            var components = Components.Components.BuildTree(
+            var components = await Components.Components.BuildTree(
                 projectSettings,
-                projectSettings.GetRootedPath(options.GetBasePath(projectSettings)));
+                options.GetFunctionPath(projectSettings));
 
-            await LambdaFunctionComponent.InitAt(
-                projectSettings, 
-                options.Trigger ?? FunctionTrigger.Api,
-                options.Language,
-                options.GetFunctionPath(projectSettings),
-                components);
+            await components.Initialize<LambdaFunctionComponent, LambdaFunctionComponentType.ComponentData>(
+                new LambdaFunctionComponentType.ComponentData(
+                    options.Name, 
+                    options.Trigger ?? FunctionTrigger.Api,
+                    options.Language),
+                projectSettings);
         }
         
         [Verb("func", HelpText = "Create a function.")]

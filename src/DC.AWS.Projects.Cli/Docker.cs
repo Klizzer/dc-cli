@@ -156,7 +156,9 @@ namespace DC.AWS.Projects.Cli
 
             public Container WithDockerSocket()
             {
-                return WithVolume("/var/run/docker.sock", "/var/run/docker.sock");
+                return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
+                    ? WithVolume("/usr/local/bin/docker", "/usr/bin/docker") 
+                    : WithVolume("/var/run/docker.sock", "/var/run/docker.sock");
             }
 
             public Container WithVolume(string source, string destination, bool useAsWorkDir = false)

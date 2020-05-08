@@ -68,15 +68,7 @@ else
 endif
 	$(DC_CLI_COMMAND) infra package -o ./.packages
 ifdef NUGET_FEED_URL
+ifdef NUGET_API_KEY
 	$(foreach file, $(wildcard ./.packages/*), dotnet nuget push $(file) --skip-duplicate  -k $(NUGET_API_KEY) -s $(NUGET_FEED_URL);)
 endif
-
-.PHONY: clear
-clear: stop
-ifeq ($(DETECTED_OS), Windows)
-	if exist .localstack del .localstack
-	if exist .packages del .packages
-else
-	sudo rm -rf ./.localstack
-	rm -rf ./.packages
 endif

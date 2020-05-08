@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -8,11 +7,11 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.AWS.Projects.Cli.Components.Aws.ApiGateway
 {
-    public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, ISupplyLogs, IHaveHttpEndpoint
+    public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, IComponentWithLogs, IHaveHttpEndpoint
     {
-        private const string ConfigFileName = "api-gw.config.yml";
+        public const string ConfigFileName = "api-gw.config.yml";
 
         private readonly ApiConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
@@ -44,32 +43,6 @@ namespace DC.AWS.Projects.Cli.Components
         public string Name => _configuration.Name;
         public DirectoryInfo Path { get; }
         
-        public static async Task InitAt(
-            ProjectSettings settings,
-            string path,
-            string baseUrl,
-            string language,
-            int? port = null)
-        {
-            var dir = new DirectoryInfo(settings.GetRootedPath(path));
-
-            if (Directory.Exists(settings.GetRootedPath(dir.FullName)))
-                throw new InvalidOperationException($"You can't add a new api at: \"{dir.FullName}\". It already exists.");
-
-            dir.Create();
-
-            var apiPort = port ?? ProjectSettings.GetRandomUnusedPort();
-            
-            await Templates.Extract(
-                ConfigFileName,
-                System.IO.Path.Combine(dir.FullName, ConfigFileName),
-                Templates.TemplateType.Infrastructure,
-                ("API_NAME", dir.Name),
-                ("PORT", apiPort.ToString()),
-                ("DEFAULT_LANGUAGE", language),
-                ("BASE_URL", baseUrl));
-        }
-
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
             await Stop();
@@ -167,20 +140,20 @@ namespace DC.AWS.Projects.Cli.Components
             return $"/{url}/{path}";
         }
 
-        public static IEnumerable<ApiGatewayComponent> FindAtPath(DirectoryInfo path, ProjectSettings settings)
+        public static async Task<ApiGatewayComponent> Init(DirectoryInfo path, ProjectSettings settings)
         {
             if (!File.Exists(System.IO.Path.Combine(path.FullName, ConfigFileName))) 
-                yield break;
+                return null;
             
             var deserializer = new Deserializer();
-            yield return new ApiGatewayComponent(
+            return new ApiGatewayComponent(
                 path,
                 deserializer.Deserialize<ApiConfiguration>(
-                    File.ReadAllText(System.IO.Path.Combine(path.FullName, ConfigFileName))),
+                    await File.ReadAllTextAsync(System.IO.Path.Combine(path.FullName, ConfigFileName))),
                 settings);
         }
         
-        private class ApiConfiguration
+        public class ApiConfiguration
         {
             public string Name { get; set; }
             public ApiSettings Settings { get; set; }

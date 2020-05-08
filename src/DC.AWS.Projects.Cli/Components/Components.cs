@@ -5,53 +5,70 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
+using DC.AWS.Projects.Cli.Components.Aws.CloudformationStack;
+using DC.AWS.Projects.Cli.Components.Aws.CloudformationTemplate;
+using DC.AWS.Projects.Cli.Components.Aws.LambdaFunction;
+using DC.AWS.Projects.Cli.Components.Client;
+using DC.AWS.Projects.Cli.Components.Nginx;
+using DC.AWS.Projects.Cli.Components.Terraform;
 
 namespace DC.AWS.Projects.Cli.Components
 {
     public static class Components
     {
-        public static ComponentTree BuildTree(ProjectSettings settings, string path)
+        private static readonly IImmutableList<IComponentType> ComponentTypes = new List<IComponentType>
         {
-            return BuildTreeFrom(settings, settings.ProjectRoot).Find(path);
+            new ApiGatewayComponentType(),
+            new LambdaFunctionComponentType(),
+            new ClientComponentType(),
+            new CloudformationComponentType(),
+            new LocalProxyComponentType(),
+            new CloudformationStackComponentType(),
+            new TerraformResourceComponentType(),
+            new TerraformResourceComponentType()
+        }.ToImmutableList();
+        
+        public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)
+        {
+            var dir = new DirectoryInfo(settings.GetRootedPath(path));
+            
+            if (!dir.Exists)
+                dir.Create();
+            
+            return (await BuildTreeFrom(settings, settings.ProjectRoot)).Find(dir.FullName);
         }
         
-        private static ComponentTree BuildTreeFrom(ProjectSettings settings, string path)
+        private static async Task<ComponentTree> BuildTreeFrom(ProjectSettings settings, string path)
         {
             var directoriesToIgnore = new List<string>
             {
                 "node_modules",
-                settings.GetRootedPath("infrastructure"),
-                settings.GetRootedPath("config"),
-                settings.GetRootedPath("docs"),
-                settings.GetRootedPath(".tools"),
-                settings.GetRootedPath(".localstack")
+                ".localstack"
             };
 
             var directory = new DirectoryInfo(settings.GetRootedPath(path));
 
-            var componentTree = GetTreeAt(directory, settings);
+            var componentTree = await GetTreeAt(directory, settings);
 
-            var children = directory
+            var children = (await directory
                 .GetDirectories()
                 .Where(x => !directoriesToIgnore.Any(y => x.Name == y || x.FullName == y || x.FullName.StartsWith(y)))
                 .Select(childDirectory => BuildTreeFrom(settings, childDirectory.FullName))
+                .WhenAll())
                 .ToImmutableList();
 
             return ComponentTree.WithChildren(componentTree, children);
         }
 
-        private static ComponentTree GetTreeAt(DirectoryInfo directory, ProjectSettings settings)
+        private static async Task<ComponentTree> GetTreeAt(DirectoryInfo directory, ProjectSettings settings)
         {
             var components = new List<IComponent>();
 
-            components.AddRange(ApiGatewayComponent.FindAtPath(directory, settings));
-            components.AddRange(LambdaFunctionComponent.FindAtPath(directory));
-            components.AddRange(ClientComponent.FindAtPath(directory, settings));
-            components.AddRange(CloudformationComponent.FindAtPath(directory));
-            components.AddRange(LocalProxyComponent.FindAtPath(directory, settings));
-            components.AddRange(CloudformationStackComponent.FindAtPath(directory, settings));
-            components.AddRange(TerraformRootComponent.FindAtPath(directory));
-            components.AddRange(TerraformResourceComponent.FindAtPath(directory, settings));
+            foreach (var componentType in ComponentTypes)
+            {
+                components.AddRange(await componentType.FindAt(directory, settings));
+            }
 
             return new ComponentTree(components.ToImmutableList(), directory);
         }
@@ -65,7 +82,7 @@ namespace DC.AWS.Projects.Cli.Components
             }
 
             public ComponentTree Parent { get; private set; }
-            public IImmutableList<IComponent> Components { get; }
+            public IImmutableList<IComponent> Components { get; private set; }
             public IImmutableList<ComponentTree> Children { get; private set; }
             public DirectoryInfo Path { get; }
             
@@ -77,6 +94,78 @@ namespace DC.AWS.Projects.Cli.Components
                     child.Parent = tree;
 
                 return tree;
+            }
+
+            public async Task Initialize<TComponent, TComponentData>(TComponentData data, ProjectSettings settings)
+                where TComponent : IComponent
+            {
+                var componentType = ComponentTypes
+                    .OfType<IComponentType<TComponent, TComponentData>>()
+                    .ToList();
+                
+                var newComponents = new List<IComponent>();
+
+                foreach (var type in componentType)
+                {
+                    var component = await type.InitializeAt(this, data, settings);
+                    
+                    if (component != null)
+                        newComponents.Add(component);
+                }
+
+                Components = Components.AddRange(newComponents);
+
+                if (newComponents.OfType<INeedConfiguration>().Any())
+                {
+                    Configure(settings, false, false);
+
+                    await settings.Save();
+                }
+            }
+
+            public void Configure(ProjectSettings settings, bool recursive, bool overwrite)
+            {
+                var newConfigurations = new Dictionary<string, (string value, INeedConfiguration.ConfigurationType configurationType)>();
+
+                var requiredConfigurations = Components
+                    .OfType<INeedConfiguration>()
+                    .SelectMany(x => x.GetRequiredConfigurations())
+                    .ToImmutableList();
+
+                foreach (var requiredConfiguration in requiredConfigurations)
+                {
+                    if (newConfigurations.ContainsKey(requiredConfiguration.key))
+                    {
+                        if (requiredConfiguration.configurationType <
+                            newConfigurations[requiredConfiguration.key].configurationType)
+                        {
+                            newConfigurations[requiredConfiguration.key] = (
+                                newConfigurations[requiredConfiguration.key].value,
+                                requiredConfiguration.configurationType);
+                        }
+                    
+                        continue;
+                    }
+                
+                    if (settings.HasConfiguration(requiredConfiguration.key) && !overwrite)
+                        continue;
+
+                    var value = ConsoleInput.Ask(requiredConfiguration.question);
+
+                    newConfigurations[requiredConfiguration.key] = (value, requiredConfiguration.configurationType);
+                }
+
+                foreach (var newConfiguration in newConfigurations)
+                {
+                    settings.SetConfiguration(newConfiguration.Key, newConfiguration.Value.value,
+                        newConfiguration.Value.configurationType);
+                }
+
+                if (!recursive) 
+                    return;
+                
+                foreach (var child in Children)
+                    child.Configure(settings, true, overwrite);
             }
             
             public Task<ComponentActionResult> Build()
@@ -106,7 +195,7 @@ namespace DC.AWS.Projects.Cli.Components
 
             public Task<ComponentActionResult> Logs()
             {
-                return Run<ISupplyLogs>((component, tree) => component.Logs());
+                return Run<IComponentWithLogs>((component, tree) => component.Logs());
             }
 
             public async Task<IImmutableList<PackageResult>> Package(string version)

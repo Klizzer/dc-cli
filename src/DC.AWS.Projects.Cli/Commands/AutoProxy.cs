@@ -1,8 +1,8 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
 using DC.AWS.Projects.Cli.Components;
+using DC.AWS.Projects.Cli.Components.Nginx;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -12,15 +12,15 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            var components = Components.Components.BuildTree(settings, settings.GetRootedPath(options.Path));
+            var components = await Components.Components.BuildTree(settings, settings.GetRootedPath(options.Path));
 
             var rootHttpEndpoints = components.FindAllFirstLevel<IHaveHttpEndpoint>();
 
             foreach (var endpoint in rootHttpEndpoints)
             {
-                var proxyPath = settings.GetRootedPath(Path.Combine($"proxy/{endpoint.component.Name}"));
+                var proxyPath = endpoint.tree.Path.FullName;
 
-                if (!LocalProxyComponent.HasProxyAt(proxyPath))
+                if (!LocalProxyComponentType.HasProxyAt(proxyPath))
                 {
                     int? port = null;
 
@@ -30,12 +30,14 @@ namespace DC.AWS.Projects.Cli.Commands
                         port = int.Parse(Console.ReadLine() ?? "");
                     }
 
-                    await LocalProxyComponent.InitAt(settings, proxyPath, port);
+                    await endpoint.tree.Initialize<LocalProxyComponent, LocalProxyComponentType.ComponentData>(
+                        new LocalProxyComponentType.ComponentData(endpoint.component.Name, port),
+                        settings);
                 }
 
-                if (!LocalProxyComponent.HasProxyPathFor(proxyPath, endpoint.component.Port))
+                if (!LocalProxyComponentType.HasProxyPathFor(proxyPath, endpoint.component.Port))
                 {
-                    await LocalProxyComponent.AddProxyPath(
+                    await LocalProxyComponentType.AddProxyPath(
                         settings,
                         proxyPath,
                         endpoint.component.BaseUrl,
@@ -46,10 +48,10 @@ namespace DC.AWS.Projects.Cli.Commands
 
                 foreach (var client in clients)
                 {
-                    if (LocalProxyComponent.HasProxyPathFor(proxyPath, client.component.Port))
+                    if (LocalProxyComponentType.HasProxyPathFor(proxyPath, client.component.Port))
                         continue;
 
-                    await LocalProxyComponent.AddProxyPath(
+                    await LocalProxyComponentType.AddProxyPath(
                         settings, 
                         proxyPath,
                         client.component.BaseUrl,
