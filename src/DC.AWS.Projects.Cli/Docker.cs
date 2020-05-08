@@ -64,35 +64,14 @@ namespace DC.AWS.Projects.Cli
 
         public static bool HasImage(string image)
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "docker",
-                Arguments = $"images -q {image}",
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                RedirectStandardOutput = true
-            };
+            var result = ProcessExecutor.Execute("docker", $"images -q {image}");
 
-            var process = Process.Start(startInfo);
-
-            process?.WaitForExit();
-
-            var output = process?.StandardOutput.ReadToEnd();
-
-            return process?.ExitCode == 0 && !string.IsNullOrEmpty(output);
+            return result.success && !string.IsNullOrEmpty(result.output);
         }
         
         public static void Pull(string image)
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "docker",
-                Arguments = $"pull {image}"
-            };
-            
-            var process = Process.Start(startInfo);
-
-            process?.WaitForExit();
+            ProcessExecutor.Execute("docker", $"pull {image}");
         }
 
         public static void Stop(string name)
@@ -170,7 +149,13 @@ namespace DC.AWS.Projects.Cli
 
             public Container AsCurrentUser()
             {
-                return RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? WithArgument("--user \"1000:1000\"") : this;
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    return this;
+
+                var userId = ProcessExecutor.Execute("id", "-u").output;
+                var groupId = ProcessExecutor.Execute("id", "-g").output;
+                
+                return WithArgument($"--user \"{userId}:{groupId}\"");
             }
 
             public Container Detached()
