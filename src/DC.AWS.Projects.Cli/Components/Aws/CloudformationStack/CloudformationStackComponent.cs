@@ -76,6 +76,8 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
+            await Stop();
+            
             var startResult = await _dockerContainer.Run("");
             
             if (startResult.exitCode != 0)

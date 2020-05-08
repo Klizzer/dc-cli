@@ -19,13 +19,16 @@ namespace DC.AWS.Projects.Cli
         
         public static Container ContainerFromImage(string image, string name)
         {
-            Pull(image);
-
             return CreateContainer(image, name);
         }
         
         public static Container ContainerFromFile(string path, string imageName, string containerName)
         {
+            var imageTag = $"{imageName}:{Assembly.GetExecutingAssembly().GetInformationVersion()}";
+
+            if (HasImage(imageTag)) 
+                return CreateContainer(imageName, containerName);
+            
             var containerPath = Path.Combine(
                 Assembly.GetExecutingAssembly().GetPath(),
                 $"Containers/{path}/Dockerfile");
@@ -35,10 +38,12 @@ namespace DC.AWS.Projects.Cli
             var startInfo = new ProcessStartInfo
             {
                 FileName = "docker",
-                Arguments = $"build -t \"{imageName}\" -",
-                RedirectStandardInput = true
+                Arguments = $"build -t {imageTag} -",
+                RedirectStandardInput = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
             };
-            
+
             var process = Process.Start(startInfo);
 
             process?.StandardInput.Write(fileData);
@@ -46,18 +51,35 @@ namespace DC.AWS.Projects.Cli
             process?.StandardInput.Close();
 
             process?.WaitForExit();
-            
+            process?.CloseMainWindow();
+            process?.Close();
+
             return CreateContainer(imageName, containerName);
         }
 
         private static Container CreateContainer(string image, string name)
         {
-            var container = new Container(name, image);
+            return new Container(name, image);
+        }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                container = container.WithArgument("--user \"$(id -u):$(id -g)\"");
+        public static bool HasImage(string image)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = $"images -q {image}",
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                RedirectStandardOutput = true
+            };
 
-            return container;
+            var process = Process.Start(startInfo);
+
+            process?.WaitForExit();
+
+            var output = process?.StandardOutput.ReadToEnd();
+
+            return process?.ExitCode == 0 && !string.IsNullOrEmpty(output);
         }
         
         public static void Pull(string image)
@@ -142,7 +164,13 @@ namespace DC.AWS.Projects.Cli
 
             public Container Interactive()
             {
-                return WithArgument("-it");
+                return new Container(Name, _image, true, _dockerArguments)
+                    .WithArgument("-it");
+            }
+
+            public Container AsCurrentUser()
+            {
+                return RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? WithArgument("--user \"1000:1000\"") : this;
             }
 
             public Container Detached()

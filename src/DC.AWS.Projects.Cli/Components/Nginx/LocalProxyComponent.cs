@@ -27,6 +27,8 @@ namespace DC.AWS.Projects.Cli.Components.Nginx
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
+            await Stop();
+            
             var response = await _dockerContainer.Run("");
 
             return new ComponentActionResult(response.exitCode == 0, response.output);

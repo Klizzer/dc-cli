@@ -16,5 +16,12 @@ namespace DC.AWS.Projects.Cli
             
             return Path.GetDirectoryName(path);
         }
+
+        public static string GetInformationVersion(this Assembly assembly)
+        {
+            return assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? assembly.GetName().Version?.ToString() ?? "";
+        }
     }
 }

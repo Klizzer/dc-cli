@@ -75,6 +75,8 @@ namespace DC.AWS.Projects.Cli.Components.Client
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
+            await Stop();
+            
             var result = await _dockerContainer
                 .Detached()
                 .Run("run dev --hostname 0.0.0.0");

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
 using DC.AWS.Projects.Cli.Components.Aws.CloudformationStack;
@@ -177,32 +176,32 @@ namespace DC.AWS.Projects.Cli.Components
             
             public Task<ComponentActionResult> Build()
             {
-                return Run<IBuildableComponent>((component, _) => component.Build());
+                return MergeResults(Run<IBuildableComponent>((component, _) => component.Build()));
             }
 
             public Task<ComponentActionResult> Test()
             {
-                return Run<ITestableComponent>((component, _) => component.Test());
+                return MergeResults(Run<ITestableComponent>((component, _) => component.Test()));
             }
 
             public Task<ComponentActionResult> Restore()
             {
-                return Run<IRestorableComponent>((component, _) => component.Restore());
+                return MergeResults(Run<IRestorableComponent>((component, _) => component.Restore()));
             }
 
             public Task<ComponentActionResult> Start()
             {
-                return Run<IStartableComponent>((component, tree) => component.Start(tree));
+                return MergeResults(Run<IStartableComponent>((component, tree) => component.Start(tree)));
             }
 
             public Task<ComponentActionResult> Stop()
             {
-                return Run<IStartableComponent>((component, _) => component.Stop());
+                return MergeResults(Run<IStartableComponent>((component, _) => component.Stop()));
             }
 
             public Task<ComponentActionResult> Logs()
             {
-                return Run<IComponentWithLogs>((component, tree) => component.Logs());
+                return MergeResults(Run<IComponentWithLogs>((component, tree) => component.Logs()));
             }
 
             public async Task<IImmutableList<PackageResult>> Package(string version)
@@ -228,34 +227,28 @@ namespace DC.AWS.Projects.Cli.Components
                 return results.ToImmutableList();
             }
 
-            private async Task<ComponentActionResult> Run<TComponentType>(
+            private IEnumerable<Task<ComponentActionResult>> Run<TComponentType>(
                 Func<TComponentType, ComponentTree, Task<ComponentActionResult>> execute) 
                 where TComponentType : IComponent
             {
-                var success = true;
-                var output = new StringBuilder();
-
                 foreach (var component in _components.OfType<TComponentType>())
-                {
-                    var result = await execute(component, this);
-
-                    if (!result.Success)
-                        success = false;
-
-                    output.Append(result.Output);
-                }
+                    yield return execute(component, this);
 
                 foreach (var child in _children)
                 {
-                    var result = await child.Run(execute);
-
-                    if (!result.Success)
-                        success = false;
-
-                    output.Append(result.Output);
+                    foreach (var childRun in child.Run(execute))
+                        yield return childRun;
                 }
+            }
 
-                return new ComponentActionResult(success, output.ToString());
+            private async Task<ComponentActionResult> MergeResults(
+                IEnumerable<Task<ComponentActionResult>> resultCollectors)
+            {
+                var results = await Task.WhenAll(resultCollectors);
+                
+                return new ComponentActionResult(
+                    results.All(x => x.Success),
+                    string.Join("\n", results.Select(x => x.Output)));
             }
 
             public ComponentTree Find(string path)

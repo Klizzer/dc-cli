@@ -21,23 +21,12 @@ namespace DC.AWS.Projects.Cli.Components.Client
             ComponentData data,
             ProjectSettings settings)
         {
-            var dir = new DirectoryInfo(Path.Combine(tree.Path.FullName, data.Name));
-            
-            if (dir.Exists)
-                throw new InvalidOperationException($"You can't create a client at \"{dir.FullName}\". It already exists.");
-            
-            dir.Create();
+            var configFile = Path.Combine(tree.Path.FullName, ClientComponent.ConfigFileName);
 
+            if (File.Exists(configFile))
+                throw new InvalidOperationException($"You can't create a client at \"{tree.Path.FullName}\". It already exists.");
+            
             var clientPort = data.Port ?? ProjectSettings.GetRandomUnusedPort();
-
-            await Templates.Extract(
-                ClientComponent.ConfigFileName,
-                Path.Combine(dir.FullName, ClientComponent.ConfigFileName),
-                Templates.TemplateType.Infrastructure,
-                ("CLIENT_NAME", dir.Name),
-                ("PORT", clientPort.ToString()),
-                ("CLIENT_TYPE", data.ClientType.ToString()),
-                ("BASE_URL", data.BaseUrl));
             
             var configuration = new ClientComponent.ClientConfiguration
             {
@@ -50,13 +39,13 @@ namespace DC.AWS.Projects.Cli.Components.Client
                 }
             };
             
-            await TypeHandlers[data.ClientType](dir, configuration, settings);
+            await TypeHandlers[data.ClientType](tree.Path, configuration, settings);
             
             var serializer = new Serializer();
-            await File.WriteAllTextAsync(Path.Combine(dir.FullName, ClientComponent.ConfigFileName),
+            await File.WriteAllTextAsync(Path.Combine(tree.Path.FullName, ClientComponent.ConfigFileName),
                 serializer.Serialize(configuration));
 
-            return await ClientComponent.Init(dir, x => CreateBaseContainer(dir, x, settings));
+            return await ClientComponent.Init(tree.Path, x => CreateBaseContainer(tree.Path, x, settings));
         }
 
         public async Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
@@ -79,6 +68,7 @@ namespace DC.AWS.Projects.Cli.Components.Client
             return CreateBaseContainer(dir.Parent, configuration, settings)
                 .Temporary()
                 .Interactive()
+                .AsCurrentUser()
                 .Run($"create nuxt-app {dir.Name}");
         }
 

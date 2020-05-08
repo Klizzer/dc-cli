@@ -31,7 +31,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 options.GetRootedPath(),
                 ("PROJECT_NAME", projectSettings.GetProjectName()),
                 ("NUGET_FEED_URL", options.NugetFeed),
-                ("DC_CLI_VERSION", GetVersion()));
+                ("DC_CLI_VERSION", Assembly.GetExecutingAssembly().GetInformationVersion()));
             
             var makeInitProcess = Process.Start(new ProcessStartInfo
             {
@@ -52,16 +52,6 @@ namespace DC.AWS.Projects.Cli.Commands
             gitInitProcess?.WaitForExit();
         }
 
-        private static string GetVersion()
-        {
-            var assembly = Assembly
-                .GetExecutingAssembly();
-            
-            return assembly
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-                .InformationalVersion ?? assembly.GetName().Version?.ToString() ?? "";
-        }
-        
         [Verb("init", HelpText = "Initialize a project here.")]
         public class Options
         {

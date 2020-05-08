@@ -32,7 +32,7 @@ namespace DC.AWS.Projects.Cli.Components.Aws.ApiGateway
                     configuration.GetContainerName(settings))
                 .WithDockerSocket()
                 .Detached()
-                .WithVolume(path.FullName, $"/usr/src/app/${settings.GetRelativePath(path.FullName)}")
+                .WithVolume(path.FullName, $"/usr/src/app/{settings.GetRelativePath(path.FullName)}")
                 .WithVolume(System.IO.Path.Combine(_tempPath.FullName, "environment.json"), "/usr/src/app/environment.json")
                 .WithVolume(System.IO.Path.Combine(_tempPath.FullName, "template.yml"), "/usr/src/app/template.yml")
                 .Port(configuration.Settings.Port, 3000);
