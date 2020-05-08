@@ -91,7 +91,7 @@ namespace DC.AWS.Projects.Cli
             var startInfo = new ProcessStartInfo
             {
                 FileName = "docker",
-                Arguments = $"stop container rm {name}"
+                Arguments = $"container rm {name}"
             };
  
             var process = Process.Start(startInfo);
@@ -111,8 +111,7 @@ namespace DC.AWS.Projects.Cli
                 RedirectStandardOutput = true,
                 RedirectStandardInput = true
             };
-
-
+            
             var process = Process.Start(startInfo);
 
             process?.WaitForExit();
