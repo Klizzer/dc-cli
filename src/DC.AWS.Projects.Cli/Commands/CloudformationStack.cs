@@ -39,10 +39,10 @@ namespace DC.AWS.Projects.Cli.Commands
             [Option("services-port", Default = 4566, HelpText = "Port to run services on.")]
             public int ServicesPort { get; set; }
 
-            [Option('s', "services", Required = true, Default = "edge,serverless", HelpText = "Services to start.")]
+            [Option('s', "services", Default = "edge,serverless", HelpText = "Services to start.")]
             public string Services { private get; set; }
 
-            [Option('r', "aws-region", Required = true, Default = "eu-north-1", HelpText = "Aws region for the stack")]
+            [Option('r', "aws-region", Default = "eu-north-1", HelpText = "Aws region for the stack")]
             public string AwsRegion { get; set; }
 
             public IImmutableList<string> GetServices()

@@ -338,7 +338,7 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
                 public int ServicesPort { get; set; }
                 public string AwsRegion { get; set; }
                 public string LocalstackVersion { get; set; } = "latest";
-                public IImmutableList<string> Services { get; set; }
+                public IList<string> Services { get; set; }
                 public string DeploymentBucketName { get; set; }
                 public string DeploymentStackName { get; set; }
             }

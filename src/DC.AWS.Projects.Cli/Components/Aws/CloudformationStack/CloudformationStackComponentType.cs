@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
@@ -27,7 +28,7 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
                 Name = data.Name,
                 Settings = new CloudformationStackComponent.CloudformationStackConfiguration.CloudformationStackSettings
                 {
-                    Services = data.Services,
+                    Services = data.Services.ToList(),
                     MainPort = data.MainPort,
                     ServicesPort = data.ServicesPort,
                     DeploymentBucketName = $"{data.Name}-deployments",

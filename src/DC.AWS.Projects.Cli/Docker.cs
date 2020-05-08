@@ -161,8 +161,8 @@ namespace DC.AWS.Projects.Cli
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     return this;
 
-                var userId = ProcessExecutor.Execute("id", "-u").output;
-                var groupId = ProcessExecutor.Execute("id", "-g").output;
+                var userId = ProcessExecutor.Execute("id", "-u").output.Split('\n').FirstOrDefault();
+                var groupId = ProcessExecutor.Execute("id", "-g").output.Split('\n').FirstOrDefault();
                 
                 return WithArgument($"--user \"{userId}:{groupId}\"");
             }
