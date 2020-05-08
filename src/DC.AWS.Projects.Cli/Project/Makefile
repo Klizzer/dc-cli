@@ -66,7 +66,7 @@ else
 	rm -rf ./.packages
 	mkdir ./.packages
 endif
-	$(DC_CLI_COMMAND) infra package
+	$(DC_CLI_COMMAND) infra package -o ./.packages
 ifdef NUGET_FEED_URL
 	$(foreach file, $(wildcard ./.packages/*), dotnet nuget push $(file) --skip-duplicate  -k $(NUGET_API_KEY) -s $(NUGET_FEED_URL);)
 endif

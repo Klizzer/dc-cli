@@ -16,7 +16,7 @@ namespace DC.AWS.Projects.Cli.Commands
 
             var results = await components.Package(options.GetVersion());
 
-            var outputDirectory = new DirectoryInfo(settings.GetRootedPath(".packages"));
+            var outputDirectory = new DirectoryInfo(settings.GetRootedPath(options.Output));
             
             if (!outputDirectory.Exists)
                 outputDirectory.Create();
@@ -47,6 +47,9 @@ namespace DC.AWS.Projects.Cli.Commands
 
             [Option('v', "package-version", HelpText = "Package version")]
             public string Version { private get; set; }
+
+            [Option('o', "output", Default = "[[PROJECT_ROOT]]/.packages", HelpText = "Output directory.")]
+            public string Output { get; set; }
 
             public string GetVersion()
             {
