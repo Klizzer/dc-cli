@@ -8,10 +8,10 @@ PROJECT_NAME = [[PROJECT_NAME]]
 
 ifeq ($(OS), Windows_NT)
     DETECTED_OS := Windows
-    DC_CLI_COMMAND := .\.tools\dc-aws.exe
+    DC_CLI_COMMAND := .\.tools\dc.exe
 else
     DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
-    DC_CLI_COMMAND := ./.tools/dc-aws
+    DC_CLI_COMMAND := ./.tools/dc
 endif
 
 NUGET_FEED_URL ?= [[NUGET_FEED_URL]]
@@ -24,14 +24,14 @@ CONFIGURE ?= true
 init:
 ifeq ($(DETECTED_OS), Windows)
 	if not exist .tools mkdir .tools
-	if exist .tools/dc-aws.exe del .tools/dc-aws.exe
-	(powershell -ExecutionPolicy Bypass -Command "& { iwr https://github.com/DigitalCreationAb/dc-aws-cli/releases/download/v$(DC_CLI_VERSION)/dc-aws-v$(DC_CLI_VERSION)-win-x64.zip -OutFile %cd%\dc-aws.zip }" && 7z.exe x dc-aws.zip -o"%cd%\.tools" && del dc-aws.zip)
+	if exist .tools/dc.exe del .tools/dc.exe
+	(powershell -ExecutionPolicy Bypass -Command "& { iwr https://github.com/DigitalCreationAb/dc-cli/releases/download/v$(DC_CLI_VERSION)/dc-v$(DC_CLI_VERSION)-win-x64.zip -OutFile %cd%\dc.zip }" && 7z.exe x dc.zip -o"%cd%\.tools" && del dc.zip)
 else
 	mkdir -p ./.tools
-	rm -f ./.tools/dc-aws
-	wget https://github.com/DigitalCreationAb/dc-aws-cli/releases/download/v$(DC_CLI_VERSION)/dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
-	unzip ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip -d ./.tools
-	rm ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
+	rm -f ./.tools/dc
+	wget https://github.com/DigitalCreationAb/dc-cli/releases/download/v$(DC_CLI_VERSION)/dc-v$(DC_CLI_VERSION)-linux-x64.zip
+	unzip ./dc-v$(DC_CLI_VERSION)-linux-x64.zip -d ./.tools
+	rm ./dc-v$(DC_CLI_VERSION)-linux-x64.zip
 endif
 ifeq ($(CONFIGURE), true)
 	@make configure

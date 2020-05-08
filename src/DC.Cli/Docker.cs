@@ -62,7 +62,7 @@ namespace DC.AWS.Projects.Cli
         {
             var dockerFileData = Assembly
                 .GetExecutingAssembly()
-                .GetManifestResourceStream($"DC.AWS.Projects.Cli.Containers.{name}.Dockerfile");
+                .GetManifestResourceStream($"DC.Cli.Containers.{name}.Dockerfile");
 
             using (dockerFileData)
             using(var reader = new StreamReader(dockerFileData!))

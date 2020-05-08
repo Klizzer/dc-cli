@@ -36,16 +36,16 @@ install: publish
 ifeq ($(DETECTED_OS), Windows)
 	if not exist $(INSTALL_LOCATION) mkdir $(INSTALL_LOCATION)
 	pathman /au $(INSTALL_LOCATION)
-	copy /B /Y .\.out\win-x64\dc-aws.exe $(INSTALL_LOCATION)\dc-aws.exe
+	copy /B /Y .\.out\win-x64\dc.exe $(INSTALL_LOCATION)\dc.exe
 else
-	sudo cp ./.out/linux-x64/dc-aws $(INSTALL_LOCATION)
+	sudo cp ./.out/linux-x64/dc $(INSTALL_LOCATION)
 endif
 
 .PHONY: package
 package: publish
 	rm -rf ./.packages
 	mkdir ./.packages
-	$(foreach release, $(wildcard ./.out/*), cd $(release) && zip -x *.pdb -r ../../.packages/dc-aws-$(VERSION)-$(notdir $(release)).zip . && cd $(CURDIR);)
+	$(foreach release, $(wildcard ./.out/*), cd $(release) && zip -x *.pdb -r ../../.packages/dc-$(VERSION)-$(notdir $(release)).zip . && cd $(CURDIR);)
 
 .PHONY: clean
 clean:

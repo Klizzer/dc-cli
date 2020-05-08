@@ -30,7 +30,7 @@ namespace DC.AWS.Projects.Cli
         {
             var infrastructureTemplateData = Assembly
                 .GetExecutingAssembly()
-                .GetManifestResourceStream($"DC.AWS.Projects.Cli.Templates.{templateType.ToString()}.{resourceName}");
+                .GetManifestResourceStream($"DC.Cli.Templates.{templateType.ToString()}.{resourceName}");
 
             await using (infrastructureTemplateData)
             using(var reader = new StreamReader(infrastructureTemplateData!))
