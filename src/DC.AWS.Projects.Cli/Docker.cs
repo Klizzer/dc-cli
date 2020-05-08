@@ -22,18 +22,14 @@ namespace DC.AWS.Projects.Cli
             return CreateContainer(image, name);
         }
         
-        public static Container ContainerFromFile(string path, string imageName, string containerName)
+        public static Container ContainerFromProject(string name, string imageName, string containerName)
         {
             var imageTag = $"{imageName}:{Assembly.GetExecutingAssembly().GetInformationVersion()}";
 
             if (HasImage(imageTag)) 
                 return CreateContainer(imageName, containerName);
-            
-            var containerPath = Path.Combine(
-                Assembly.GetExecutingAssembly().GetPath(),
-                $"Containers/{path}/Dockerfile");
 
-            var fileData = File.ReadAllText(containerPath);
+            var fileData = GetProjectDockerContent(name);
 
             var startInfo = new ProcessStartInfo
             {
@@ -60,6 +56,19 @@ namespace DC.AWS.Projects.Cli
         private static Container CreateContainer(string image, string name)
         {
             return new Container(name, image);
+        }
+        
+        private static string GetProjectDockerContent(string name)
+        {
+            var dockerFileData = Assembly
+                .GetExecutingAssembly()
+                .GetManifestResourceStream($"DC.AWS.Projects.Cli.Containers.{name}.Dockerfile");
+
+            using (dockerFileData)
+            using(var reader = new StreamReader(dockerFileData!))
+            {
+                return reader.ReadToEnd();
+            }
         }
 
         public static bool HasImage(string image)

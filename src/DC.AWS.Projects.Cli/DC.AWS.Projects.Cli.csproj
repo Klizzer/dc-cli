@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc-aws</AssemblyName>
-    <Version>0.27.0</Version>
+    <Version>0.28.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,10 +24,6 @@
     <None Include="Templates/Functions/**/*.*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    
-    <None Include="Containers/**/*.*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   
   <ItemGroup>
@@ -36,5 +32,7 @@
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-lambda-function.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\proxy.config.yml" />
+    <None Remove="Containers\sam\Dockerfile" />
+    <EmbeddedResource Include="Containers\sam\Dockerfile" />
   </ItemGroup>
 </Project>

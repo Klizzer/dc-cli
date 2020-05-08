@@ -26,7 +26,7 @@ namespace DC.AWS.Projects.Cli.Components.Aws.ApiGateway
             _tempPath = new DirectoryInfo(System.IO.Path.Combine(path.FullName, ".tmp"));
             
             _dockerContainer = Docker
-                .ContainerFromFile(
+                .ContainerFromProject(
                     "sam",
                     configuration.GetContainerImageName(settings),
                     configuration.GetContainerName(settings))
