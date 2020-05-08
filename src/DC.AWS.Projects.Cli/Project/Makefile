@@ -14,7 +14,6 @@ else
     DC_CLI_COMMAND := ./.tools/dc-aws
 endif
 
-CONFIGURE ?= true
 NUGET_FEED_URL ?= [[NUGET_FEED_URL]]
 NUGET_API_KEY ?=
 
@@ -33,9 +32,11 @@ else
 	unzip ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip -d ./.tools
 	rm ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
 endif
-ifeq ($(CONFIGURE), true)
-	$(DC_CLI_COMMAND) project configure -s
-endif
+
+.PHONY: configure
+configure:
+	$(DC_CLI_COMMAND) project configure
+
 
 .PHONY: restore
 restore:

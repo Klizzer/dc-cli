@@ -21,6 +21,37 @@ namespace DC.AWS.Projects.Cli
         {
             Pull(image);
 
+            return CreateContainer(image, name);
+        }
+        
+        public static Container ContainerFromFile(string path, string imageName, string containerName)
+        {
+            var containerPath = Path.Combine(
+                Assembly.GetExecutingAssembly().GetPath(),
+                $"Containers/{path}/Dockerfile");
+
+            var fileData = File.ReadAllText(containerPath);
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = $"build -t \"{imageName}\" -",
+                RedirectStandardInput = true
+            };
+            
+            var process = Process.Start(startInfo);
+
+            process?.StandardInput.Write(fileData);
+            process?.StandardInput.Flush();
+            process?.StandardInput.Close();
+
+            process?.WaitForExit();
+            
+            return CreateContainer(imageName, containerName);
+        }
+
+        private static Container CreateContainer(string image, string name)
+        {
             var container = new Container(name, image);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -29,30 +60,6 @@ namespace DC.AWS.Projects.Cli
             return container;
         }
         
-        public static Container ContainerFromFile(string path, string imageName, string containerName)
-        {
-            var containerPath = path;
-
-            if (!Path.IsPathRooted(path))
-            {
-                containerPath = Path.Combine(
-                    Assembly.GetExecutingAssembly().GetPath(),
-                    $"Containers/{path}");
-            }
-            
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "docker",
-                Arguments = $"build -t \"{imageName}\" \"{containerPath}\""
-            };
-            
-            var process = Process.Start(startInfo);
-
-            process?.WaitForExit();
-            
-            return ContainerFromImage(imageName, containerName);
-        }
-
         public static void Pull(string image)
         {
             var startInfo = new ProcessStartInfo
