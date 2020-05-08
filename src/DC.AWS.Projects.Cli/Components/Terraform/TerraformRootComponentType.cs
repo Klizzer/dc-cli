@@ -24,14 +24,16 @@ namespace DC.AWS.Projects.Cli.Components.Terraform
 
             await File.WriteAllTextAsync(filePath, "");
 
-            return new TerraformRootComponent(data.Name, tree.Path);
+            return new TerraformRootComponent(data.Name, new FileInfo(filePath));
         }
 
         public Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
         {
             var result = from file in path.EnumerateFiles()
                 where file.Name.EndsWith(".main.tf")
-                select new TerraformRootComponent(Path.GetFileNameWithoutExtension(file.Name), file.Directory);
+                select new TerraformRootComponent(
+                    Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(file.Name)), 
+                    file);
             
             return Task.FromResult<IImmutableList<IComponent>>(result.OfType<IComponent>().ToImmutableList());
         }

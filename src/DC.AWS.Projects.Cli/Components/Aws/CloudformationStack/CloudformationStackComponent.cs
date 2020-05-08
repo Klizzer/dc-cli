@@ -148,10 +148,10 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
                 serializer.Serialize(template));
 
             var cliDocker = Docker.TemporaryContainerFromImage("amazon/aws-cli")
-                .WithVolume("~/.aws", "/root/.aws")
+                .WithVolume(Path.Combine(User.GetHome(), ".aws"), "/root/.aws")
                 .WithVolume(
-                    _projectSettings.GetRootedPath(""),
-                    $"/usr/src/app/${_projectSettings.GetRelativePath(_path.FullName)}")
+                    _projectSettings.GetRootedPath(_path.FullName),
+                    $"/usr/src/app/{_projectSettings.GetRelativePath(_path.FullName)}")
                 .WorkDir("/usr/src/app");
 
             await cliDocker
@@ -159,33 +159,23 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
                     _projectSettings.GetRootedPath("infrastructure/deployment-bucket.yml"),
                     "/usr/src/app/template.yml")
                 .WithVolume(tempDir.FullName, "/usr/src/app/output")
-                .Run(@$"cloudformation deploy 
-                                        --stack-name {_configuration.Settings.DeploymentStackName} 
-                                        --parameter-overrides DeploymentBucketName={_configuration.Settings.DeploymentBucketName} 
-                                        --no-fail-on-empty-changeset 
-                                        --region {_configuration.Settings.AwsRegion}");
+                .Run($"cloudformation deploy --template-file ./template.yml --stack-name {_configuration.Settings.DeploymentStackName} --parameter-overrides DeploymentBucketName={_configuration.Settings.DeploymentBucketName} --no-fail-on-empty-changeset --region {_configuration.Settings.AwsRegion}");
 
             await cliDocker
-                .WithVolume(
-                    _projectSettings.GetRootedPath(""),
-                    $"/usr/src/app/${_projectSettings.GetRelativePath(_path.FullName)}")
                 .WithVolume(outputDir.FullName, "/usr/src/app/output")
                 .WithVolume(Path.Combine(tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
-                .Run(@$"cloudformation package 
-                                        --output-template-file ./output/template.yml
-                                        --s3-bucket {_configuration.Settings.DeploymentBucketName}
-                                        --s3-prefix {version}");
+                .Run($"cloudformation package --template-file ./template.yml --output-template-file ./output/template.yml --s3-bucket {_configuration.Settings.DeploymentBucketName} --s3-prefix {version}");
             
             var result = new List<PackageResource>();
 
             foreach (var file in outputDir.EnumerateFiles())
             {
                 result.Add(new PackageResource(
-                    _projectSettings.GetRelativePath(file.FullName, components.Path.FullName),
+                    _projectSettings.GetRelativePath(Path.Combine(_path.FullName, file.Name), components.Path.FullName),
                     await File.ReadAllBytesAsync(file.FullName)));
             }
             
-            tempDir.Delete();
+            tempDir.Delete(true);
 
             return result.ToImmutableList();
         }

@@ -6,12 +6,12 @@ namespace DC.AWS.Projects.Cli.Components.Terraform
 {
     public class TerraformRootComponent : IPackageApplication
     {
-        private readonly DirectoryInfo _path;
+        private readonly FileInfo _file;
 
-        public TerraformRootComponent(string name, DirectoryInfo path)
+        public TerraformRootComponent(string name, FileInfo file)
         {
+            _file = file;
             Name = name;
-            _path = path;
         }
         
         public string Name { get; }
@@ -20,7 +20,7 @@ namespace DC.AWS.Projects.Cli.Components.Terraform
         {
             var packageResources = resources
                 .Add(new PackageResource("main.tf",
-                    await File.ReadAllBytesAsync(Path.Combine(_path.FullName, $"{Name}.main.tf"))));
+                    await File.ReadAllBytesAsync(_file.FullName)));
             
             return new PackageResult($"{Name}.{version}.zip", packageResources);
         }
