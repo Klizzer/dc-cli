@@ -28,8 +28,8 @@ build:
 	
 .PHONY: publish
 publish: clean
-	dotnet publish ./src/DC.AWS.Projects.Cli -c Release --output $(CURDIR)/.out/win-x64 --self-contained -r win-x64 -p:PublishSingleFile=true
-	dotnet publish ./src/DC.AWS.Projects.Cli -c Release --output $(CURDIR)/.out/linux-x64 --self-contained -r linux-x64 -p:PublishSingleFile=true
+	dotnet publish ./src/DC.Cli -c Release --output $(CURDIR)/.out/win-x64 --self-contained -r win-x64 -p:PublishSingleFile=true
+	dotnet publish ./src/DC.Cli -c Release --output $(CURDIR)/.out/linux-x64 --self-contained -r linux-x64 -p:PublishSingleFile=true
 
 .PHONY: install
 install: publish
