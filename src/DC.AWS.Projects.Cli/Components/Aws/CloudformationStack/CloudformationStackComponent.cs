@@ -83,10 +83,10 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
             if (startResult.exitCode != 0)
                 return new ComponentActionResult(false, startResult.output);
 
-            var started = await WaitForStart(TimeSpan.FromSeconds(30));
+            var started = await WaitForStart(TimeSpan.FromMinutes(1));
             
             if (!started)
-                return new ComponentActionResult(false, "Can't start localstack within 30 seconds.");
+                return new ComponentActionResult(false, "Can't start localstack within 60 seconds.");
             
             var cloudformationComponents =
                 components.FindAll<ICloudformationComponent>(Components.Direction.In);
@@ -314,7 +314,7 @@ namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
 
             public string GetDataDir(ProjectSettings settings)
             {
-                return settings.GetRootedPath($"./localstack/{Name}");
+                return settings.GetRootedPath($"./.localstack/{Name}");
             }
             
             public IImmutableList<string> GetConfiguredServices()

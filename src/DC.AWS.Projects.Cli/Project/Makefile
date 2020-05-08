@@ -16,6 +16,7 @@ endif
 
 NUGET_FEED_URL ?= [[NUGET_FEED_URL]]
 NUGET_API_KEY ?=
+CONFIGURE ?= true
 
 .DEFAULT_GOAL := build
 
@@ -31,6 +32,9 @@ else
 	wget https://github.com/DigitalCreationAb/dc-aws-cli/releases/download/v$(DC_CLI_VERSION)/dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
 	unzip ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip -d ./.tools
 	rm ./dc-aws-v$(DC_CLI_VERSION)-linux-x64.zip
+endif
+ifeq ($(CONFIGURE), true)
+	@make configure
 endif
 
 .PHONY: configure

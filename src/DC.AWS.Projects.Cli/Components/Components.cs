@@ -26,7 +26,7 @@ namespace DC.AWS.Projects.Cli.Components
             new LocalProxyComponentType(),
             new CloudformationStackComponentType(),
             new TerraformResourceComponentType(),
-            new TerraformResourceComponentType()
+            new TerraformRootComponentType()
         }.ToImmutableList();
         
         public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)
