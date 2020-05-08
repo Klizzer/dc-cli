@@ -29,9 +29,10 @@ namespace DC.AWS.Projects.Cli.Components
             _dockerContainer = Docker
                 .ContainerFromFile(
                     "sam",
-                    configuration.GetContainerImageName(),
-                    configuration.GetContainerName())
+                    configuration.GetContainerImageName(settings),
+                    configuration.GetContainerName(settings))
                 .WithDockerSocket()
+                .Detached()
                 .WithVolume(path.FullName, $"/usr/src/app/${settings.GetRelativePath(path.FullName)}")
                 .WithVolume(System.IO.Path.Combine(_tempPath.FullName, "environment.json"), "/usr/src/app/environment.json")
                 .WithVolume(System.IO.Path.Combine(_tempPath.FullName, "template.yml"), "/usr/src/app/template.yml")
@@ -71,8 +72,7 @@ namespace DC.AWS.Projects.Cli.Components
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
-            if (_tempPath.Exists)
-                _tempPath.Delete(true);
+            await Stop();
                 
             _tempPath.Create();
 
@@ -122,7 +122,6 @@ namespace DC.AWS.Projects.Cli.Components
                 serializer.Serialize(template));
             
             var result = await _dockerContainer
-                .Detached()
                 .Run($"local start-api --env-vars ./environment.json --docker-volume-basedir \"{Path.FullName}\" --host 0.0.0.0");
 
             return new ComponentActionResult(result.exitCode == 0, result.output);
@@ -153,7 +152,8 @@ namespace DC.AWS.Projects.Cli.Components
 
         public ILanguageVersion GetDefaultLanguage(ProjectSettings settings)
         {
-            return FunctionLanguage.Parse(_configuration.Settings.DefaultLanguage) ?? settings.GetDefaultLanguage();
+            return FunctionLanguage.GetLanguage(_configuration.Settings.DefaultLanguage,
+                settings.GetConfiguration(FunctionLanguage.DefaultLanguageConfigurationKay));
         }
 
         public string GetUrl(string path)
@@ -185,16 +185,14 @@ namespace DC.AWS.Projects.Cli.Components
             public string Name { get; set; }
             public ApiSettings Settings { get; set; }
 
-            public string GetContainerImageName()
+            public string GetContainerImageName(ProjectSettings settings)
             {
-                //TODO:Use better name
-                return Name;
+                return $"{settings.GetProjectName()}/api-{Name}";
             }
 
-            public string GetContainerName()
+            public string GetContainerName(ProjectSettings settings)
             {
-                //TODO: Use better name
-                return Name;
+                return $"{settings.GetProjectName()}-api-{Name}";
             }
             
             public class ApiSettings

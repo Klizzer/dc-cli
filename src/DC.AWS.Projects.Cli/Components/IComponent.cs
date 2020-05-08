@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 
@@ -50,6 +51,17 @@ namespace DC.AWS.Projects.Cli.Components
     {
         string BaseUrl { get; }
         int Port { get; }
+    }
+
+    public interface INeedConfiguration : IComponent
+    {
+        IEnumerable<(string key, string question, ConfigurationType configurationType)> GetRequiredConfigurations();
+        
+        public enum ConfigurationType
+        {
+            Project,
+            User
+        }
     }
 
     public class PackageResult

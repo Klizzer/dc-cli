@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
+using DC.AWS.Projects.Cli.Components;
 
 namespace DC.AWS.Projects.Cli.Commands
 {
@@ -11,51 +15,52 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             var settings = await ProjectSettings.Read();
 
-            if (File.Exists(Path.Combine(settings.ProjectRoot, ".settings.json")))
-            {
-                if (options.SkipExisting)
-                    return;
+            var components = Components.Components.BuildTree(settings, settings.GetRootedPath(""));
 
-                if (!options.Force)
-                {
-                    Console.WriteLine(
-                        "This project is already configured. Do you want to overwrite the current configuration? (yes, no)");
-                    
-                    var overwrite = Console.ReadLine() == "yes";
-
-                    if (!overwrite)
-                        return;
-                }
-            }
-
-            var localstackApiKey = options.LocalstackApiKey;
-
-            if (string.IsNullOrEmpty(localstackApiKey))
-            {
-                Console.WriteLine("Enter your localstack api key if you have any:");
-
-                localstackApiKey = Console.ReadLine();
-            }
-
-            var config = new ProjectConfiguration
-            {
-                LocalstackApiKey = localstackApiKey
-            };
+            var requiredConfigurations = components
+                .FindAll<INeedConfiguration>(Components.Components.Direction.In)
+                .SelectMany(x => x.component.GetRequiredConfigurations())
+                .ToImmutableList();
             
-            await File.WriteAllTextAsync(Path.Combine(settings.ProjectRoot, ".settings.json"), Json.Serialize(config));
+            var newConfigurations = new Dictionary<string, (string value, INeedConfiguration.ConfigurationType configurationType)>();
+
+            foreach (var requiredConfiguration in requiredConfigurations)
+            {
+                if (newConfigurations.ContainsKey(requiredConfiguration.key))
+                {
+                    if (requiredConfiguration.configurationType <
+                        newConfigurations[requiredConfiguration.key].configurationType)
+                    {
+                        newConfigurations[requiredConfiguration.key] = (
+                            newConfigurations[requiredConfiguration.key].value,
+                            requiredConfiguration.configurationType);
+                    }
+                    
+                    continue;
+                }
+                
+                if (settings.HasConfiguration(requiredConfiguration.key) && !options.Force)
+                    continue;
+
+                var value = ConsoleInput.Ask(requiredConfiguration.question);
+
+                newConfigurations[requiredConfiguration.key] = (value, requiredConfiguration.configurationType);
+            }
+
+            foreach (var newConfiguration in newConfigurations)
+            {
+                settings.SetConfiguration(newConfiguration.Key, newConfiguration.Value.value,
+                    newConfiguration.Value.configurationType);
+            }
+
+            await settings.Save();
         }
         
         [Verb("configure", HelpText = "Configure your environment.")]
         public class Options
         {
-            [Option('k', "localstack-key", Default = "", HelpText = "Localstack api key.")]
-            public string LocalstackApiKey { get; set; }
-
-            [Option('f', "force", Default = false, HelpText = "Overwrite existing configuration without asking.")]
+            [Option('f', "force", Default = false, HelpText = "Reconfigure project.")]
             public bool Force { get; set; }
-
-            [Option('s', "skip-existing", Default = false, HelpText = "Skip if already configured.")]
-            public bool SkipExisting { get; set; }
         }
     }
 }

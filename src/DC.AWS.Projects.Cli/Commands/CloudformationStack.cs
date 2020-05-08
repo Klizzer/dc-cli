@@ -18,7 +18,8 @@ namespace DC.AWS.Projects.Cli.Commands
                 options.Name,
                 options.MainPort,
                 options.ServicesPort,
-                options.GetServices());
+                options.GetServices(),
+                options.AwsRegion);
         }
         
         [Verb("cf-stack", HelpText = "Setup a cloudformation stack environment.")]
@@ -38,6 +39,9 @@ namespace DC.AWS.Projects.Cli.Commands
 
             [Option('s', "services", Required = true, Default = "edge,serverless", HelpText = "Services to start.")]
             public string Services { private get; set; }
+
+            [Option('r', "aws-region", Required = true, Default = "eu-north-1", HelpText = "Aws region for the stack")]
+            public string AwsRegion { get; set; }
 
             public IImmutableList<string> GetServices()
             {

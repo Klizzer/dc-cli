@@ -1,5 +1,5 @@
 *.user
-.settings.json
+.user.settings
 .vs/
 .idea/
 bin/

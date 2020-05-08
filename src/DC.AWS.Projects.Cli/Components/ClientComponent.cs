@@ -16,8 +16,8 @@ namespace DC.AWS.Projects.Cli.Components
     {
         private const string ConfigFileName = "client.config.yml";
         
-        private static readonly IImmutableDictionary<ClientType, Func<DirectoryInfo, ClientConfiguration, Task>> TypeHandlers =
-            new Dictionary<ClientType, Func<DirectoryInfo, ClientConfiguration, Task>>
+        private static readonly IImmutableDictionary<ClientType, Func<DirectoryInfo, ClientConfiguration, ProjectSettings, Task>> TypeHandlers =
+            new Dictionary<ClientType, Func<DirectoryInfo, ClientConfiguration, ProjectSettings, Task>>
             {
                 [ClientType.VueNuxt] = CreateVueNuxt
             }.ToImmutableDictionary();
@@ -26,12 +26,12 @@ namespace DC.AWS.Projects.Cli.Components
         private readonly ClientConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
         
-        private ClientComponent(DirectoryInfo path, ClientConfiguration configuration)
+        private ClientComponent(DirectoryInfo path, ClientConfiguration configuration, ProjectSettings settings)
         {
             _path = path;
             _configuration = configuration;
 
-            _dockerContainer = CreateBaseContainer(path, configuration);
+            _dockerContainer = CreateBaseContainer(path, configuration, settings);
         }
 
         public string BaseUrl => _configuration.Settings.BaseUrl;
@@ -66,7 +66,7 @@ namespace DC.AWS.Projects.Cli.Components
             var configuration = deserializer.Deserialize<ClientConfiguration>(
                 await File.ReadAllTextAsync(Path.Combine(dir.FullName, ConfigFileName)));
             
-            await TypeHandlers[clientType](dir, configuration);
+            await TypeHandlers[clientType](dir, configuration, settings);
         }
 
         public async Task<ComponentActionResult> Restore()
@@ -132,7 +132,7 @@ namespace DC.AWS.Projects.Cli.Components
             return new ComponentActionResult(true, result);
         }
 
-        public static IEnumerable<ClientComponent> FindAtPath(DirectoryInfo path)
+        public static IEnumerable<ClientComponent> FindAtPath(DirectoryInfo path, ProjectSettings settings)
         {
             if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
                 yield break;
@@ -141,20 +141,27 @@ namespace DC.AWS.Projects.Cli.Components
             yield return new ClientComponent(
                 path,
                 deserializer.Deserialize<ClientConfiguration>(
-                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))));
+                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))),
+                settings);
         }
         
-        private static Task CreateVueNuxt(DirectoryInfo dir, ClientConfiguration configuration)
+        private static Task CreateVueNuxt(
+            DirectoryInfo dir,
+            ClientConfiguration configuration,
+            ProjectSettings settings)
         {
-            return CreateBaseContainer(dir.Parent, configuration)
+            return CreateBaseContainer(dir.Parent, configuration, settings)
                 .Interactive()
                 .Run($"create nuxt-app {dir.Name}");
         }
 
-        private static Docker.Container CreateBaseContainer(FileSystemInfo path, ClientConfiguration configuration)
+        private static Docker.Container CreateBaseContainer(
+            FileSystemInfo path,
+            ClientConfiguration configuration,
+            ProjectSettings settings)
         {
             return Docker
-                .ContainerFromImage("node", configuration.GetContainerName())
+                .ContainerFromImage("node", configuration.GetContainerName(settings))
                 .EntryPoint("yarn")
                 .Port(configuration.Settings.Port, 3000)
                 .WithVolume(path.FullName, "/usr/local/src", true);
@@ -170,9 +177,9 @@ namespace DC.AWS.Projects.Cli.Components
             public string Name { get; set; }
             public ClientSettings Settings { get; set; }
 
-            public string GetContainerName()
+            public string GetContainerName(ProjectSettings settings)
             {
-                return Name;
+                return $"{settings.GetProjectName()}-client-{Name}";
             }
             
             public class ClientSettings

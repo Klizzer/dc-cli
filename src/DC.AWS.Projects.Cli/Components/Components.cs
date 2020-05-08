@@ -46,9 +46,9 @@ namespace DC.AWS.Projects.Cli.Components
 
             components.AddRange(ApiGatewayComponent.FindAtPath(directory, settings));
             components.AddRange(LambdaFunctionComponent.FindAtPath(directory));
-            components.AddRange(ClientComponent.FindAtPath(directory));
+            components.AddRange(ClientComponent.FindAtPath(directory, settings));
             components.AddRange(CloudformationComponent.FindAtPath(directory));
-            components.AddRange(LocalProxyComponent.FindAtPath(directory));
+            components.AddRange(LocalProxyComponent.FindAtPath(directory, settings));
             components.AddRange(CloudformationStackComponent.FindAtPath(directory, settings));
             components.AddRange(TerraformRootComponent.FindAtPath(directory));
             components.AddRange(TerraformResourceComponent.FindAtPath(directory, settings));

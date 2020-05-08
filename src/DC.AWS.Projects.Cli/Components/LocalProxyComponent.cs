@@ -13,12 +13,12 @@ namespace DC.AWS.Projects.Cli.Components
         private readonly ProxyConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
 
-        private LocalProxyComponent(FileSystemInfo path, ProxyConfiguration configuration)
+        private LocalProxyComponent(FileSystemInfo path, ProxyConfiguration configuration, ProjectSettings settings)
         {
             _configuration = configuration;
 
             _dockerContainer = Docker
-                .ContainerFromImage("nginx", configuration.GetContainerName())
+                .ContainerFromImage("nginx", configuration.GetContainerName(settings))
                 .Detached()
                 .Port(configuration.Settings.Port, 80)
                 .WithVolume(Path.Combine(path.FullName, "proxy.nginx.conf"), "/etc/nginx/nginx.conf")
@@ -94,7 +94,7 @@ namespace DC.AWS.Projects.Cli.Components
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
-            return Task.FromResult(new ComponentActionResult(true, ""));
+            return Task.FromResult(new ComponentActionResult(true, $"Proxy \"{_configuration.Name}\" stopped"));
         }
 
         public async Task<ComponentActionResult> Logs()
@@ -104,7 +104,7 @@ namespace DC.AWS.Projects.Cli.Components
             return new ComponentActionResult(true, result);
         }
 
-        public static IEnumerable<LocalProxyComponent> FindAtPath(DirectoryInfo path)
+        public static IEnumerable<LocalProxyComponent> FindAtPath(DirectoryInfo path, ProjectSettings settings)
         {
             if (!HasProxyAt(path.FullName)) 
                 yield break;
@@ -113,7 +113,8 @@ namespace DC.AWS.Projects.Cli.Components
             yield return new LocalProxyComponent(
                 path,
                 deserializer.Deserialize<ProxyConfiguration>(
-                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))));
+                    File.ReadAllText(Path.Combine(path.FullName, ConfigFileName))),
+                settings);
         }
         
         private class ProxyConfiguration
@@ -121,9 +122,9 @@ namespace DC.AWS.Projects.Cli.Components
             public string Name { get; set; }
             public ProxySettings Settings { get; set; }
             
-            public string GetContainerName()
+            public string GetContainerName(ProjectSettings settings)
             {
-                return Name;
+                return $"{settings.GetProjectName()}-proxy-{Name}";
             }
             
             public class ProxySettings

@@ -1,38 +1,49 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using DC.AWS.Projects.Cli.Components;
 
 namespace DC.AWS.Projects.Cli
 {
     public class ProjectSettings
     {
-        private ProjectSettings()
+        private const string ProjectNameKey = "projectName";
+
+        private readonly IDictionary<string, string> _projectSettings;
+        private readonly IDictionary<string, string> _userSettings;
+        
+        private ProjectSettings(
+            IDictionary<string, string> projectSettings,
+            IDictionary<string, string> userSettings,
+            string projectRoot)
         {
-            
+            ProjectRoot = projectRoot;
+            _projectSettings = projectSettings;
+            _userSettings = userSettings;
+        }
+
+        public string ProjectRoot { get; }
+
+        public string GetProjectName()
+        {
+            return GetConfiguration(ProjectNameKey);
         }
         
-        public string DefaultLanguage { private get; set; }
-        public string AwsRegion { get; set; }
-
-        [JsonIgnore]
-        public string ProjectRoot { get; set; }
-
-        public ILanguageVersion GetDefaultLanguage()
+        public static ProjectSettings New(string path, string name)
         {
-            return FunctionLanguage.Parse(DefaultLanguage);
-        }
-
-        public static ProjectSettings New(ILanguageVersion defaultLanguage, string awsRegion, string path)
-        {
-            return new ProjectSettings
+            var projectSettings = new Dictionary<string, string>
             {
-                DefaultLanguage = defaultLanguage?.ToString(),
-                ProjectRoot = path,
-                AwsRegion = awsRegion
+                [ProjectNameKey] = name
             };
+            
+            return new ProjectSettings(
+                projectSettings,
+                new Dictionary<string, string>(), 
+                path);
         }
         
         public static async Task<ProjectSettings> Read()
@@ -43,21 +54,63 @@ namespace DC.AWS.Projects.Cli
             {
                 if (File.Exists(Path.Combine(currentPath, ".project.settings")))
                 {
-                    var settings = Json.DeSerialize<ProjectSettings>(
+                    var projectSettings = Json.DeSerialize<IDictionary<string, string>>(
                         await File.ReadAllTextAsync(Path.Combine(currentPath, ".project.settings")));
+                    
+                    var userSettings = new Dictionary<string, string>();
 
-                    settings.ProjectRoot = currentPath;
+                    if (File.Exists(Path.Combine(currentPath, ".user.settings")))
+                    {
+                        userSettings = Json.DeSerialize<Dictionary<string, string>>(
+                            await File.ReadAllTextAsync(Path.Combine(currentPath, ".user.settings")));
+                    }
 
-                    return settings;
+                    return new ProjectSettings(projectSettings, userSettings, currentPath);
                 }
 
                 currentPath = Directory.GetParent(currentPath).FullName;
             }
         }
 
-        public Task Save()
+        public async Task Save()
         {
-            return File.WriteAllTextAsync(Path.Combine(ProjectRoot, ".project.settings"), Json.Serialize(this));
+            await File.WriteAllTextAsync(Path.Combine(ProjectRoot, ".project.settings"), Json.Serialize(_projectSettings));
+
+            if (_userSettings.Any())
+            {
+                await File.WriteAllTextAsync(Path.Combine(ProjectRoot, ".user.settings"),
+                    Json.Serialize(_userSettings));
+            }
+        }
+
+        public string GetConfiguration(string key, string defaultValue = "")
+        {
+            if (_userSettings.ContainsKey(key))
+                return _userSettings[key];
+
+            return _projectSettings.ContainsKey(key) ? _projectSettings[key] : defaultValue;
+        }
+
+        public bool HasConfiguration(string key)
+        {
+            return _userSettings.ContainsKey(key) || _projectSettings.ContainsKey(key);
+        }
+
+        public void SetConfiguration(string key, string value, INeedConfiguration.ConfigurationType configurationType)
+        {
+            switch (configurationType)
+            {
+                case INeedConfiguration.ConfigurationType.Project:
+                    _projectSettings[key] = value;
+                    
+                    break;
+                case INeedConfiguration.ConfigurationType.User:
+                    _userSettings[key] = value;
+                    
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(configurationType), configurationType, null);
+            }
         }
         
         public string GetRootedPath(string path)

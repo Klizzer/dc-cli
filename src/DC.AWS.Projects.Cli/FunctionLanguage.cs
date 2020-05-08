@@ -12,8 +12,8 @@ namespace DC.AWS.Projects.Cli
             NodeLanguage.Instance,
             GoLanguage.Instance
         }.ToImmutableList();
-        
-        public const string DefaultLanguage = NodeLanguage.LanguageName;
+
+        public const string DefaultLanguageConfigurationKay = "defaultFunctionLanguage";
         
         public static ILanguageVersion Parse(string language)
         {
@@ -39,6 +39,19 @@ namespace DC.AWS.Projects.Cli
 
             throw new InvalidOperationException(
                 $"We don't support version: {parts[1]} for language: {parts[0]}. Available versions are: {string.Join(", ", availableVersions.Select(x => x.Version))}");
+        }
+
+        public static ILanguageVersion GetLanguage(params string[] prioOrder)
+        {
+            foreach (var languageName in prioOrder)
+            {
+                var languageVersion = Parse(languageName);
+
+                if (languageVersion != null)
+                    return languageVersion;
+            }
+
+            return NodeLanguage.Instance.GetDefaultVersion();
         }
     }
 }

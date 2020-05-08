@@ -14,7 +14,11 @@ using YamlDotNet.Serialization;
 
 namespace DC.AWS.Projects.Cli.Components
 {
-    public class CloudformationStackComponent : IStartableComponent, ISupplyLogs, IHavePackageResources
+    public class CloudformationStackComponent : 
+        IStartableComponent, 
+        ISupplyLogs,
+        IHavePackageResources,
+        INeedConfiguration
     {
         private static readonly HttpClient HttpClient = new HttpClient();
         
@@ -46,11 +50,10 @@ namespace DC.AWS.Projects.Cli.Components
             if (!dataDir.Exists)
                 dataDir.Create();
             
-            //TODO: Set api key
             _dockerContainer = Docker
                 .ContainerFromImage(
                     $"localstack/localstack:{configuration.Settings.LocalstackVersion}",
-                    configuration.GetContainerName())
+                    configuration.GetContainerName(projectSettings))
                 .Detached()
                 .WithVolume(dataDir.FullName, "/tmp/localstack")
                 .WithDockerSocket()
@@ -59,10 +62,17 @@ namespace DC.AWS.Projects.Cli.Components
                 .EnvironmentVariable("SERVICES", string.Join(",", configuration.Settings.Services))
                 .EnvironmentVariable("DATA_DIR", "/tmp/localstack/data")
                 .EnvironmentVariable("LAMBDA_REMOTE_DOCKER", "0")
-                .EnvironmentVariable("DEBUG", "1");
+                .EnvironmentVariable("DEBUG", "1")
+                .EnvironmentVariable("LOCALSTACK_API_KEY", projectSettings.GetConfiguration("localstackApiKey"));
         }
 
         public string Name => _configuration.Name;
+        
+        public IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)> GetRequiredConfigurations()
+        {
+            yield return ("localstackApiKey", "Enter your localstack api key if you have any:",
+                INeedConfiguration.ConfigurationType.User);
+        }
 
         public static async Task InitAt(
             ProjectSettings settings,
@@ -70,7 +80,8 @@ namespace DC.AWS.Projects.Cli.Components
             string name,
             int mainPort,
             int servicesPort,
-            IImmutableList<string> services)
+            IImmutableList<string> services,
+            string awsRegion)
         {
             var dir = new DirectoryInfo(settings.GetRootedPath(path));
             
@@ -78,7 +89,7 @@ namespace DC.AWS.Projects.Cli.Components
                 dir.Create();
             
             if (File.Exists(Path.Combine(dir.FullName, ConfigFileName)))
-                throw new InvalidCastException($"There is already a localstack configured at: \"{dir.FullName}\"");
+                throw new InvalidCastException($"There is already a cloudformation stack configured at: \"{dir.FullName}\"");
             
             var serializer = new Serializer();
             
@@ -90,7 +101,9 @@ namespace DC.AWS.Projects.Cli.Components
                     Services = services,
                     MainPort = mainPort,
                     ServicesPort = servicesPort,
-                    DeploymentBucketName = $"{name}-deployments"
+                    DeploymentBucketName = $"{name}-deployments",
+                    DeploymentStackName = $"{name}-deployments",
+                    AwsRegion = awsRegion
                 }
             };
 
@@ -133,7 +146,7 @@ namespace DC.AWS.Projects.Cli.Components
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
-            return Task.FromResult(new ComponentActionResult(true, ""));
+            return Task.FromResult(new ComponentActionResult(true, $"Localstack \"{_configuration.Name}\" stopped"));
         }
 
         public async Task<ComponentActionResult> Logs()
@@ -183,10 +196,10 @@ namespace DC.AWS.Projects.Cli.Components
                     "/usr/src/app/template.yml")
                 .WithVolume(tempDir.FullName, "/usr/src/app/output")
                 .Run(@$"cloudformation deploy 
-                                        --stack-name {_configuration.GetDeploymentStackName()} 
+                                        --stack-name {_configuration.Settings.DeploymentStackName} 
                                         --parameter-overrides DeploymentBucketName={_configuration.Settings.DeploymentBucketName} 
                                         --no-fail-on-empty-changeset 
-                                        --region {_projectSettings.AwsRegion}");
+                                        --region {_configuration.Settings.AwsRegion}");
 
             await cliDocker
                 .WithVolume(
@@ -330,20 +343,14 @@ namespace DC.AWS.Projects.Cli.Components
             public string Name { get; set; }
             public CloudformationStackSettings Settings { get; set; }
 
-            public string GetContainerName()
+            public string GetContainerName(ProjectSettings settings)
             {
-                //TODO: Use better name
-                return Name;
+                return $"{settings.GetProjectName()}-localstack-{Name}";
             }
 
             public string GetDataDir(ProjectSettings settings)
             {
                 return settings.GetRootedPath($"./localstack/{Name}");
-            }
-
-            public string GetDeploymentStackName()
-            {
-                return $"{Name}-deployments";
             }
             
             public IImmutableList<string> GetConfiguredServices()
@@ -365,9 +372,11 @@ namespace DC.AWS.Projects.Cli.Components
             {
                 public int MainPort { get; set; }
                 public int ServicesPort { get; set; }
+                public string AwsRegion { get; set; }
                 public string LocalstackVersion { get; set; } = "latest";
                 public IImmutableList<string> Services { get; set; }
                 public string DeploymentBucketName { get; set; }
+                public string DeploymentStackName { get; set; }
             }
         }
         

@@ -14,21 +14,22 @@ namespace DC.AWS.Projects.Cli.Commands
             if (File.Exists(Path.Combine(options.GetRootedPath(), ".project.settings")))
                 throw new InvalidOperationException("This project is already initialized.");
 
-            var projectSettings = ProjectSettings.New(options.GetLanguage(), options.AwsRegion, options.GetRootedPath());
+            var projectDirectory = new DirectoryInfo(options.GetRootedPath());
+            
+            var projectSettings = ProjectSettings.New(
+                options.GetRootedPath(),
+                projectDirectory.Name);
 
             await projectSettings.Save();
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
             var projectFilesSourcePath = Path.Combine(executingAssembly.GetPath(), "Project");
-            
-            var projectDirectory = new DirectoryInfo(options.GetRootedPath());
 
             await Directories.Copy(
                 projectFilesSourcePath, 
                 options.GetRootedPath(),
-                ("PROJECT_NAME", projectDirectory.Name),
-                ("AWS_REGION", options.AwsRegion),
+                ("PROJECT_NAME", projectSettings.GetProjectName()),
                 ("NUGET_FEED_URL", options.NugetFeed),
                 ("DC_CLI_VERSION", GetVersion()));
             
@@ -64,12 +65,7 @@ namespace DC.AWS.Projects.Cli.Commands
         [Verb("init", HelpText = "Initialize a project here.")]
         public class Options
         {
-            [Option('l', "lang", Default = FunctionLanguage.DefaultLanguage, HelpText = "Default language to use for functions")]
-            public string Language { private get; set; }
-            
-            [Option('r', "aws-region", Default = "eu-north-1", HelpText = "Aws region.")]
-            public string AwsRegion { get; set; }
-            
+
             [Option('f', "nuget-feed", Default = "", HelpText = "Nuget feed to publish packages to.")]
             public string NugetFeed { get; set; }
             
@@ -86,11 +82,6 @@ namespace DC.AWS.Projects.Cli.Commands
                     path = path.Substring(2);
 
                 return System.IO.Path.Combine(Environment.CurrentDirectory, path);
-            }
-
-            public ILanguageVersion GetLanguage()
-            {
-                return FunctionLanguage.Parse(Language);
             }
         }
     }
