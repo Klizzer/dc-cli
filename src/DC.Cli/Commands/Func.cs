@@ -1,8 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components.Aws.LambdaFunction;
+using DC.Cli.Components.Aws.LambdaFunction;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class Func
     {
@@ -33,9 +34,9 @@ namespace DC.AWS.Projects.Cli.Commands
 
             [Option('t', "trigger", HelpText = "Trigger type for the function.")]
             public FunctionTrigger? Trigger { get; set; }
-            
-            [Option('p', "path", Default = "[[PROJECT_ROOT]]/src", HelpText = "Path where to put the function.")]
-            public string Path { private get; set; }
+
+            [Option('p', "path", HelpText = "Path where to put the function.")]
+            public string Path { private get; set; } = Environment.CurrentDirectory;
 
             public string GetFunctionPath(ProjectSettings settings)
             {

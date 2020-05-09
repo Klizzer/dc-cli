@@ -4,17 +4,17 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
-using DC.AWS.Projects.Cli.Components.Aws.CloudformationStack;
-using DC.AWS.Projects.Cli.Components.Aws.CloudformationTemplate;
-using DC.AWS.Projects.Cli.Components.Aws.LambdaFunction;
-using DC.AWS.Projects.Cli.Components.Client;
-using DC.AWS.Projects.Cli.Components.Cloudflare;
-using DC.AWS.Projects.Cli.Components.Nginx;
-using DC.AWS.Projects.Cli.Components.Terraform;
+using DC.Cli.Components.Aws.ApiGateway;
+using DC.Cli.Components.Aws.CloudformationStack;
+using DC.Cli.Components.Aws.CloudformationTemplate;
+using DC.Cli.Components.Aws.LambdaFunction;
+using DC.Cli.Components.Client;
+using DC.Cli.Components.Cloudflare;
+using DC.Cli.Components.Nginx;
+using DC.Cli.Components.Terraform;
 using MAB.DotIgnore;
 
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.Cli.Components
 {
     public static class Components
     {

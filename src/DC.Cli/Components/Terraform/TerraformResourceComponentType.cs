@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli.Components.Terraform
+namespace DC.Cli.Components.Terraform
 {
     public class TerraformResourceComponentType 
         : IComponentType<TerraformResourceComponent, TerraformResourceComponentType.ComponentData>

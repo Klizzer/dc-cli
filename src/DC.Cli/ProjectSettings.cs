@@ -5,9 +5,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using DC.AWS.Projects.Cli.Components;
+using DC.Cli.Components;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public class ProjectSettings
     {
@@ -123,7 +123,7 @@ namespace DC.AWS.Projects.Cli
             if (path.StartsWith("./"))
                 path = path.Substring(2);
 
-            return Path.Combine(Environment.CurrentDirectory, path);
+            return Path.Combine(ProjectRoot, path);
         }
 
         public string GetRelativePath(string path, string fromPath = null)

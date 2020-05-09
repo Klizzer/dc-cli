@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli.Components.Terraform
+namespace DC.Cli.Components.Terraform
 {
     public class TerraformRootComponent : IPackageApplication
     {

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class TemplateDataExtensions
     {

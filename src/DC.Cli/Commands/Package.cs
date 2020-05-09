@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using CommandLine;
 using ICSharpCode.SharpZipLib.Zip;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class Package
     {

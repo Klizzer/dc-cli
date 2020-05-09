@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public interface ILanguage
     {

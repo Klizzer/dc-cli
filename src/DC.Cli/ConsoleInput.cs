@@ -1,6 +1,6 @@
 using System;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class ConsoleInput
     {

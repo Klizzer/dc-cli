@@ -41,7 +41,6 @@ endif
 configure:
 	$(DC_CLI_COMMAND) project configure
 
-
 .PHONY: restore
 restore:
 	$(DC_CLI_COMMAND) project restore

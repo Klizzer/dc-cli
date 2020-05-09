@@ -2,7 +2,7 @@ using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components.Aws.LambdaFunction
+namespace DC.Cli.Components.Aws.LambdaFunction
 {
     public class LambdaFunctionComponent : ICloudformationComponent,
         IRestorableComponent,

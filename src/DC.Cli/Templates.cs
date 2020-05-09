@@ -3,7 +3,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class Templates
     {

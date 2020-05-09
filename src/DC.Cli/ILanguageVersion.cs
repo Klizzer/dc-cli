@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
-using DC.AWS.Projects.Cli.Components;
+using DC.Cli.Components;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public interface ILanguageVersion
     {

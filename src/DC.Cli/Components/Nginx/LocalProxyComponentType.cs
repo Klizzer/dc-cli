@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli.Components.Nginx
+namespace DC.Cli.Components.Nginx
 {
     public class LocalProxyComponentType : IComponentType<LocalProxyComponent, LocalProxyComponentType.ComponentData>
     {

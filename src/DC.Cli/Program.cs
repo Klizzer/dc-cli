@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Commands;
+using DC.Cli.Commands;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class Program
     {

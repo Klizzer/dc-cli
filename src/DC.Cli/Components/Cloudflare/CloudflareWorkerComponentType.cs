@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components.Cloudflare
+namespace DC.Cli.Components.Cloudflare
 {
     public class CloudflareWorkerComponentType 
         : IComponentType<CloudflareWorkerComponent, CloudflareWorkerComponentType.ComponentData>

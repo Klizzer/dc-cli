@@ -2,7 +2,7 @@ using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components.Cloudflare
+namespace DC.Cli.Components.Cloudflare
 {
     public class CloudflareWorkerComponent : 
         IStartableComponent,

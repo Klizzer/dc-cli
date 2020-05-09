@@ -5,7 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components.Client
+namespace DC.Cli.Components.Client
 {
     public class ClientComponentType : IComponentType<ClientComponent, ClientComponentType.ComponentData>
     {

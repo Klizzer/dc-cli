@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components.Nginx;
+using DC.Cli.Components.Nginx;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class AddProxyPath
     {

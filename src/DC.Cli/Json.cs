@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class Json
     {

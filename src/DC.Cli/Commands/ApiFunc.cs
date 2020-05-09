@@ -2,9 +2,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
+using DC.Cli.Components.Aws.ApiGateway;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class ApiFunc
     {

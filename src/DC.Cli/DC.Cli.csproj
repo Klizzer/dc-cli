@@ -4,8 +4,8 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc</AssemblyName>
-    <Version>0.37.0</Version>
-    <RootNamespace>DC.AWS.Projects.Cli</RootNamespace>
+    <Version>0.38.0</Version>
+    <RootNamespace>DC.Cli</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

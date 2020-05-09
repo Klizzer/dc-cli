@@ -1,4 +1,4 @@
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public enum ClientType
     {

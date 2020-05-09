@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class AssemblyExtensions
     {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.Cli.Components
 {
     public interface INeedConfiguration : IComponent
     {

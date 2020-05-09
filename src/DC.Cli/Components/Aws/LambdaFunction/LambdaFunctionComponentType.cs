@@ -4,9 +4,9 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
+using DC.Cli.Components.Aws.ApiGateway;
 
-namespace DC.AWS.Projects.Cli.Components.Aws.LambdaFunction
+namespace DC.Cli.Components.Aws.LambdaFunction
 {
     public class LambdaFunctionComponentType 
         : IComponentType<LambdaFunctionComponent, LambdaFunctionComponentType.ComponentData>

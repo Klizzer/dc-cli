@@ -2,7 +2,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class Directories
     {

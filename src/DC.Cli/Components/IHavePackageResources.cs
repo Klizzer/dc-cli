@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.Cli.Components
 {
     public interface IHavePackageResources : IComponent
     {

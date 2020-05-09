@@ -1,9 +1,9 @@
-using System.IO;
+using System;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components.Client;
+using DC.Cli.Components.Client;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class Client
     {
@@ -23,9 +23,9 @@ namespace DC.AWS.Projects.Cli.Commands
         {
             [Option('n', "name", Required = true, HelpText = "Name of the client.")]
             public string Name { get; set; }
-            
-            [Option('p', "path", Default = "[[PROJECT_ROOT]]/src", HelpText = "Path where to put the client.")]
-            public string Path { get; set; }
+
+            [Option('p', "path", HelpText = "Path where to put the client.")]
+            public string Path { get; set; } = Environment.CurrentDirectory;
             
             [Option('b', "base-url", Default = "/", HelpText = "Base url for the client.")]
             public string BaseUrl { get; set; }
@@ -36,13 +36,6 @@ namespace DC.AWS.Projects.Cli.Commands
             [Option('o', "port", HelpText = "Port to run client on.")]
             public int? Port { get; set; }
             
-            public string GetRelativeClientPath(ProjectSettings settings)
-            {
-                var dir = new DirectoryInfo(GetRootedClientPath(settings).Substring(settings.ProjectRoot.Length));
-
-                return dir.FullName.Substring(1);
-            }
-
             public string GetRootedClientPath(ProjectSettings settings)
             {
                 return System.IO.Path.Combine(settings.GetRootedPath(Path), Name);

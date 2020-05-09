@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using CommandLine;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class Init
     {

@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli.Components.Aws.ApiGateway
+namespace DC.Cli.Components.Aws.ApiGateway
 {
     public class ApiGatewayComponentType : IComponentType<ApiGatewayComponent, ApiGatewayComponentType.ComponentData>
     {

@@ -1,4 +1,4 @@
-namespace DC.AWS.Projects.Cli.Components
+namespace DC.Cli.Components
 {
     public class PackageResource
     {

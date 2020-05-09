@@ -1,9 +1,10 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components.Aws.ApiGateway;
+using DC.Cli.Components.Aws.ApiGateway;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class Api
     {
@@ -32,9 +33,9 @@ namespace DC.AWS.Projects.Cli.Commands
 
             [Option('b', "base-url", Default = "/", HelpText = "Base url for the api.")]
             public string BaseUrl { get; set; }
-            
-            [Option('p', "path", Default = "[[PROJECT_ROOT]]/src", HelpText = "Path where to put the api.")]
-            public string Path { get; set; }
+
+            [Option('p', "path", HelpText = "Path where to put the api.")]
+            public string Path { get; set; } = Environment.CurrentDirectory;
 
             [Option('l', "lang", HelpText = "Default language for api functions.")]
             public string DefaultLanguage { get; set; }

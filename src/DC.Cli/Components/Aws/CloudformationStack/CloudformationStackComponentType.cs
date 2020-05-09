@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
+namespace DC.Cli.Components.Aws.CloudformationStack
 {
     public class CloudformationStackComponentType 
         : IComponentType<CloudformationStackComponent, CloudformationStackComponentType.ComponentData>

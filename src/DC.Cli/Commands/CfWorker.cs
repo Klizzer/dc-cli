@@ -1,8 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components.Cloudflare;
+using DC.Cli.Components.Cloudflare;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class CfWorker
     {
@@ -20,8 +21,8 @@ namespace DC.AWS.Projects.Cli.Commands
         [Verb("cf-worker")]
         public class Options
         {
-            [Option('p', "path", Default = "[[PROJECT_ROOT]]/src", HelpText = "Where to put the worker.")]
-            public string Path { private get; set; }
+            [Option('p', "path", HelpText = "Where to put the worker.")]
+            public string Path { private get; set; } = Environment.CurrentDirectory;
 
             [Option('n', "name", HelpText = "Name of worker.")]
             public string Name { get; set; }

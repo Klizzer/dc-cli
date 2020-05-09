@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class Docker
     {

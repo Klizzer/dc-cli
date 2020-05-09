@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class ProcessExecutor
     {

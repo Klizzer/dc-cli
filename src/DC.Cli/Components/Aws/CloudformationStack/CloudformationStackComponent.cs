@@ -12,7 +12,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components.Aws.CloudformationStack
+namespace DC.Cli.Components.Aws.CloudformationStack
 {
     public class CloudformationStackComponent : 
         IStartableComponent, 

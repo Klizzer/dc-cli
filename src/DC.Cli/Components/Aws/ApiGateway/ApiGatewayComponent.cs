@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
-namespace DC.AWS.Projects.Cli.Components.Aws.ApiGateway
+namespace DC.Cli.Components.Aws.ApiGateway
 {
     public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, IComponentWithLogs, IHaveHttpEndpoint
     {

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace DC.AWS.Projects.Cli
+namespace DC.Cli
 {
     public static class TaskExtensions
     {

@@ -2,9 +2,9 @@ using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using CommandLine;
-using DC.AWS.Projects.Cli.Components.Aws.CloudformationStack;
+using DC.Cli.Components.Aws.CloudformationStack;
 
-namespace DC.AWS.Projects.Cli.Commands
+namespace DC.Cli.Commands
 {
     public static class CloudformationStack
     {
