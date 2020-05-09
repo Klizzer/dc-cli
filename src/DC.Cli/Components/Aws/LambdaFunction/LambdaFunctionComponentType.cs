@@ -11,8 +11,8 @@ namespace DC.Cli.Components.Aws.LambdaFunction
     public class LambdaFunctionComponentType 
         : IComponentType<LambdaFunctionComponent, LambdaFunctionComponentType.ComponentData>
     {
-        private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageVersion>>> TriggerHandlers =
-            new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, Task<ILanguageVersion>>>
+        private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, string, Task<ILanguageVersion>>> TriggerHandlers =
+            new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, string, Task<ILanguageVersion>>>
             {
                 [FunctionTrigger.Api] = SetupApiTrigger
             }.ToImmutableDictionary();
@@ -27,7 +27,7 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             if (File.Exists(configFilePath))
                 throw new InvalidOperationException($"You can't add a new function at: \"{tree.Path.FullName}\". It already exists.");
 
-            var languageVersion = await TriggerHandlers[data.Trigger](data.Language, tree.Path, settings, tree);
+            var languageVersion = await TriggerHandlers[data.Trigger](data.Language, tree.Path, settings, tree, data.Name);
             
             var executingAssembly = Assembly.GetExecutingAssembly();
 
@@ -54,7 +54,8 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             string language,
             DirectoryInfo path,
             ProjectSettings settings,
-            Components.ComponentTree componentTree)
+            Components.ComponentTree componentTree,
+            string name)
         {
             var apiComponent = componentTree.FindFirst<ApiGatewayComponent>(Components.Direction.Out);
             
@@ -74,13 +75,14 @@ namespace DC.Cli.Components.Aws.LambdaFunction
                 "api-lambda-function.config.yml",
                 settings.GetRootedPath(Path.Combine(path.FullName, LambdaFunctionComponent.ConfigFileName)),
                 Templates.TemplateType.Infrastructure,
-                ("FUNCTION_NAME", path.Name),
+                ("NAME", name),
+                ("FUNCTION_NAME", TemplateData.SanitizeResourceName(name)),
                 ("FUNCTION_TYPE", "api"),
                 ("LANGUAGE", languageVersion.ToString()),
                 ("FUNCTION_RUNTIME", languageVersion.GetRuntimeName()),
                 ("FUNCTION_METHOD", method),
                 ("FUNCTION_PATH", languageVersion.GetFunctionOutputPath(functionPath)),
-                ("API_NAME", apiComponent.Name),
+                ("API_NAME", TemplateData.SanitizeResourceName(apiComponent.Name)),
                 ("URL", url),
                 ("FUNCTION_HANDLER", languageVersion.GetHandlerName()));
 

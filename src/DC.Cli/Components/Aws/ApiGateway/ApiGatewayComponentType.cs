@@ -24,7 +24,7 @@ namespace DC.Cli.Components.Aws.ApiGateway
                 ApiGatewayComponent.ConfigFileName,
                 configPath,
                 Templates.TemplateType.Infrastructure,
-                ("API_NAME", data.Name),
+                ("API_NAME", TemplateData.SanitizeResourceName(data.Name)),
                 ("PORT", port.ToString()),
                 ("DEFAULT_LANGUAGE", data.DefaultLanguage),
                 ("BASE_URL", data.BaseUrl));

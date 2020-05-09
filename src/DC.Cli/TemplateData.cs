@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace DC.Cli
 {
@@ -29,6 +30,11 @@ namespace DC.Cli
                 if (!Resources.ContainsKey(resource.Key))
                     Resources[resource.Key] = resource.Value;
             }
+        }
+
+        public static string SanitizeResourceName(string name)
+        {
+            return Regex.Replace(name, "[^a-zA-Z\\s]+", "");
         }
             
         public class ResourceData
