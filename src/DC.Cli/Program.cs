@@ -63,7 +63,8 @@ namespace DC.AWS.Projects.Cli
                     Restore.Options,
                     Start.Options,
                     Stop.Options,
-                    Logs.Options>(args);
+                    Logs.Options,
+                    CfWorker.Options>(args);
                 
                 await parsedArguments.WithParsedAsync<New.Options>(New.Execute);
                 await parsedArguments.WithParsedAsync<Init.Options>(Init.Execute);
@@ -78,6 +79,7 @@ namespace DC.AWS.Projects.Cli
                 await parsedArguments.WithParsedAsync<Start.Options>(Start.Execute);
                 await parsedArguments.WithParsedAsync<Stop.Options>(Stop.Execute);
                 await parsedArguments.WithParsedAsync<Logs.Options>(Logs.Execute);
+                await parsedArguments.WithParsedAsync<CfWorker.Options>(CfWorker.Execute);
             }
             
             [Verb("project")]

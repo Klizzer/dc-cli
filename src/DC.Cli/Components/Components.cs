@@ -9,6 +9,7 @@ using DC.AWS.Projects.Cli.Components.Aws.CloudformationStack;
 using DC.AWS.Projects.Cli.Components.Aws.CloudformationTemplate;
 using DC.AWS.Projects.Cli.Components.Aws.LambdaFunction;
 using DC.AWS.Projects.Cli.Components.Client;
+using DC.AWS.Projects.Cli.Components.Cloudflare;
 using DC.AWS.Projects.Cli.Components.Nginx;
 using DC.AWS.Projects.Cli.Components.Terraform;
 using MAB.DotIgnore;
@@ -26,7 +27,8 @@ namespace DC.AWS.Projects.Cli.Components
             new LocalProxyComponentType(),
             new CloudformationStackComponentType(),
             new TerraformResourceComponentType(),
-            new TerraformRootComponentType()
+            new TerraformRootComponentType(),
+            new CloudflareWorkerComponentType()
         }.ToImmutableList();
         
         public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)
