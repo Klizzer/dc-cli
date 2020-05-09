@@ -129,6 +129,9 @@ namespace DC.AWS.Projects.Cli.Components
 
                     await settings.Save();
                 }
+
+                foreach (var restorableComponent in newComponents.OfType<IRestorableComponent>())
+                    await restorableComponent.Restore();
             }
 
             public void Configure(ProjectSettings settings, bool recursive, bool overwrite)

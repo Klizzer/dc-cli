@@ -8,7 +8,8 @@ namespace DC.AWS.Projects.Cli.Components.Cloudflare
         IStartableComponent,
         IComponentWithLogs,
         IBuildableComponent,
-        ITestableComponent
+        ITestableComponent,
+        IRestorableComponent
     {
         public const string ConfigFileName = "cloudflare-worker.config.yml";
         
@@ -31,6 +32,15 @@ namespace DC.AWS.Projects.Cli.Components.Cloudflare
 
         public string Name => _configuration.Name;
         
+        public async Task<ComponentActionResult> Restore()
+        {
+            var response = await _dockerContainer
+                .Temporary()
+                .Run("yarn");
+
+            return new ComponentActionResult(response.exitCode == 0, response.output);
+        }
+
         public async Task<ComponentActionResult> Test()
         {
             var response = await _dockerContainer
