@@ -20,6 +20,7 @@ namespace DC.AWS.Projects.Cli.Commands
                 throw new RestoreFailedException(settings.GetRootedPath(options.Path));
         }
         
+        [Verb("restore")]
         public class Options
         {
             [Option('p', "path", HelpText = "Path to restore")]
