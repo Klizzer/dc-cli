@@ -95,7 +95,7 @@ namespace DC.Cli.Components.Aws.ApiGateway
                 serializer.Serialize(template));
             
             var result = await _dockerContainer
-                .Run($"local start-api --env-vars ./environment.json --docker-volume-basedir \"{Path.FullName}\" --host 0.0.0.0");
+                .Run($"local start-api --env-vars ./environment.json --docker-volume-basedir \"{_settings.ProjectRoot}\" --host 0.0.0.0");
 
             return new ComponentActionResult(result.exitCode == 0, result.output);
         }

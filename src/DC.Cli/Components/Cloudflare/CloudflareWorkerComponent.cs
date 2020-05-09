@@ -24,15 +24,13 @@ namespace DC.Cli.Components.Cloudflare
         {
             _configuration = configuration;
             
-            var baseContainer = Docker
+            _dockerContainer = Docker
                 .ContainerFromImage("node", $"{settings.GetProjectName()}-cf-{configuration.Name}")
                 .WithVolume(path.FullName, "/usr/src/app", true)
                 .EnvironmentVariable("DESTINATION_PORT", configuration.Settings.DestinationPort.ToString())
                 .AsCurrentUser();
-
-            _dockerContainer = baseContainer.Port(configuration.Settings.Port, 3000);
-
-            _watchContainer = baseContainer.WithName($"{baseContainer.Name}-watcher");
+            
+            _watchContainer = _dockerContainer.WithName($"{_dockerContainer.Name}-watcher");
         }
 
         public string Name => _configuration.Name;
@@ -80,6 +78,7 @@ namespace DC.Cli.Components.Cloudflare
                 .Run("yarn run watch");
             
             var startResponse = await _dockerContainer
+                .Port(_configuration.Settings.Port, 3000)
                 .Detached()
                 .Run("yarn run start");
             

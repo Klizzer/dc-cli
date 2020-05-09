@@ -35,11 +35,11 @@ Settings:
           DomainName:
             Ref: [[API_NAME]]DomainName
           DomainValidationOptions:
-              - DomainName:
-                Ref: [[API_NAME]]DomainName
-                ValidationDomain:
-                  Ref: [[API_NAME]]DomainName
-                ValidationMethod: DNS
+          - DomainName:
+              Ref: [[API_NAME]]DomainName
+            ValidationDomain:
+              Ref: [[API_NAME]]DomainName
+            ValidationMethod: DNS
 
       [[API_NAME]]Mapping:
         Type: AWS::ApiGateway::BasePathMapping

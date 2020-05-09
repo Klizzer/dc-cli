@@ -59,7 +59,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 .WithDockerSocket()
                 .Port(configuration.Settings.MainPort, 8080)
                 .Port(configuration.Settings.ServicesPort, 4566)
-                .EnvironmentVariable("SERVICES", string.Join(",", configuration.Settings.Services))
+                .EnvironmentVariable("SERVICES", string.Join(",", (configuration.Settings.Services ?? new List<string>())))
                 .EnvironmentVariable("DATA_DIR", "/tmp/localstack/data")
                 .EnvironmentVariable("LAMBDA_REMOTE_DOCKER", "0")
                 .EnvironmentVariable("DEBUG", "1")
@@ -76,6 +76,9 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
+            if (!_configuration.GetConfiguredServices().Any())
+                return new ComponentActionResult(true, "");
+            
             await Stop();
             
             var startResult = await _dockerContainer.Run("");
@@ -227,7 +230,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             TemplateData.ResourceData tableNode,
             CloudformationStackConfiguration configuration)
         {
-            if (!configuration.Settings.Services.Contains("dynamodb"))
+            if (!configuration.GetConfiguredServices().Contains("dynamodb"))
                 return;
 
             var client = new AmazonDynamoDBClient(new BasicAWSCredentials("key", "secret-key"), new AmazonDynamoDBConfig
@@ -315,7 +318,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             {
                 var services = new List<string>();
 
-                foreach (var service in Settings.Services)
+                foreach (var service in Settings.Services ?? new List<string>())
                 {
                     if (ServiceAliases.ContainsKey(service))
                         services.AddRange(ServiceAliases[service]);

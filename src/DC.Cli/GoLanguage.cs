@@ -37,7 +37,8 @@ namespace DC.Cli
 
                 _dockerContainer = Docker
                     .TemporaryContainerFromImage($"golang:{dockerImageTag}")
-                    .EntryPoint("go");
+                    .EntryPoint("go")
+                    .EnvironmentVariable("GOPATH", "/usr/local/src/.go");
             }
 
             public string Language { get; } = LanguageName;
@@ -45,6 +46,11 @@ namespace DC.Cli
             
             public async Task<ComponentActionResult> Restore(string path)
             {
+                var goPath = new DirectoryInfo(Path.Combine(path, ".go"));
+                
+                if (!goPath.Exists)
+                    goPath.Create();
+                
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("get -v -t -d ./...");
@@ -54,6 +60,11 @@ namespace DC.Cli
             
             public async Task<ComponentActionResult> Build(string path)
             {
+                var restoreResult = await Restore(path);
+
+                if (!restoreResult.Success)
+                    return restoreResult;
+                
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("build -o ./.out/main -v .");
@@ -63,6 +74,11 @@ namespace DC.Cli
 
             public async Task<ComponentActionResult> Test(string path)
             {
+                var restoreResult = await Restore(path);
+
+                if (!restoreResult.Success)
+                    return restoreResult;
+                
                 var result = await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("test -run ''");

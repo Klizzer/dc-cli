@@ -1,6 +1,8 @@
 node_modules/
 .tmp/
 .packages/
+.go/
+.out/
 .env/
 .git/
 .github/

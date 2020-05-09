@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
 using DC.Cli.Components;
@@ -18,6 +19,11 @@ namespace DC.Cli.Commands
 
             foreach (var endpoint in rootHttpEndpoints)
             {
+                var clients = endpoint.tree.FindAll<IHaveHttpEndpoint>(Components.Components.Direction.In);
+                
+                if (!clients.Any())
+                    continue;
+                
                 var proxyPath = endpoint.tree.Path.FullName;
 
                 if (!LocalProxyComponentType.HasProxyAt(proxyPath))
@@ -43,8 +49,6 @@ namespace DC.Cli.Commands
                         endpoint.component.BaseUrl,
                         endpoint.component.Port);
                 }
-
-                var clients = endpoint.tree.FindAll<IHaveHttpEndpoint>(Components.Components.Direction.In);
 
                 foreach (var client in clients)
                 {

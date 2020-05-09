@@ -7,7 +7,8 @@ namespace DC.Cli.Components.Aws.LambdaFunction
     public class LambdaFunctionComponent : ICloudformationComponent,
         IRestorableComponent,
         IBuildableComponent,
-        ITestableComponent
+        ITestableComponent,
+        IStartableComponent
     {
         public const string ConfigFileName = "lambda-func.config.yml";
         
@@ -35,6 +36,17 @@ namespace DC.Cli.Components.Aws.LambdaFunction
         public Task<ComponentActionResult> Test()
         {
             return _configuration.GetLanguage().Test(_path.FullName);
+        }
+        
+        public Task<ComponentActionResult> Start(Components.ComponentTree components)
+        {
+            //TODO: Setup watch
+            return Build();
+        }
+
+        public Task<ComponentActionResult> Stop()
+        {
+            return Task.FromResult(new ComponentActionResult(true, ""));
         }
         
         public Task<TemplateData> GetCloudformationData()

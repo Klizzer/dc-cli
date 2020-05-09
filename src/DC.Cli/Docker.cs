@@ -27,7 +27,7 @@ namespace DC.Cli
             var imageTag = $"{imageName}:{Assembly.GetExecutingAssembly().GetInformationVersion()}";
 
             if (HasImage(imageTag)) 
-                return CreateContainer(imageName, containerName);
+                return CreateContainer(imageTag, containerName);
 
             var fileData = GetProjectDockerContent(name);
 
@@ -50,7 +50,7 @@ namespace DC.Cli
             process?.CloseMainWindow();
             process?.Close();
 
-            return CreateContainer(imageName, containerName);
+            return CreateContainer(imageTag, containerName);
         }
 
         private static Container CreateContainer(string image, string name)

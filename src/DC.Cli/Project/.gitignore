@@ -8,6 +8,9 @@ obj/
 node_modules/
 .tools/
 .tmp/
+.go/
+.out/
+.env/
 .packages/
 .terraform/
 *.tfstate
