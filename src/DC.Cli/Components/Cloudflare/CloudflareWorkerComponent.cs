@@ -15,6 +15,7 @@ namespace DC.AWS.Projects.Cli.Components.Cloudflare
         
         private readonly CloudflareWorkerConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
+        private readonly Docker.Container _watchContainer;
 
         private CloudflareWorkerComponent(
             CloudflareWorkerConfiguration configuration,
@@ -22,12 +23,16 @@ namespace DC.AWS.Projects.Cli.Components.Cloudflare
             ProjectSettings settings)
         {
             _configuration = configuration;
-
-            _dockerContainer = Docker
+            
+            var baseContainer = Docker
                 .ContainerFromImage("node", $"{settings.GetProjectName()}-cf-{configuration.Name}")
-                .Port(configuration.Settings.Port, 3000)
                 .WithVolume(path.FullName, "/usr/src/app", true)
-                .EnvironmentVariable("DESTINATION_PORT", configuration.Settings.DestinationPort.ToString());
+                .EnvironmentVariable("DESTINATION_PORT", configuration.Settings.DestinationPort.ToString())
+                .AsCurrentUser();
+
+            _dockerContainer = baseContainer.Port(configuration.Settings.Port, 3000);
+
+            _watchContainer = baseContainer.WithName($"{baseContainer.Name}-watcher");
         }
 
         public string Name => _configuration.Name;
@@ -69,18 +74,26 @@ namespace DC.AWS.Projects.Cli.Components.Cloudflare
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
             await Stop();
-            
-            var response = await _dockerContainer
+
+            var watchResponse = await _watchContainer
                 .Detached()
-                .Run("start");
+                .Run("yarn run watch");
             
-            return new ComponentActionResult(response.exitCode == 0, response.output);
+            var startResponse = await _dockerContainer
+                .Detached()
+                .Run("yarn run start");
+            
+            return new ComponentActionResult(
+                startResponse.exitCode == 0 && watchResponse.exitCode == 0, 
+                $"{watchResponse.output}\n{startResponse.output}");
         }
 
         public Task<ComponentActionResult> Stop()
         {
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
+            Docker.Stop(_watchContainer.Name);
+            Docker.Remove(_watchContainer.Name);
 
             return Task.FromResult(new ComponentActionResult(true, ""));
         }

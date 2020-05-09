@@ -210,6 +210,11 @@ namespace DC.AWS.Projects.Cli
             {
                 return new Container(null, _image, _interactive, _dockerArguments);
             }
+
+            public Container WithName(string name)
+            {
+                return new Container(name, _image, _interactive, _dockerArguments);
+            }
             
             public Container WithArgument(string argument)
             {

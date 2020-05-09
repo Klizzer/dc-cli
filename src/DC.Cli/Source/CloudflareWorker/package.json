@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "description": "A Cloudflare Worker",
   "scripts": {
-    "build": "webpack --mode production",
-    "start": "npm run build && npx nodemon --watch dist/main.js --exec \"cloudflare-worker-local dist/main.js 172.17.0.1:$DESTINATION_PORT 3000\" --signal SIGHUP",
+    "build": "webpack index.js -o dist/main.js",
+    "start": "npx nodemon --watch dist/main.js --exec \"cloudflare-worker-local dist/main.js 172.17.0.1:$DESTINATION_PORT 3000\" --signal SIGHUP",
     "test": "jest",
-    "watch": "webpack --mode production --watch"
+    "watch": "webpack index.js -o dist/main.js --watch"
   },
   "devDependencies": {
     "babel-eslint": "^10.0.1",
