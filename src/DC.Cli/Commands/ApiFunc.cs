@@ -14,23 +14,36 @@ namespace DC.Cli.Commands
 
             var components = await Components.Components.BuildTree(
                 settings,
-                settings.GetRootedPath(options.Root));
+                settings.GetRootedPath(options.Path));
 
-            var apiComponent = components.FindFirst<ApiGatewayComponent>(
-                Components.Components.Direction.In,
-                options.Api);
+            var path = options.Path;
 
-            if (apiComponent == null)
+            if (!string.IsNullOrEmpty(options.Api))
             {
-                throw new InvalidOperationException(
-                    $"Can't find a api named {options.Api} at path {settings.GetRootedPath(options.Root)}");
+                var apiComponent = components.FindFirst<ApiGatewayComponent>(
+                    Components.Components.Direction.Out,
+                    options.Api);
+
+                if (apiComponent == null)
+                {
+                    apiComponent = components.FindFirst<ApiGatewayComponent>(
+                        Components.Components.Direction.In,
+                        options.Api);
+                    
+                    if (apiComponent == null)
+                        throw new InvalidOperationException($"Can't find a api named {options.Api}");
+
+                    path = Path.IsPathRooted(path) 
+                        ? apiComponent.Path.FullName 
+                        : Path.Combine(apiComponent.Path.FullName, path ?? "");
+                }
             }
 
             await Func.Execute(new Func.Options
             {
                 Language = options.Language,
                 Name = options.Name,
-                Path = Path.Combine(apiComponent.Path.FullName, options.Path ?? ""),
+                Path = path,
                 Trigger = FunctionTrigger.Api
             });
         }
@@ -41,14 +54,11 @@ namespace DC.Cli.Commands
             [Option('n', "name", Required = true, HelpText = "Name of the function.")]
             public string Name { get; set; }
             
-            [Option('a', "api", Required = true, HelpText = "Api to add function to.")]
+            [Option('a', "api", HelpText = "Api to add function to.")]
             public string Api { get; set; }
 
-            [Option('p', "path", HelpText = "Relative path from api path.")]
-            public string Path { get; set; }
-
-            [Option('r', "root", HelpText = "Root path to look for api.")]
-            public string Root { get; set; } = Environment.CurrentDirectory;
+            [Option('p', "path", HelpText = "Path to put function.")]
+            public string Path { get; set; } = Environment.CurrentDirectory;
             
             [Option('l', "lang", HelpText = "Language to use for the function.")]
             public string Language { get; set; }

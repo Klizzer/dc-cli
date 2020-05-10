@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
@@ -23,6 +24,12 @@ namespace DC.Cli.Components.Aws.LambdaFunction
 
         public string Name => _configuration.Name;
         
+        public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
+            GetRequiredConfigurations()
+        {
+            return _configuration.Settings.Template.GetRequiredConfigurations();
+        }
+
         public Task<ComponentActionResult> Restore()
         {
             return _configuration.GetLanguage().Restore(_path.FullName);

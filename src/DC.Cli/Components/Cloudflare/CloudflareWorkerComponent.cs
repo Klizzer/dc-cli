@@ -26,6 +26,7 @@ namespace DC.Cli.Components.Cloudflare
             
             _dockerContainer = Docker
                 .ContainerFromImage("node", $"{settings.GetProjectName()}-cf-{configuration.Name}")
+                .EntryPoint("yarn")
                 .WithVolume(path.FullName, "/usr/src/app", true)
                 .EnvironmentVariable("DESTINATION_PORT", configuration.Settings.DestinationPort.ToString())
                 .AsCurrentUser();
@@ -39,7 +40,7 @@ namespace DC.Cli.Components.Cloudflare
         {
             var response = await _dockerContainer
                 .Temporary()
-                .Run("yarn");
+                .Run("");
 
             return new ComponentActionResult(response.exitCode == 0, response.output);
         }
@@ -48,7 +49,7 @@ namespace DC.Cli.Components.Cloudflare
         {
             var response = await _dockerContainer
                 .Temporary()
-                .Run("yarn run test");
+                .Run("run test");
 
             return new ComponentActionResult(response.exitCode == 0, response.output);
         }
@@ -57,7 +58,7 @@ namespace DC.Cli.Components.Cloudflare
         {
             var response = await _dockerContainer
                 .Temporary()
-                .Run("yarn run build");
+                .Run("run build");
 
             return new ComponentActionResult(response.exitCode == 0, response.output);
         }
@@ -75,12 +76,12 @@ namespace DC.Cli.Components.Cloudflare
 
             var watchResponse = await _watchContainer
                 .Detached()
-                .Run("yarn run watch");
+                .Run("run watch");
             
             var startResponse = await _dockerContainer
                 .Port(_configuration.Settings.Port, 3000)
                 .Detached()
-                .Run("yarn run start");
+                .Run("run start");
             
             return new ComponentActionResult(
                 startResponse.exitCode == 0 && watchResponse.exitCode == 0, 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -89,6 +90,20 @@ namespace DC.Cli
                 return _userSettings[key];
 
             return _projectSettings.ContainsKey(key) ? _projectSettings[key] : defaultValue;
+        }
+
+        public IImmutableDictionary<string, string> GetAllConfigurations(string configNamespace, string defaultValue = "")
+        {
+            var keys = _userSettings
+                .Keys
+                .Where(x => x.StartsWith(configNamespace))
+                .Select(x => x.Substring(configNamespace.Length))
+                .Union(_projectSettings
+                    .Keys
+                    .Where(x => x.StartsWith(configNamespace))
+                    .Select(x => x.Substring(configNamespace.Length)));
+
+            return keys.ToImmutableDictionary(x => x, x => GetConfiguration(x, defaultValue));
         }
 
         public bool HasConfiguration(string key)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
@@ -16,6 +17,14 @@ namespace DC.Cli.Components.Aws.CloudformationTemplate
         }
 
         public string Name => _path.Name;
+        
+        public async Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
+            GetRequiredConfigurations()
+        {
+            var template = await GetCloudformationData();
+
+            return await template.GetRequiredConfigurations();
+        }
 
         public async Task<TemplateData> GetCloudformationData()
         {

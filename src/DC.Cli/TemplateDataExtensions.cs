@@ -1,88 +1,56 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
+using System.Threading.Tasks;
+using DC.Cli.Components;
 
 namespace DC.Cli
 {
     public static class TemplateDataExtensions
     {
-        private static readonly IImmutableDictionary<
-            string,
-            Func<
-                TemplateData, 
-                TemplateData.ResourceData,
-                IImmutableDictionary<string, string>, 
-                Func<string, string, string>,
-                IImmutableDictionary<string, string>>> ResourceEnvironmentHandlers = 
-            new Dictionary<
-                string, 
-                Func<
-                    TemplateData, 
-                    TemplateData.ResourceData,
-                    IImmutableDictionary<string, string>, 
-                    Func<string, string, string>,
-                    IImmutableDictionary<string, string>>>
-            {
-                ["AWS::Serverless::Function"] = GetFunctionEnvironmentVariables
-            }.ToImmutableDictionary();
-        
         public static TemplateData Merge(
-            this IEnumerable<TemplateData> templates,
-            params string[] servicesToInclude)
+            this IEnumerable<TemplateData> templates)
         {
             var newTemplate = new TemplateData();
 
             foreach (var template in templates)
-                newTemplate.Merge(template, servicesToInclude);
+                newTemplate.Merge(template);
 
             return newTemplate;
         }
 
-        public static IImmutableDictionary<string, IImmutableDictionary<string, string>> FindEnvironmentVariables(
+        public static Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>>
+            GetRequiredConfigurations(this TemplateData templateData)
+        {
+            return Task.FromResult(templateData.Parameters.Select(parameter => ($"{SettingNamespaces.CloudformationParameters}{parameter.Key}",
+                $"Please enter local value for cloudformation parameter: \"{parameter.Key}\"",
+                INeedConfiguration.ConfigurationType.Project)));
+        }
+
+        public static async Task<IImmutableDictionary<string, IImmutableDictionary<string, string>>> FindEnvironmentVariables(
             this TemplateData template,
-            IImmutableDictionary<string, string> variableValues,
-            Func<string, string, string> askForValue)
+            Components.Components.ComponentTree components)
         {
             var result = new Dictionary<string, IImmutableDictionary<string, string>>();
 
             foreach (var resource in template.Resources)
             {
-                if (ResourceEnvironmentHandlers.ContainsKey(resource.Value.Type))
+                if (resource.Value.Type == "AWS::Serverless::Function")
                 {
-                    result[resource.Key] = ResourceEnvironmentHandlers[resource.Value.Type](
+                    result[resource.Key] = await GetFunctionEnvironmentVariables(
                         template,
                         resource.Value,
-                        variableValues,
-                        askForValue);
+                        components);
                 }
             }
 
             return result.ToImmutableDictionary();
         }
-
-        public static IImmutableDictionary<string, string> GetParameterValues(
-            this TemplateData templateData,
-            IImmutableDictionary<string, string> variableValues,
-            Func<string, string, string> askForValue)
-        {
-            var result = new Dictionary<string, string>();
-            
-            foreach (var parameter in templateData.Parameters)
-            {
-                if (variableValues.ContainsKey(parameter.Key))
-                    result[parameter.Key] = variableValues[parameter.Key];
-                else
-                    result[parameter.Key] = askForValue($"Please enter value for parameter \"{parameter.Key}\":", parameter.Key);
-            }
-
-            return result.ToImmutableDictionary();
-        }
         
-        private static IImmutableDictionary<string, string> GetFunctionEnvironmentVariables(
+        private static async Task<IImmutableDictionary<string, string>> GetFunctionEnvironmentVariables(
             TemplateData template,
             TemplateData.ResourceData functionNode,
-            IImmutableDictionary<string, string> variableValues,
-            Func<string, string, string> askForValue)
+            Components.Components.ComponentTree components)
         {
             if (!functionNode.Properties.ContainsKey("Environment") ||
                 !((IDictionary<object, object>) functionNode.Properties["Environment"]).ContainsKey("Variables"))
@@ -90,49 +58,24 @@ namespace DC.Cli
                 return new Dictionary<string, string>().ToImmutableDictionary();
             }
 
+            var parsers = components
+                .FindAll<IParseCloudformationValues>(Components.Components.Direction.Out)
+                .Select(x => x.component)
+                .ToImmutableList();
+
             var variables =
                 (IDictionary<object, object>) ((IDictionary<object, object>) functionNode.Properties["Environment"])[
                     "Variables"];
             
             var resultVariables = new Dictionary<string, string>();
 
-            //TODO: Refactor
             foreach (var variable in variables)
             {
                 var variableName = variable.Key.ToString() ?? "";
-                
-                switch (variable.Value)
-                {
-                    case string variableValue:
-                        resultVariables[variableName] = variableValue;
-                        break;
-                    case IDictionary<object, object> objectVariableValue:
-                        if (objectVariableValue.ContainsKey("Ref"))
-                        {
-                            var refKey = objectVariableValue["Ref"].ToString() ?? "";
 
-                            if (template.Parameters.ContainsKey(refKey) &&
-                                     variableValues.ContainsKey(refKey))
-                            {
-                                resultVariables[variableName] = variableValues[refKey];
-                            }
-                            else if (template.Parameters.ContainsKey(refKey) &&
-                                     template.Parameters[refKey].ContainsKey("Default"))
-                            {
-                                resultVariables[variableName] = template.Parameters[refKey]["Default"];
-                            }
-                            else if (template.Parameters.ContainsKey(refKey))
-                            {
-                                resultVariables[variableName] =
-                                    askForValue($"Please enter value for parameter \"{refKey}\":", variableName);
-                            }
-                            else
-                            {
-                                resultVariables[variableName] = refKey;
-                            }
-                        }
-                        break;
-                }
+                var parsedValue = await parsers.Parse(variable.Value, template); 
+
+                resultVariables[variableName] = (parsedValue ?? "").ToString();
             }
 
             return resultVariables.ToImmutableDictionary();

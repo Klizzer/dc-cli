@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -41,20 +39,20 @@ namespace DC.Cli.Components.Aws.ApiGateway
         public string BaseUrl => _configuration.Settings.BaseUrl;
         public int Port => _configuration.Settings.Port;
         public string Name => _configuration.Name;
+
         public DirectoryInfo Path { get; }
+        
+        public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
+            GetRequiredConfigurations()
+        {
+            return _configuration.Settings.Template.GetRequiredConfigurations();
+        }
         
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
             await Stop();
                 
             _tempPath.Create();
-
-            var variableValuesFile = _settings.GetRootedPath(".env/variables.json");
-
-            var currentVariables = File.Exists(variableValuesFile)
-                ? JsonConvert.DeserializeObject<IImmutableDictionary<string, string>>(
-                    await File.ReadAllTextAsync(variableValuesFile))
-                : new Dictionary<string, string>().ToImmutableDictionary();
             
             var template = (await components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
@@ -62,31 +60,9 @@ namespace DC.Cli.Components.Aws.ApiGateway
                     .WhenAll())
                 .Merge();
             
-            var newVariables = new ConcurrentDictionary<string, string>();
-            var resourceEnvironmentVariables = template.FindEnvironmentVariables(
-                currentVariables,
-                (question, name) =>
-                {
-                    var value = ConsoleInput.Ask(question);
-
-                    newVariables[name] = value;
-
-                    return value;
-                }
-            );
-
             await File.WriteAllTextAsync(System.IO.Path.Combine(_tempPath.FullName, "environment.json"),
-                JsonConvert.SerializeObject(resourceEnvironmentVariables));
-
-            var configuredVariables = currentVariables.ToDictionary(x => x.Key, x => x.Value);
-
-            foreach (var newVariable in newVariables)
-                configuredVariables[newVariable.Key] = newVariable.Value;
-
-            if (!Directory.Exists(_settings.GetRootedPath(".env")))
-                Directory.CreateDirectory(_settings.GetRootedPath(".env"));
-
-            await File.WriteAllTextAsync(variableValuesFile, JsonConvert.SerializeObject(configuredVariables));
+                JsonConvert.SerializeObject(
+                    await template.FindEnvironmentVariables(components)));
 
             var serializer = new Serializer();
 

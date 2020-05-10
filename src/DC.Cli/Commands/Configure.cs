@@ -11,7 +11,7 @@ namespace DC.Cli.Commands
 
             var components = await Components.Components.BuildTree(settings, settings.GetRootedPath(""));
 
-            components.Configure(settings, true, options.Force);
+            await components.Configure(settings, true, options.Force);
 
             await settings.Save();
         }

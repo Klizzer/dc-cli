@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -8,12 +7,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.CognitoIdentityProvider;
-using Amazon.CognitoIdentityProvider.Model;
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
-using Amazon.Runtime;
-using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
 namespace DC.Cli.Components.Aws.CloudformationStack
@@ -22,18 +15,10 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         IStartableComponent, 
         IComponentWithLogs,
         IHavePackageResources,
-        INeedConfiguration
+        INeedConfiguration,
+        IParseCloudformationValues
     {
         private static readonly HttpClient HttpClient = new HttpClient();
-
-        private static readonly IImmutableList<(string type, string requiredService)> AvailableServices =
-            new List<(string type, string requiredService)>
-            {
-                ("AWS::DynamoDB::Table", "dynamodb"),
-                ("AWS::Cognito::UserPool", "cognito"),
-                ("AWS::Cognito::UserPoolClient", "cognito"),
-                ("AWS::Cognito::UserPoolDomain", "cognito")
-            }.ToImmutableList();
         
         public const string ConfigFileName = "cloudformation-stack.config.yml";
 
@@ -77,10 +62,15 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
         public string Name => _configuration.Name;
         
-        public IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)> GetRequiredConfigurations()
+        public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
+            GetRequiredConfigurations()
         {
-            yield return ("localstackApiKey", "Enter your localstack api key if you have any:",
-                INeedConfiguration.ConfigurationType.User);
+            return Task.FromResult<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>>(
+                new List<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>
+            {
+                ("localstackApiKey", "Enter your localstack api key if you have any:",
+                    INeedConfiguration.ConfigurationType.User)
+            });
         }
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
@@ -102,74 +92,15 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             if (!started)
                 return new ComponentActionResult(false, "Can't start localstack within 60 seconds.");
             
-            var cloudformationComponents =
-                components.FindAll<ICloudformationComponent>(Components.Direction.In);
-
-            var servicesToUse = AvailableServices
-                .Where(x => startedServices.Contains(x.requiredService))
-                .Select(x => x.type)
-                .ToArray();
-            
             var template = (await components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
                     .Select(x => x.component.GetCloudformationData())
                     .WhenAll())
-                .Merge(servicesToUse);
+                .Merge();
 
-            if (_tempDir.Exists)
-                _tempDir.Delete(true);
-            
-            _tempDir.Create();
-            
-            var serializer = new Serializer();
+            await CloudformationResources.EnsureResourcesExist(template, _configuration);
 
-            await File.WriteAllTextAsync(
-                Path.Combine(_tempDir.FullName, "template.yml"),
-                serializer.Serialize(template));
-            
-            var variableValuesFile = _projectSettings.GetRootedPath(".env/variables.json");
-
-            var currentVariables = File.Exists(variableValuesFile)
-                ? JsonConvert.DeserializeObject<IImmutableDictionary<string, string>>(
-                    await File.ReadAllTextAsync(variableValuesFile))
-                : new Dictionary<string, string>().ToImmutableDictionary();
-            
-            var newVariables = new ConcurrentDictionary<string, string>();
-            var parameterValues = template.GetParameterValues(
-                currentVariables,
-                (question, name) =>
-                {
-                    var value = ConsoleInput.Ask(question);
-
-                    newVariables[name] = value;
-
-                    return value;
-                });
-            
-            var configuredVariables = currentVariables.ToDictionary(x => x.Key, x => x.Value);
-
-            foreach (var newVariable in newVariables)
-                configuredVariables[newVariable.Key] = newVariable.Value;
-            
-            if (!Directory.Exists(_projectSettings.GetRootedPath(".env")))
-                Directory.CreateDirectory(_projectSettings.GetRootedPath(".env"));
-
-            await File.WriteAllTextAsync(variableValuesFile, JsonConvert.SerializeObject(configuredVariables));
-
-            var parameterOverrides = string.Join(" ", parameterValues.Select(x => $"{x.Key}={x.Value}"));
-            
-           var deploymentResponse = await Docker.TemporaryContainerFromImage("amazon/aws-cli")
-                .WithVolume(
-                    _projectSettings.GetRootedPath(_path.FullName),
-                    $"/usr/src/app/{_projectSettings.GetRelativePath(_path.FullName)}")
-                .WithVolume(Path.Combine(User.GetHome(), ".aws"), "/root/.aws")
-                .WorkDir("/usr/src/app")
-                .WithVolume(Path.Combine(_tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
-                .Run($"cloudformation deploy --template-file ./template.yml --no-fail-on-empty-changeset --region {_configuration.Settings.AwsRegion} --stack-name {_configuration.Name} --endpoint-url http://172.17.0.1:{_configuration.Settings.ServicesPort} --parameter-overrides {parameterOverrides}");;
-            
-            _tempDir.Delete(true);
-            
-            return new ComponentActionResult(deploymentResponse.exitCode == 0, $"{startResult.output}\n{deploymentResponse.output}");
+            return new ComponentActionResult(true, startResult.output);
         }
 
         public Task<ComponentActionResult> Stop()
@@ -249,6 +180,25 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             return result.ToImmutableList();
         }
         
+        public Task<object> Parse(object value, TemplateData template)
+        {
+            return CloudformationResources.ParseValue(
+                value,
+                template, 
+                _projectSettings,
+                async service =>
+                {
+                    var services = _configuration.GetConfiguredServices();
+
+                    if (!service.Contains(service))
+                        return (false, _configuration.Settings.ServicesPort);
+
+                    var isRunning = await WaitForStart(TimeSpan.FromMinutes(1));
+
+                    return (isRunning, _configuration.Settings.ServicesPort);
+                });
+        }
+
         private async Task<bool> WaitForStart(TimeSpan timeout)
         {
             var requiredServices = _configuration.GetConfiguredServices();

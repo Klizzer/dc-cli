@@ -3,7 +3,6 @@ node_modules/
 .packages/
 .go/
 .out/
-.env/
 .git/
 .github/
 .tools/

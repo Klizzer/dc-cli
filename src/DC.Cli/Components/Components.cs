@@ -125,7 +125,7 @@ namespace DC.Cli.Components
 
                 if (newComponents.OfType<INeedConfiguration>().Any())
                 {
-                    Configure(settings, false, false);
+                    await Configure(settings, false, false);
 
                     await settings.Save();
                 }
@@ -134,14 +134,15 @@ namespace DC.Cli.Components
                     await restorableComponent.Restore();
             }
 
-            public void Configure(ProjectSettings settings, bool recursive, bool overwrite)
+            public async Task Configure(ProjectSettings settings, bool recursive, bool overwrite)
             {
                 var newConfigurations = new Dictionary<string, (string value, INeedConfiguration.ConfigurationType configurationType)>();
 
-                var requiredConfigurations = _components
-                    .OfType<INeedConfiguration>()
-                    .SelectMany(x => x.GetRequiredConfigurations())
-                    .ToImmutableList();
+                var requiredConfigurations = (await _components
+                        .OfType<INeedConfiguration>()
+                        .Select(x => x.GetRequiredConfigurations())
+                        .WhenAll())
+                    .SelectMany(x => x);
 
                 foreach (var requiredConfiguration in requiredConfigurations)
                 {
@@ -176,7 +177,7 @@ namespace DC.Cli.Components
                     return;
                 
                 foreach (var child in _children)
-                    child.Configure(settings, true, overwrite);
+                    await child.Configure(settings, true, overwrite);
             }
             
             public Task<ComponentActionResult> Build()
@@ -292,7 +293,7 @@ namespace DC.Cli.Components
                         return null;
 
                     case Direction.Out:
-                        return FindComponent<TComponent>(name) ?? _parent?.FindComponent<TComponent>(name);
+                        return FindComponent<TComponent>(name) ?? _parent?.FindFirst<TComponent>(Direction.Out, name);
 
                     default:
                         throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
