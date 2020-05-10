@@ -4,11 +4,12 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc</AssemblyName>
-    <Version>0.40.0</Version>
+    <Version>0.41.0</Version>
     <RootNamespace>DC.Cli</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.CognitoIdentityProvider" Version="3.3.109.33" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.105.38" />
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="MAB.DotIgnore" Version="3.0.0" />

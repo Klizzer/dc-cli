@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace DC.Cli
@@ -11,7 +12,7 @@ namespace DC.Cli
         public IDictionary<string, IDictionary<string, string>> Parameters { get; set; } = new Dictionary<string, IDictionary<string, string>>();
         public IDictionary<string, ResourceData> Resources { get; set; } = new Dictionary<string, ResourceData>();
 
-        public void Merge(TemplateData other)
+        public void Merge(TemplateData other, params string[] servicesToInclude)
         {
             foreach (var output in other.Outputs)
             {
@@ -27,8 +28,11 @@ namespace DC.Cli
                 
             foreach (var resource in other.Resources)
             {
-                if (!Resources.ContainsKey(resource.Key))
+                if (!Resources.ContainsKey(resource.Key)
+                    && (!servicesToInclude.Any() || servicesToInclude.Contains(resource.Value.Type)))
+                {
                     Resources[resource.Key] = resource.Value;
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -7,9 +8,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.CognitoIdentityProvider;
+using Amazon.CognitoIdentityProvider.Model;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
+using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
 namespace DC.Cli.Components.Aws.CloudformationStack
@@ -21,12 +25,15 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         INeedConfiguration
     {
         private static readonly HttpClient HttpClient = new HttpClient();
-        
-        private static readonly IImmutableDictionary<string, Func<string, TemplateData.ResourceData, CloudformationStackConfiguration, Task>> TypeHandlers =
-            new Dictionary<string, Func<string, TemplateData.ResourceData, CloudformationStackConfiguration, Task>>
+
+        private static readonly IImmutableList<(string type, string requiredService)> AvailableServices =
+            new List<(string type, string requiredService)>
             {
-                ["AWS::DynamoDB::Table"] = HandleTable
-            }.ToImmutableDictionary();
+                ("AWS::DynamoDB::Table", "dynamodb"),
+                ("AWS::Cognito::UserPool", "cognito"),
+                ("AWS::Cognito::UserPoolClient", "cognito"),
+                ("AWS::Cognito::UserPoolDomain", "cognito")
+            }.ToImmutableList();
         
         public const string ConfigFileName = "cloudformation-stack.config.yml";
 
@@ -34,6 +41,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         private readonly Docker.Container _dockerContainer;
         private readonly DirectoryInfo _path;
         private readonly ProjectSettings _projectSettings;
+        private readonly DirectoryInfo _tempDir;
 
         private CloudformationStackComponent(
             CloudformationStackConfiguration configuration,
@@ -44,6 +52,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             _configuration = configuration;
             _path = path;
             _projectSettings = projectSettings;
+            _tempDir = new DirectoryInfo(Path.Combine(path.FullName, ".tmp"));
 
             var dataDir = new DirectoryInfo(configuration.GetDataDir(settings));
             
@@ -76,7 +85,9 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
         public async Task<ComponentActionResult> Start(Components.ComponentTree components)
         {
-            if (!_configuration.GetConfiguredServices().Any())
+            var startedServices = _configuration.GetConfiguredServices();
+            
+            if (!startedServices.Any())
                 return new ComponentActionResult(true, "");
             
             await Stop();
@@ -94,18 +105,71 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             var cloudformationComponents =
                 components.FindAll<ICloudformationComponent>(Components.Direction.In);
 
-            foreach (var component in cloudformationComponents)
-            {
-                var template = await component.component.GetCloudformationData();
-
-                foreach (var resource in template.Resources)
-                {
-                    if (TypeHandlers.ContainsKey(resource.Value.Type))
-                        await TypeHandlers[resource.Value.Type](resource.Key, resource.Value, _configuration);
-                }
-            }
+            var servicesToUse = AvailableServices
+                .Where(x => startedServices.Contains(x.requiredService))
+                .Select(x => x.type)
+                .ToArray();
             
-            return new ComponentActionResult(true, startResult.output);
+            var template = (await components
+                    .FindAll<ICloudformationComponent>(Components.Direction.In)
+                    .Select(x => x.component.GetCloudformationData())
+                    .WhenAll())
+                .Merge(servicesToUse);
+
+            if (_tempDir.Exists)
+                _tempDir.Delete(true);
+            
+            _tempDir.Create();
+            
+            var serializer = new Serializer();
+
+            await File.WriteAllTextAsync(
+                Path.Combine(_tempDir.FullName, "template.yml"),
+                serializer.Serialize(template));
+            
+            var variableValuesFile = _projectSettings.GetRootedPath(".env/variables.json");
+
+            var currentVariables = File.Exists(variableValuesFile)
+                ? JsonConvert.DeserializeObject<IImmutableDictionary<string, string>>(
+                    await File.ReadAllTextAsync(variableValuesFile))
+                : new Dictionary<string, string>().ToImmutableDictionary();
+            
+            var newVariables = new ConcurrentDictionary<string, string>();
+            var parameterValues = template.GetParameterValues(
+                currentVariables,
+                (question, name) =>
+                {
+                    var value = ConsoleInput.Ask(question);
+
+                    newVariables[name] = value;
+
+                    return value;
+                });
+            
+            var configuredVariables = currentVariables.ToDictionary(x => x.Key, x => x.Value);
+
+            foreach (var newVariable in newVariables)
+                configuredVariables[newVariable.Key] = newVariable.Value;
+            
+            if (!Directory.Exists(_projectSettings.GetRootedPath(".env")))
+                Directory.CreateDirectory(_projectSettings.GetRootedPath(".env"));
+
+            await File.WriteAllTextAsync(variableValuesFile, JsonConvert.SerializeObject(configuredVariables));
+
+            var parameterOverrides = string.Join(" ", parameterValues.Select(x => $"{x.Key}={x.Value}"));
+            
+           var deploymentResponse = await Docker.TemporaryContainerFromImage("amazon/aws-cli")
+                .WithVolume(
+                    _projectSettings.GetRootedPath(_path.FullName),
+                    $"/usr/src/app/{_projectSettings.GetRelativePath(_path.FullName)}")
+                .WithVolume(Path.Combine(User.GetHome(), ".aws"), "/root/.aws")
+                .WorkDir("/usr/src/app")
+                .WithVolume(Path.Combine(_tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
+                .Run($"cloudformation deploy --template-file ./template.yml --no-fail-on-empty-changeset --region {_configuration.Settings.AwsRegion} --stack-name {_configuration.Name} --endpoint-url http://172.17.0.1:{_configuration.Settings.ServicesPort} --parameter-overrides {parameterOverrides}");;
+            
+            _tempDir.Delete(true);
+            
+            return new ComponentActionResult(deploymentResponse.exitCode == 0, $"{startResult.output}\n{deploymentResponse.output}");
         }
 
         public Task<ComponentActionResult> Stop()
@@ -127,14 +191,12 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             Components.ComponentTree components,
             string version)
         {
-            var tempDir = new DirectoryInfo(Path.Combine(_path.FullName, ".tmp"));
+            if (_tempDir.Exists)
+                _tempDir.Delete(true);
             
-            if (tempDir.Exists)
-                tempDir.Delete(true);
+            _tempDir.Create();
             
-            tempDir.Create();
-            
-            var outputDir = new DirectoryInfo(Path.Combine(tempDir.FullName, "output"));
+            var outputDir = new DirectoryInfo(Path.Combine(_tempDir.FullName, "output"));
             
             outputDir.Create();
             
@@ -147,7 +209,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             var serializer = new Serializer();
 
             await File.WriteAllTextAsync(
-                Path.Combine(tempDir.FullName, "template.yml"),
+                Path.Combine(_tempDir.FullName, "template.yml"),
                 serializer.Serialize(template));
 
             var cliDocker = Docker.TemporaryContainerFromImage("amazon/aws-cli")
@@ -159,18 +221,18 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             await Templates.Extract(
                 "deployment-bucket.yml",
-                Path.Combine(tempDir.FullName, "deployment-bucket.yml"),
+                Path.Combine(_tempDir.FullName, "deployment-bucket.yml"),
                 Templates.TemplateType.Infrastructure);
             
             await cliDocker
                 .WithVolume(
-                    Path.Combine(tempDir.FullName, "deployment-bucket.yml"),
+                    Path.Combine(_tempDir.FullName, "deployment-bucket.yml"),
                     "/usr/src/app/template.yml")
                 .Run($"cloudformation deploy --template-file ./template.yml --stack-name {_configuration.Settings.DeploymentStackName} --parameter-overrides DeploymentBucketName={_configuration.Settings.DeploymentBucketName} --no-fail-on-empty-changeset --region {_configuration.Settings.AwsRegion}");
 
             await cliDocker
                 .WithVolume(outputDir.FullName, "/usr/src/app/output")
-                .WithVolume(Path.Combine(tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
+                .WithVolume(Path.Combine(_tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
                 .Run($"cloudformation package --template-file ./template.yml --output-template-file ./output/template.yml --s3-bucket {_configuration.Settings.DeploymentBucketName} --s3-prefix {version}");
             
             var result = new List<PackageResource>();
@@ -182,11 +244,11 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     await File.ReadAllBytesAsync(file.FullName)));
             }
             
-            tempDir.Delete(true);
+            _tempDir.Delete(true);
 
             return result.ToImmutableList();
         }
-
+        
         private async Task<bool> WaitForStart(TimeSpan timeout)
         {
             var requiredServices = _configuration.GetConfiguredServices();
@@ -224,53 +286,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             return false;
         }
-        
-        private static async Task HandleTable(
-            string name,
-            TemplateData.ResourceData tableNode,
-            CloudformationStackConfiguration configuration)
-        {
-            if (!configuration.GetConfiguredServices().Contains("dynamodb"))
-                return;
 
-            var client = new AmazonDynamoDBClient(new BasicAWSCredentials("key", "secret-key"), new AmazonDynamoDBConfig
-            {
-                ServiceURL = $"http://localhost:{configuration.Settings.ServicesPort}"
-            });
-
-            var billingMode = BillingMode.FindValue(tableNode.Properties["BillingMode"].ToString());
-
-            var attributeDefinitions = ((IEnumerable<IDictionary<string, string>>)tableNode.Properties["AttributeDefinitions"])
-                .Select(x => new AttributeDefinition(
-                    x["AttributeName"],
-                    ScalarAttributeType.FindValue(x["AttributeType"])))
-                .ToList();
-
-            if (await client.TableExists(name))
-            {
-                await client.UpdateTableAsync(new UpdateTableRequest
-                {
-                    TableName = name,
-                    AttributeDefinitions = attributeDefinitions,
-                    BillingMode = billingMode
-                });
-            }
-            else
-            {
-                await client.CreateTableAsync(new CreateTableRequest
-                {
-                    TableName = name,
-                    KeySchema = ((IEnumerable<IDictionary<string, string>>)tableNode.Properties["KeySchema"])
-                        .Select(x => new KeySchemaElement(
-                            x["AttributeName"],
-                            KeyType.FindValue(x["KeyType"])))
-                        .ToList(),
-                    AttributeDefinitions = attributeDefinitions,
-                    BillingMode = billingMode
-                });
-            }
-        }
-        
         public static async Task<CloudformationStackComponent> Init(DirectoryInfo path, ProjectSettings settings)
         {
             if (!File.Exists(Path.Combine(path.FullName, ConfigFileName)))
@@ -297,7 +313,12 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         "dynamodb",
                         "apigateway",
                         "s3",
-                        "sns"
+                        "sts"
+                    }.ToImmutableList(),
+                    ["cognito"] = new List<string>
+                    {
+                        "cognito-identity",
+                        "cognito-idp"
                     }.ToImmutableList()
                 }.ToImmutableDictionary();
             

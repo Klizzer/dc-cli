@@ -26,12 +26,14 @@ namespace DC.Cli
                 ["AWS::Serverless::Function"] = GetFunctionEnvironmentVariables
             }.ToImmutableDictionary();
         
-        public static TemplateData Merge(this IEnumerable<TemplateData> templates)
+        public static TemplateData Merge(
+            this IEnumerable<TemplateData> templates,
+            params string[] servicesToInclude)
         {
             var newTemplate = new TemplateData();
 
             foreach (var template in templates)
-                newTemplate.Merge(template);
+                newTemplate.Merge(template, servicesToInclude);
 
             return newTemplate;
         }
@@ -53,6 +55,24 @@ namespace DC.Cli
                         variableValues,
                         askForValue);
                 }
+            }
+
+            return result.ToImmutableDictionary();
+        }
+
+        public static IImmutableDictionary<string, string> GetParameterValues(
+            this TemplateData templateData,
+            IImmutableDictionary<string, string> variableValues,
+            Func<string, string, string> askForValue)
+        {
+            var result = new Dictionary<string, string>();
+            
+            foreach (var parameter in templateData.Parameters)
+            {
+                if (variableValues.ContainsKey(parameter.Key))
+                    result[parameter.Key] = variableValues[parameter.Key];
+                else
+                    result[parameter.Key] = askForValue($"Please enter value for parameter \"{parameter.Key}\":", parameter.Key);
             }
 
             return result.ToImmutableDictionary();

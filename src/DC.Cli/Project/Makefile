@@ -50,11 +50,11 @@ build:
 	$(DC_CLI_COMMAND) project build
 
 .PHONY: test
-test: build
+test:
 	$(DC_CLI_COMMAND) project test
 
 .PHONY: start
-start: build
+start:
 	$(DC_CLI_COMMAND) project start
 
 .PHONY: stop
