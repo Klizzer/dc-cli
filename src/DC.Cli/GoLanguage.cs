@@ -37,6 +37,7 @@ namespace DC.Cli
 
                 _dockerContainer = Docker
                     .TemporaryContainerFromImage($"golang:{dockerImageTag}")
+                    .AsCurrentUser()
                     .EntryPoint("go")
                     .EnvironmentVariable("GOPATH", "/usr/local/src/.go");
             }

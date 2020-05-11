@@ -98,7 +98,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     .WhenAll())
                 .Merge();
 
-            await CloudformationResources.EnsureResourcesExist(template, _configuration);
+            await CloudformationResources.EnsureResourcesExist(template, _configuration, _projectSettings);
 
             return new ComponentActionResult(true, startResult.output);
         }

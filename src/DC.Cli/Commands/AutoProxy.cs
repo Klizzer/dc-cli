@@ -21,7 +21,7 @@ namespace DC.Cli.Commands
             {
                 var clients = endpoint.tree.FindAll<IHaveHttpEndpoint>(Components.Components.Direction.In);
                 
-                if (!clients.Any())
+                if (clients.All(x => x.component == endpoint.component))
                     continue;
                 
                 var proxyPath = endpoint.tree.Path.FullName;
@@ -40,16 +40,7 @@ namespace DC.Cli.Commands
                         new LocalProxyComponentType.ComponentData(endpoint.component.Name, port),
                         settings);
                 }
-
-                if (!LocalProxyComponentType.HasProxyPathFor(proxyPath, endpoint.component.Port))
-                {
-                    await LocalProxyComponentType.AddProxyPath(
-                        settings,
-                        proxyPath,
-                        endpoint.component.BaseUrl,
-                        endpoint.component.Port);
-                }
-
+                
                 foreach (var client in clients)
                 {
                     if (LocalProxyComponentType.HasProxyPathFor(proxyPath, client.component.Port))
