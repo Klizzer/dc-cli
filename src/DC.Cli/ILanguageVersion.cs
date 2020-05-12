@@ -8,9 +8,9 @@ namespace DC.Cli
         string Language { get; }
         string Version { get; }
 
-        Task<ComponentActionResult> Restore(string path);
-        Task<ComponentActionResult> Build(string path);
-        Task<ComponentActionResult> Test(string path);
+        Task<bool> Restore(string path);
+        Task<bool> Build(string path);
+        Task<bool> Test(string path);
 
         string GetHandlerName();
         string GetFunctionOutputPath(string functionPath);

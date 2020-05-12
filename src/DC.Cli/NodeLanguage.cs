@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
-using DC.Cli.Components;
 
 namespace DC.Cli
 {
@@ -50,27 +49,25 @@ namespace DC.Cli
             public string Language { get; } = LanguageName;
             public string Version { get; }
 
-            public async Task<ComponentActionResult> Restore(string path)
+            public async Task<bool> Restore(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
-                    return new ComponentActionResult(true, "");
+                    return true;
                 
-                var result = await _dockerContainer
+                return await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
                     .Run("");
-
-                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
-            public Task<ComponentActionResult> Build(string path)
+            public Task<bool> Build(string path)
             {
-                return Task.FromResult(new ComponentActionResult(true, ""));
+                return Task.FromResult(true);
             }
 
-            public async Task<ComponentActionResult> Test(string path)
+            public async Task<bool> Test(string path)
             {
                 if (!File.Exists(Path.Combine(path, "package.json")))
-                    return new ComponentActionResult(true, "");
+                    return true;
 
                 var packageData =
                     Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(path, "package.json")));
@@ -78,14 +75,12 @@ namespace DC.Cli
                 if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
                     .ContainsKey("test"))
                 {
-                    return new ComponentActionResult(true, "");
+                    return true;
                 }
                 
-                var result = await _dockerContainer
+                return await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
                     .Run("run test");
-
-                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
             public string GetHandlerName()

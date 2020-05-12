@@ -34,28 +34,26 @@ namespace DC.Cli.Components.Client
         public int Port => _configuration.Settings.Port;
         public string Name => _configuration.Name;
         
-        public async Task<ComponentActionResult> Restore()
+        public async Task<bool> Restore()
         {
             if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
-                return new ComponentActionResult(true, "");
-            
-            var result = await _dockerContainer
+                return true;
+
+            return await _dockerContainer
                 .Temporary()
                 .Run("");
-
-            return new ComponentActionResult(result.exitCode == 0, result.output);
         }
 
-        public Task<ComponentActionResult> Build()
+        public Task<bool> Build()
         {
             //TODO: Build in prod
-            return Task.FromResult(new ComponentActionResult(true, ""));
+            return Task.FromResult(true);
         }
 
-        public async Task<ComponentActionResult> Test()
+        public async Task<bool> Test()
         {
             if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
-                return new ComponentActionResult(true, "");
+                return true;
 
             var packageData =
                 Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
@@ -63,40 +61,38 @@ namespace DC.Cli.Components.Client
             if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
                 .ContainsKey("test"))
             {
-                return new ComponentActionResult(true, "");
+                return true;
             }
             
-            var testResult = await _dockerContainer
+            return await _dockerContainer
                 .Temporary()
                 .Run("run test");
-                
-            return new ComponentActionResult(testResult.exitCode == 0, testResult.output);
         }
 
-        public async Task<ComponentActionResult> Start(Components.ComponentTree components)
+        public async Task<bool> Start(Components.ComponentTree components)
         {
             await Stop();
             
-            var result = await _dockerContainer
+            return await _dockerContainer
                 .Detached()
                 .Run("run dev --hostname 0.0.0.0");
-
-            return new ComponentActionResult(result.exitCode == 0, result.output);
         }
 
-        public Task<ComponentActionResult> Stop()
+        public Task<bool> Stop()
         {
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
-            return Task.FromResult(new ComponentActionResult(true, ""));
+            return Task.FromResult(true);
         }
 
-        public async Task<ComponentActionResult> Logs()
+        public async Task<bool> Logs()
         {
             var result = await Docker.Logs(_dockerContainer.Name);
+
+            Console.WriteLine(result);
             
-            return new ComponentActionResult(true, result);
+            return true;
         }
         
         public static async Task<ClientComponent> Init(

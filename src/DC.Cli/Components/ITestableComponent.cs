@@ -4,6 +4,6 @@ namespace DC.Cli.Components
 {
     public interface ITestableComponent : IComponent
     {
-        Task<ComponentActionResult> Test();
+        Task<bool> Test();
     }
 }

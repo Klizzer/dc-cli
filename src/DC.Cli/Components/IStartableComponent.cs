@@ -4,7 +4,7 @@ namespace DC.Cli.Components
 {
     public interface IStartableComponent : IComponent
     {
-        Task<ComponentActionResult> Start(Components.ComponentTree components);
-        Task<ComponentActionResult> Stop();
+        Task<bool> Start(Components.ComponentTree components);
+        Task<bool> Stop();
     }
 }

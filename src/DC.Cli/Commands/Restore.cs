@@ -14,9 +14,7 @@ namespace DC.Cli.Commands
 
             var restoreResult = await components.Restore();
             
-            Console.Write(restoreResult.Output);
-
-            if (!restoreResult.Success)
+            if (!restoreResult)
                 throw new RestoreFailedException(settings.GetRootedPath(options.Path));
         }
         

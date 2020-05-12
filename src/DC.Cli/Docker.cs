@@ -230,7 +230,7 @@ namespace DC.Cli
                 return new Container(Name, _image, _interactive, newArguments);
             }
 
-            public async Task<(int exitCode, string output)> Run(string command)
+            public Task<bool> Run(string command)
             {
                 var arguments = string.Join(" ", _dockerArguments);
 
@@ -242,27 +242,29 @@ namespace DC.Cli
                     FileName = "docker",
                     Arguments = $"run {arguments} {_image} {command}"
                 };
-
-                Func<Process, Task<string>> getOutput = x => Task.FromResult("");
-
+                
                 if (!_interactive)
                 {
                     startInfo.WindowStyle = ProcessWindowStyle.Hidden;
                     startInfo.CreateNoWindow = true;
                     startInfo.RedirectStandardError = true;
                     startInfo.RedirectStandardOutput = true;
-                    startInfo.RedirectStandardInput = true;
-
-                    getOutput = x => x.StandardOutput.ReadToEndAsync();
                 }
                 
                 var process = Process.Start(startInfo);
 
+                if (!_interactive && process != null)
+                {
+                    process.ErrorDataReceived += (sender, args) => Console.WriteLine(args.Data);
+                    process.OutputDataReceived += (sender, args) => Console.WriteLine(args.Data);
+                    
+                    process.BeginErrorReadLine();
+                    process.BeginOutputReadLine();
+                }
+
                 process?.WaitForExit();
 
-                var output = await getOutput(process);
-
-                return (process?.ExitCode ?? 127, output);
+                return Task.FromResult((process?.ExitCode ?? 127) == 0);
             }
         }
     }

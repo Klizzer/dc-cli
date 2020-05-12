@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -44,73 +45,70 @@ namespace DC.Cli.Components.Cloudflare
 
         public string Name => _configuration.Name;
         
-        public async Task<ComponentActionResult> Test()
+        public async Task<bool> Test()
         {
             await Restore();
             
-            var response = await _dockerContainer
+            return await _dockerContainer
                 .Temporary()
                 .Run("test");
-
-            return new ComponentActionResult(response.exitCode == 0, response.output);
         }
 
-        public async Task<ComponentActionResult> Build()
+        public async Task<bool> Build()
         {
             await Restore();
             
-            var response = await _dockerContainer
+            return await _dockerContainer
                 .Temporary()
                 .AsCurrentUser()
                 .Run("build");
-
-            return new ComponentActionResult(response.exitCode == 0, response.output);
         }
         
-        public async Task<ComponentActionResult> Restore()
+        public async Task<bool> Restore()
         {
-            var response = await _dockerContainer
+            return await _dockerContainer
                 .Temporary()
                 .AsCurrentUser()
                 .Run("");
-
-            return new ComponentActionResult(response.exitCode == 0, response.output);
         }
 
-        public async Task<ComponentActionResult> Logs()
+        public async Task<bool> Logs()
         {
             var response = await Docker.Logs(_dockerContainer.Name);
 
-            return new ComponentActionResult(true, response);
+            Console.WriteLine(response);
+            
+            return true;
         }
         
-        public async Task<ComponentActionResult> Start(Components.ComponentTree components)
+        public async Task<bool> Start(Components.ComponentTree components)
         {
             await Stop();
             
             var watchResponse = await _watchContainer
                 .Detached()
                 .Run("watch");
+
+            if (!watchResponse)
+                return false;
             
             var startResponse = await _dockerContainer
                 .Port(_configuration.Settings.Port, 3000)
                 .Detached()
                 .WithEmptyVolume("/usr/src/app/node_modules/")
                 .Run("start");
-            
-            return new ComponentActionResult(
-                startResponse.exitCode == 0 && watchResponse.exitCode == 0, 
-                $"{watchResponse.output}\n{startResponse.output}");
+
+            return startResponse;
         }
 
-        public Task<ComponentActionResult> Stop()
+        public Task<bool> Stop()
         {
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
             Docker.Stop(_watchContainer.Name);
             Docker.Remove(_watchContainer.Name);
 
-            return Task.FromResult(new ComponentActionResult(true, ""));
+            return Task.FromResult(true);
         }
         
         public async Task<IImmutableList<PackageResource>> GetPackageResources(

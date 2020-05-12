@@ -4,6 +4,6 @@ namespace DC.Cli.Components
 {
     public interface IBuildableComponent : IComponent
     {
-        Task<ComponentActionResult> Build();
+        Task<bool> Build();
     }
 }

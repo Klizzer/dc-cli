@@ -4,6 +4,6 @@ namespace DC.Cli.Components
 {
     public interface IRestorableComponent : IComponent
     {
-        Task<ComponentActionResult> Restore();
+        Task<bool> Restore();
     }
 }

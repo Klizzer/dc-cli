@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using DC.Cli.Components;
 
 namespace DC.Cli
 {
@@ -44,46 +43,40 @@ namespace DC.Cli
             public string Language { get; } = LanguageName;
             public string Version { get; }
             
-            public async Task<ComponentActionResult> Restore(string path)
+            public async Task<bool> Restore(string path)
             {
                 var goPath = new DirectoryInfo(Path.Combine(path, ".go"));
                 
                 if (!goPath.Exists)
                     goPath.Create();
                 
-                var result = await _dockerContainer
+                return await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("get -v -t -d ./...");
-
-                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
             
-            public async Task<ComponentActionResult> Build(string path)
+            public async Task<bool> Build(string path)
             {
                 var restoreResult = await Restore(path);
 
-                if (!restoreResult.Success)
-                    return restoreResult;
+                if (!restoreResult)
+                    return false;
                 
-                var result = await _dockerContainer
+                return await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("build -o ./.out/main -v .");
-                
-                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
-            public async Task<ComponentActionResult> Test(string path)
+            public async Task<bool> Test(string path)
             {
                 var restoreResult = await Restore(path);
 
-                if (!restoreResult.Success)
-                    return restoreResult;
+                if (!restoreResult)
+                    return false;
                 
-                var result = await _dockerContainer
+                return await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("test -run ''");
-
-                return new ComponentActionResult(result.exitCode == 0, result.output);
             }
 
             public string GetHandlerName()

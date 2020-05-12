@@ -30,30 +30,30 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             return _configuration.Settings.Template.GetRequiredConfigurations();
         }
 
-        public Task<ComponentActionResult> Restore()
+        public Task<bool> Restore()
         {
             return _configuration.GetLanguage().Restore(_path.FullName);
         }
 
-        public async Task<ComponentActionResult> Build()
+        public async Task<bool> Build()
         {
             return await _configuration.GetLanguage().Build(_path.FullName);
         }
 
-        public Task<ComponentActionResult> Test()
+        public Task<bool> Test()
         {
             return _configuration.GetLanguage().Test(_path.FullName);
         }
         
-        public Task<ComponentActionResult> Start(Components.ComponentTree components)
+        public Task<bool> Start(Components.ComponentTree components)
         {
             //TODO: Setup watch
             return Build();
         }
 
-        public Task<ComponentActionResult> Stop()
+        public Task<bool> Stop()
         {
-            return Task.FromResult(new ComponentActionResult(true, ""));
+            return Task.FromResult(true);
         }
         
         public Task<TemplateData> GetCloudformationData()

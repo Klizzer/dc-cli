@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -48,7 +49,7 @@ namespace DC.Cli.Components.Aws.ApiGateway
             return _configuration.Settings.Template.GetRequiredConfigurations();
         }
         
-        public async Task<ComponentActionResult> Start(Components.ComponentTree components)
+        public async Task<bool> Start(Components.ComponentTree components)
         {
             await Stop();
                 
@@ -70,13 +71,11 @@ namespace DC.Cli.Components.Aws.ApiGateway
                 System.IO.Path.Combine(_tempPath.FullName, "template.yml"),
                 serializer.Serialize(template));
             
-            var result = await _dockerContainer
+            return await _dockerContainer
                 .Run($"local start-api --env-vars ./environment.json --docker-volume-basedir \"{_settings.ProjectRoot}\" --host 0.0.0.0");
-
-            return new ComponentActionResult(result.exitCode == 0, result.output);
         }
 
-        public Task<ComponentActionResult> Stop()
+        public Task<bool> Stop()
         {
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
@@ -84,14 +83,16 @@ namespace DC.Cli.Components.Aws.ApiGateway
             if (_tempPath.Exists)
                 _tempPath.Delete(true);
 
-            return Task.FromResult(new ComponentActionResult(true, ""));
+            return Task.FromResult(true);
         }
 
-        public async Task<ComponentActionResult> Logs()
+        public async Task<bool> Logs()
         {
             var result = await Docker.Logs(_dockerContainer.Name);
+            
+            Console.WriteLine(result);
 
-            return new ComponentActionResult(true, result);
+            return true;
         }
 
         public Task<TemplateData> GetCloudformationData()

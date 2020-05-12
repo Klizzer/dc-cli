@@ -180,32 +180,32 @@ namespace DC.Cli.Components
                     await child.Configure(settings, true, overwrite);
             }
             
-            public Task<ComponentActionResult> Build()
+            public Task<bool> Build()
             {
                 return MergeResults(Run<IBuildableComponent>((component, _) => component.Build()));
             }
 
-            public Task<ComponentActionResult> Test()
+            public Task<bool> Test()
             {
                 return MergeResults(Run<ITestableComponent>((component, _) => component.Test()));
             }
 
-            public Task<ComponentActionResult> Restore()
+            public Task<bool> Restore()
             {
                 return MergeResults(Run<IRestorableComponent>((component, _) => component.Restore()));
             }
 
-            public Task<ComponentActionResult> Start()
+            public Task<bool> Start()
             {
                 return MergeResults(Run<IStartableComponent>((component, tree) => component.Start(tree)));
             }
 
-            public Task<ComponentActionResult> Stop()
+            public Task<bool> Stop()
             {
                 return MergeResults(Run<IStartableComponent>((component, _) => component.Stop()));
             }
 
-            public Task<ComponentActionResult> Logs()
+            public Task<bool> Logs()
             {
                 return MergeResults(Run<IComponentWithLogs>((component, tree) => component.Logs()));
             }
@@ -233,8 +233,8 @@ namespace DC.Cli.Components
                 return results.ToImmutableList();
             }
 
-            private IEnumerable<Task<ComponentActionResult>> Run<TComponentType>(
-                Func<TComponentType, ComponentTree, Task<ComponentActionResult>> execute) 
+            private IEnumerable<Task<bool>> Run<TComponentType>(
+                Func<TComponentType, ComponentTree, Task<bool>> execute) 
                 where TComponentType : IComponent
             {
                 foreach (var component in _components.OfType<TComponentType>())
@@ -247,14 +247,12 @@ namespace DC.Cli.Components
                 }
             }
 
-            private async Task<ComponentActionResult> MergeResults(
-                IEnumerable<Task<ComponentActionResult>> resultCollectors)
+            private async Task<bool> MergeResults(
+                IEnumerable<Task<bool>> resultCollectors)
             {
                 var results = await Task.WhenAll(resultCollectors);
-                
-                return new ComponentActionResult(
-                    results.All(x => x.Success),
-                    string.Join("\n", results.Select(x => x.Output)));
+
+                return results.All(x => x);
             }
 
             public ComponentTree Find(string path)

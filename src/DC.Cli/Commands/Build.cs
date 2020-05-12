@@ -13,10 +13,8 @@ namespace DC.Cli.Commands
             var components = await Components.Components.BuildTree(settings, options.Path);
             
             var result = await components.Build();
-            
-            Console.Write(result.Output);
 
-            if (!result.Success)
+            if (!result)
                 throw new BuildFailedException(settings.GetRootedPath(options.Path));
         }
         

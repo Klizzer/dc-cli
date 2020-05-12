@@ -73,24 +73,24 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             });
         }
 
-        public async Task<ComponentActionResult> Start(Components.ComponentTree components)
+        public async Task<bool> Start(Components.ComponentTree components)
         {
             var startedServices = _configuration.GetConfiguredServices();
-            
+
             if (!startedServices.Any())
-                return new ComponentActionResult(true, "");
+                return true;
             
             await Stop();
             
             var startResult = await _dockerContainer.Run("");
-            
-            if (startResult.exitCode != 0)
-                return new ComponentActionResult(false, startResult.output);
+
+            if (!startResult)
+                return false;
 
             var started = await WaitForStart(TimeSpan.FromMinutes(1));
-            
+
             if (!started)
-                return new ComponentActionResult(false, "Can't start localstack within 60 seconds.");
+                return false;
             
             var template = (await components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
@@ -100,22 +100,24 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             await CloudformationResources.EnsureResourcesExist(template, _configuration, _projectSettings);
 
-            return new ComponentActionResult(true, startResult.output);
+            return true;
         }
 
-        public Task<ComponentActionResult> Stop()
+        public Task<bool> Stop()
         {
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
-            return Task.FromResult(new ComponentActionResult(true, $"Localstack \"{_configuration.Name}\" stopped"));
+            return Task.FromResult(true);
         }
 
-        public async Task<ComponentActionResult> Logs()
+        public async Task<bool> Logs()
         {
             var result = await Docker.Logs(_dockerContainer.Name);
 
-            return new ComponentActionResult(true, result);
+            Console.WriteLine(result);
+            
+            return true;
         }
         
         public async Task<IImmutableList<PackageResource>> GetPackageResources(

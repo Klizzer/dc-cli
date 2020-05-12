@@ -14,9 +14,7 @@ namespace DC.Cli.Commands
 
             var startResult = await components.Start();
             
-            Console.Write(startResult.Output);
-
-            if (!startResult.Success)
+            if (!startResult)
                 throw new StartFailedException(settings.GetRootedPath(options.Path));
         }
         

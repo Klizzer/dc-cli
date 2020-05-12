@@ -12,9 +12,7 @@ namespace DC.Cli.Commands
 
             var components = await Components.Components.BuildTree(settings, options.Path);
 
-            var restoreResult = await components.Logs();
-            
-            Console.Write(restoreResult.Output);
+            await components.Logs();
         }
         
         [Verb("logs", HelpText = "Get logs for the application.")]

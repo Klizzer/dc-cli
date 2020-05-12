@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
@@ -25,28 +26,28 @@ namespace DC.Cli.Components.Nginx
 
         public string Name => _configuration.Name;
 
-        public async Task<ComponentActionResult> Start(Components.ComponentTree components)
+        public async Task<bool> Start(Components.ComponentTree components)
         {
             await Stop();
             
-            var response = await _dockerContainer.Run("");
-
-            return new ComponentActionResult(response.exitCode == 0, response.output);
+            return await _dockerContainer.Run("");
         }
 
-        public Task<ComponentActionResult> Stop()
+        public Task<bool> Stop()
         {
             Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
-            return Task.FromResult(new ComponentActionResult(true, $"Proxy \"{_configuration.Name}\" stopped"));
+            return Task.FromResult(true);
         }
 
-        public async Task<ComponentActionResult> Logs()
+        public async Task<bool> Logs()
         {
             var result = await Docker.Logs(_dockerContainer.Name);
+            
+            Console.WriteLine(result);
 
-            return new ComponentActionResult(true, result);
+            return true;
         }
 
         public static async Task<LocalProxyComponent> Init(DirectoryInfo path, ProjectSettings settings)
