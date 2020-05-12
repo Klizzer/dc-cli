@@ -239,7 +239,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             });
 
             var name = GetBucketName(new KeyValuePair<string, TemplateData.ResourceData>(key, bucketNode));
-            
+
             await client.PutBucketAsync(name);
         }
         
@@ -260,10 +260,11 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             var billingMode = BillingMode.FindValue(tableNode.Properties["BillingMode"].ToString());
 
-            var attributeDefinitions = ((IEnumerable<IDictionary<string, string>>)tableNode.Properties["AttributeDefinitions"])
+            var attributeDefinitions = ((IEnumerable<object>)tableNode.Properties["AttributeDefinitions"])
+                .Select(x => (IDictionary<object, object>)x)
                 .Select(x => new AttributeDefinition(
-                    x["AttributeName"],
-                    ScalarAttributeType.FindValue(x["AttributeType"])))
+                    (string)x["AttributeName"],
+                    ScalarAttributeType.FindValue((string)x["AttributeType"])))
                 .ToList();
 
             var name = GetTableName(new KeyValuePair<string, TemplateData.ResourceData>(key, tableNode));
@@ -282,10 +283,11 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 await client.CreateTableAsync(new CreateTableRequest
                 {
                     TableName = name,
-                    KeySchema = ((IEnumerable<IDictionary<string, string>>)tableNode.Properties["KeySchema"])
+                    KeySchema = ((IEnumerable<object>)tableNode.Properties["KeySchema"])
+                        .Select(x => (IDictionary<object, object>)x)
                         .Select(x => new KeySchemaElement(
-                            x["AttributeName"],
-                            KeyType.FindValue(x["KeyType"])))
+                            (string)x["AttributeName"],
+                            KeyType.FindValue((string)x["KeyType"])))
                         .ToList(),
                     AttributeDefinitions = attributeDefinitions,
                     BillingMode = billingMode
@@ -315,15 +317,18 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             var existing = await client.CognitoUserPoolExists(userPoolName);
 
-            var autoVerifiedAttributes = (List<string>) userPoolNode.Properties["AutoVerifiedAttributes"];
+            var autoVerifiedAttributes = ((List<object>) userPoolNode.Properties["AutoVerifiedAttributes"])
+                .Select(x => (string)x)
+                .ToList();
 
-            var schema = ((List<Dictionary<string, string>>) userPoolNode.Properties["Schema"])
+            var schema = ((List<object>) userPoolNode.Properties["Schema"])
+                .Select(x => (IDictionary<object, object>)x)
                 .Select(x => new SchemaAttributeType
                 {
-                    Mutable = x["Mutable"] == "true",
-                    Name = x["Name"],
-                    Required = x["Required"] == "true",
-                    AttributeDataType = AttributeDataType.FindValue(x["AttributeDataType"])
+                    Mutable = (string)x["Mutable"] == "true",
+                    Name = (string)x["Name"],
+                    Required = (string)x["Required"] == "true",
+                    AttributeDataType = AttributeDataType.FindValue((string)x["AttributeDataType"])
                 })
                 .ToList();
             
