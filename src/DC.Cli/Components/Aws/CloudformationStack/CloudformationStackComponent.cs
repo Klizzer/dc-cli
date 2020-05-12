@@ -53,6 +53,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 .WithDockerSocket()
                 .Port(configuration.Settings.MainPort, 8080)
                 .Port(configuration.Settings.ServicesPort, 4566)
+                .Port(4590, 4590)
                 .EnvironmentVariable("SERVICES", string.Join(",", (configuration.Settings.Services ?? new List<string>())))
                 .EnvironmentVariable("DATA_DIR", "/tmp/localstack/data")
                 .EnvironmentVariable("LAMBDA_REMOTE_DOCKER", "0")
@@ -188,6 +189,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 value,
                 template, 
                 _projectSettings,
+                _configuration.Settings.AwsRegion,
                 async service =>
                 {
                     var services = _configuration.GetConfiguredServices();

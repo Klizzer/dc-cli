@@ -1,6 +1,6 @@
-FROM python
+FROM python:3-buster
 
-RUN pip install aws-sam-cli
+RUN pip3 install aws-sam-cli
 
 WORKDIR /usr/src/app
 

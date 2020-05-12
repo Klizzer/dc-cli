@@ -34,5 +34,40 @@ namespace DC.Cli
 
             return (matchingPool != null, matchingPool?.Id);
         }
+
+        public static async Task<(bool exists, string id)> CognitoUserPoolClientExists(
+            this AmazonCognitoIdentityProviderClient client,
+            string userPoolId,
+            string name)
+        {
+            var userPoolClients = await client.ListUserPoolClientsAsync(new ListUserPoolClientsRequest
+            {
+                MaxResults = 10,
+                UserPoolId = userPoolId
+            });
+
+            var matchingClient = userPoolClients.UserPoolClients.FirstOrDefault(x => x.ClientName == name);
+
+            return (matchingClient != null, matchingClient?.ClientId);
+        }
+
+        public static async Task<bool> CognitoUserPoolDomainExists(
+            this AmazonCognitoIdentityProviderClient client,
+            string name)
+        {
+            try
+            {
+                var response = await client.DescribeUserPoolDomainAsync(new DescribeUserPoolDomainRequest
+                {
+                    Domain = name
+                });
+
+                return !string.IsNullOrEmpty(response.DomainDescription?.UserPoolId);
+            }
+            catch (ResourceNotFoundException)
+            {
+                return false;
+            }
+        }
     }
 }
