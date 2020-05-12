@@ -39,7 +39,8 @@ namespace DC.Cli.Components.Cloudflare
 
             await Directories.Copy(
                 Path.Combine(executingAssembly.GetPath(), "Source/CloudflareWorker"), 
-                tree.Path.FullName);
+                tree.Path.FullName,
+                ("WORKER_NAME", data.Name));
 
             return await CloudflareWorkerComponent.Init(tree.Path, settings);
         }

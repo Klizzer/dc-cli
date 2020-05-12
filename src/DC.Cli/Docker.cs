@@ -196,6 +196,11 @@ namespace DC.Cli
                 return useAsWorkDir ? container.WorkDir(destination) : container;
             }
 
+            public Container WithEmptyVolume(string destination)
+            {
+                return WithArgument($"-v {destination}");
+            }
+
             public Container WorkDir(string path)
             {
                 return WithArgument($"--workdir \"{path}\"");

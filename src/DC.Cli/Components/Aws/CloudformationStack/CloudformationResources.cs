@@ -8,6 +8,7 @@ using Amazon.CognitoIdentityProvider.Model;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
+using Amazon.S3;
 
 namespace DC.Cli.Components.Aws.CloudformationStack
 {
@@ -32,6 +33,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     ProjectSettings,
                     Task> handle)>
             {
+                ["AWS::S3::Bucket"] = (1, EnsureBucketExists),
                 ["AWS::DynamoDB::Table"] = (1, EnsureTableExists),
                 ["AWS::Cognito::UserPool"] = (2, EnsureCognitoUserPoolExists),
                 // ["AWS::Cognito::UserPoolClient"] = EnsureConitoUserPoolClientExists,
@@ -56,7 +58,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     Task<string>>>
             {
                 ["AWS::DynamoDB::Table"] = GetTableRef,
-                ["AWS::Cognito::UserPool"] = GetUserPoolRef
+                ["AWS::Cognito::UserPool"] = GetUserPoolRef,
+                ["AWS::S3::Bucket"] = GetBucketRef
             }.ToImmutableDictionary();
         
         private static readonly IImmutableDictionary<
@@ -210,6 +213,35 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             return existsData.id;
         }
+
+        private static Task<string> GetBucketRef(
+            TemplateData template,
+            KeyValuePair<string, TemplateData.ResourceData> resource,
+            ProjectSettings settings,
+            Func<string, Task<(bool isRunning, int port)>> getServiceInformation)
+        {
+            return Task.FromResult(GetBucketName(resource));
+        }
+
+        private static async Task EnsureBucketExists(
+            string key,
+            TemplateData template,
+            TemplateData.ResourceData bucketNode,
+            CloudformationStackComponent.CloudformationStackConfiguration configuration,
+            ProjectSettings settings)
+        {
+            if (!configuration.GetConfiguredServices().Contains("s3"))
+                return;
+            
+            var client = new AmazonS3Client(new BasicAWSCredentials("key", "secret-key"), new AmazonS3Config
+            {
+                ServiceURL = $"http://localhost:{configuration.Settings.ServicesPort}"
+            });
+
+            var name = GetBucketName(new KeyValuePair<string, TemplateData.ResourceData>(key, bucketNode));
+            
+            await client.PutBucketAsync(name);
+        }
         
         private static async Task EnsureTableExists(
             string key,
@@ -318,6 +350,12 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             //TODO: Check TableName property
             return tableNode.Key;
+        }
+
+        private static string GetBucketName(KeyValuePair<string, TemplateData.ResourceData> bucketNode)
+        {
+            //TODO: Check BucketName property
+            return bucketNode.Key;
         }
     }
 }

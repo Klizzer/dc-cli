@@ -1,0 +1,5 @@
+name = "[[WORKER_NAME]]"
+type = "webpack"
+
+[env.local]
+route = "*"
