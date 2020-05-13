@@ -61,12 +61,16 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             {
                 ["AWS::DynamoDB::Table"] = GetTableRef,
                 ["AWS::Cognito::UserPool"] = GetUserPoolRef,
-                ["AWS::S3::Bucket"] = GetBucketRef
+                ["AWS::S3::Bucket"] = GetBucketRef,
+                ["AWS::Cognito::UserPoolClient"] = GetUserPoolClientRef
             }.ToImmutableDictionary();
         
         private static readonly IImmutableDictionary<
                 string,
                 Func<
+                    TemplateData,
+                    ProjectSettings,
+                    string,
                     KeyValuePair<string, TemplateData.ResourceData>, 
                     string,
                     Func<string, Task<(bool isRunning, int port)>>,
@@ -74,10 +78,16 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             GetAttributes = new Dictionary<
                 string,
                 Func<
+                    TemplateData,
+                    ProjectSettings,
+                    string,
                     KeyValuePair<string, TemplateData.ResourceData>,
                     string,
                     Func<string, Task<(bool isRunning, int port)>>,
-                    Task<string>>>().ToImmutableDictionary();
+                    Task<string>>>
+            {
+                ["AWS::Cognito::UserPoolClient"] = GetUserPoolClientAttr
+            }.ToImmutableDictionary();
 
         public static async Task EnsureResourcesExist(
             TemplateData template,
@@ -144,6 +154,9 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         if (template.Resources.ContainsKey(resourceId))
                         {
                             return await GetAttribute(
+                                template,
+                                settings, 
+                                region,
                                 new KeyValuePair<string, TemplateData.ResourceData>(resourceId, template.Resources[resourceId]), 
                                 getAttKey.Substring(resourceId.Length + 1),
                                 getServiceInformation);
@@ -190,12 +203,21 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         }
 
         private static Task<string> GetAttribute(
+            TemplateData template,
+            ProjectSettings settings,
+            string region,
             KeyValuePair<string, TemplateData.ResourceData> resource,
             string attribute,
             Func<string, Task<(bool isRunning, int port)>> getServiceInformation)
         {
             return GetAttributes.ContainsKey(resource.Value.Type) 
-                ? GetAttributes[resource.Value.Type](resource, attribute, getServiceInformation)
+                ? GetAttributes[resource.Value.Type](
+                    template,
+                    settings,
+                    region,
+                    resource,
+                    attribute,
+                    getServiceInformation)
                 : Task.FromResult<string>(null);
         }
 
@@ -238,6 +260,85 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             var existsData = await client.CognitoUserPoolExists(userPoolName);
 
             return existsData.id;
+        }
+
+        private static async Task<string> GetUserPoolClientRef(
+            TemplateData template,
+            KeyValuePair<string, TemplateData.ResourceData> resource,
+            ProjectSettings settings,
+            string region,
+            Func<string, Task<(bool isRunning, int port)>> getServiceInformation)
+        {
+            var serviceInformation = await getServiceInformation("cognito-idp");
+
+            if (!serviceInformation.isRunning)
+                return null;
+            
+            var client = new AmazonCognitoIdentityProviderClient(
+                new BasicAWSCredentials("key", "secret-key"),
+                new AmazonCognitoIdentityProviderConfig
+                {
+                    ServiceURL = $"http://localhost:{serviceInformation.port}"
+                });
+            
+            var userPoolId = ((await ParseValue(
+                resource.Value.Properties["UserPoolId"],
+                template,
+                settings,
+                region,
+                getServiceInformation)) ?? "").ToString();
+            
+            var clientName = resource.Value.Properties["ClientName"].ToString();
+
+            var data = await client.CognitoUserPoolClientExists(userPoolId, clientName);
+
+            return data.id;
+        }
+
+        private static async Task<string> GetUserPoolClientAttr(
+            TemplateData template,
+            ProjectSettings settings,
+            string region,
+            KeyValuePair<string, TemplateData.ResourceData> resource,
+            string attribute,
+            Func<string, Task<(bool isRunning, int port)>> getServiceInformation)
+        {
+            var serviceInformation = await getServiceInformation("cognito-idp");
+
+            if (!serviceInformation.isRunning)
+                return null;
+            
+            var client = new AmazonCognitoIdentityProviderClient(
+                new BasicAWSCredentials("key", "secret-key"),
+                new AmazonCognitoIdentityProviderConfig
+                {
+                    ServiceURL = $"http://localhost:{serviceInformation.port}"
+                });
+            
+            var userPoolId = ((await ParseValue(
+                resource.Value.Properties["UserPoolId"],
+                template,
+                settings,
+                region,
+                getServiceInformation)) ?? "").ToString();
+            
+            var clientName = resource.Value.Properties["ClientName"].ToString();
+
+            var userPoolClientData = await client.CognitoUserPoolClientExists(userPoolId, clientName);
+            if (!userPoolClientData.exists)
+                return null;
+
+            var userPoolClient = await client.DescribeUserPoolClientAsync(new DescribeUserPoolClientRequest
+            {
+                ClientId = userPoolClientData.id,
+                UserPoolId = userPoolId
+            });
+
+            return attribute switch
+            {
+                "ClientSecret" => userPoolClient.UserPoolClient.ClientSecret,
+                _ => null
+            };
         }
 
         private static Task<string> GetBucketRef(

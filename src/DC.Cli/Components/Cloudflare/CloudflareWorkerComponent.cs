@@ -83,8 +83,6 @@ namespace DC.Cli.Components.Cloudflare
         
         public async Task<bool> Start(Components.ComponentTree components)
         {
-            await Stop();
-            
             var watchResponse = await _watchContainer
                 .Detached()
                 .Run("watch");

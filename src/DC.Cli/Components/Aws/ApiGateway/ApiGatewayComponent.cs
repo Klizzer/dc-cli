@@ -51,8 +51,6 @@ namespace DC.Cli.Components.Aws.ApiGateway
         
         public async Task<bool> Start(Components.ComponentTree components)
         {
-            await Stop();
-                
             _tempPath.Create();
             
             var template = (await components
@@ -72,6 +70,7 @@ namespace DC.Cli.Components.Aws.ApiGateway
                 serializer.Serialize(template));
             
             return await _dockerContainer
+                .WithVolume(Path.FullName, Path.FullName)
                 .Run($"local start-api --env-vars ./environment.json --docker-volume-basedir \"{_settings.ProjectRoot}\" --host 0.0.0.0");
         }
 

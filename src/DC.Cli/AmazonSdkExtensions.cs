@@ -45,12 +45,12 @@ namespace DC.Cli
                 MaxResults = 10,
                 UserPoolId = userPoolId
             });
-
+            
             var matchingClient = userPoolClients.UserPoolClients.FirstOrDefault(x => x.ClientName == name);
 
             return (matchingClient != null, matchingClient?.ClientId);
         }
-
+        
         public static async Task<bool> CognitoUserPoolDomainExists(
             this AmazonCognitoIdentityProviderClient client,
             string name)
@@ -64,7 +64,7 @@ namespace DC.Cli
 
                 return !string.IsNullOrEmpty(response.DomainDescription?.UserPoolId);
             }
-            catch (ResourceNotFoundException)
+            catch (Amazon.CognitoIdentityProvider.Model.ResourceNotFoundException)
             {
                 return false;
             }

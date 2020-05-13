@@ -12,6 +12,7 @@ namespace DC.Cli.Commands
 
             var components = await Components.Components.BuildTree(settings, options.Path);
 
+            await components.Stop();
             var startResult = await components.Start();
             
             if (!startResult)

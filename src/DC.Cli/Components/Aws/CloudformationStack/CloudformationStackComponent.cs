@@ -27,6 +27,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         private readonly DirectoryInfo _path;
         private readonly ProjectSettings _projectSettings;
         private readonly DirectoryInfo _tempDir;
+        private bool _isStarting;
 
         private CloudformationStackComponent(
             CloudformationStackConfiguration configuration,
@@ -80,18 +81,25 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             if (!startedServices.Any())
                 return true;
-            
-            await Stop();
+
+            _isStarting = true;
             
             var startResult = await _dockerContainer.Run("");
 
             if (!startResult)
+            {
+                _isStarting = false;
                 return false;
+            }
 
             var started = await WaitForStart(TimeSpan.FromMinutes(1));
 
             if (!started)
+            {
+                _isStarting = false;
+                
                 return false;
+            }
             
             var template = (await components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
@@ -101,6 +109,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             await CloudformationResources.EnsureResourcesExist(template, _configuration, _projectSettings);
 
+            _isStarting = false;
+            
             return true;
         }
 
@@ -197,7 +207,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     if (!service.Contains(service))
                         return (false, _configuration.Settings.ServicesPort);
 
-                    var isRunning = await WaitForStart(TimeSpan.FromMinutes(1));
+                    var isRunning = await WaitForStartedAndResourcesCreated(TimeSpan.FromMinutes(2));
 
                     return (isRunning, _configuration.Settings.ServicesPort);
                 });
@@ -239,6 +249,23 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             }
 
             return false;
+        }
+
+        private async Task<bool> WaitForStartedAndResourcesCreated(TimeSpan timeout)
+        {
+            var timer = Stopwatch.StartNew();
+            
+            var started = await WaitForStart(timeout);
+
+            if (!started)
+                return false;
+            
+            while (_isStarting && timer.Elapsed < timeout)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+            
+            return !_isStarting;
         }
 
         public static async Task<CloudformationStackComponent> Init(DirectoryInfo path, ProjectSettings settings)

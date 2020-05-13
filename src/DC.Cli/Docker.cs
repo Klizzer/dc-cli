@@ -71,9 +71,16 @@ namespace DC.Cli
             }
         }
 
-        public static bool HasImage(string image)
+        private static bool HasImage(string image)
         {
             var result = ProcessExecutor.Execute("docker", $"images -q {image}");
+
+            return result.success && !string.IsNullOrEmpty(result.output);
+        }
+
+        private static bool HasContainer(string name)
+        {
+            var result = ProcessExecutor.Execute("docker", $"ps -qa -f name={name}");
 
             return result.success && !string.IsNullOrEmpty(result.output);
         }
@@ -85,6 +92,9 @@ namespace DC.Cli
 
         public static void Stop(string name)
         {
+            if (!HasContainer(name))
+                return;
+            
             var startInfo = new ProcessStartInfo
             {
                 FileName = "docker",
@@ -98,6 +108,9 @@ namespace DC.Cli
 
         public static void Remove(string name)
         {
+            if (!HasContainer(name))
+                return;
+            
             var startInfo = new ProcessStartInfo
             {
                 FileName = "docker",

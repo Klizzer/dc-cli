@@ -26,11 +26,9 @@ namespace DC.Cli.Components.Nginx
 
         public string Name => _configuration.Name;
 
-        public async Task<bool> Start(Components.ComponentTree components)
+        public Task<bool> Start(Components.ComponentTree components)
         {
-            await Stop();
-            
-            return await _dockerContainer.Run("");
+            return _dockerContainer.Run("");
         }
 
         public Task<bool> Stop()
