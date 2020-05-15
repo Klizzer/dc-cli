@@ -45,9 +45,11 @@ namespace DC.Cli.Components.Cloudflare
             return await CloudflareWorkerComponent.Init(tree.Path, settings);
         }
 
-        public async Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public async Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var component = await CloudflareWorkerComponent.Init(path, settings);
+            var component = await CloudflareWorkerComponent.Init(components.Path, settings);
 
             return component != null
                 ? new List<IComponent>

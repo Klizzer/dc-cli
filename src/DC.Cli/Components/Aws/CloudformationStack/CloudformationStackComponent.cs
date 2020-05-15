@@ -27,17 +27,20 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         private readonly DirectoryInfo _path;
         private readonly ProjectSettings _projectSettings;
         private readonly DirectoryInfo _tempDir;
+        private readonly Components.ComponentTree _components;
         private bool _isStarting;
 
         private CloudformationStackComponent(
             CloudformationStackConfiguration configuration,
             ProjectSettings settings,
             DirectoryInfo path, 
-            ProjectSettings projectSettings)
+            ProjectSettings projectSettings, 
+            Components.ComponentTree components)
         {
             _configuration = configuration;
             _path = path;
             _projectSettings = projectSettings;
+            _components = components;
             _tempDir = new DirectoryInfo(Path.Combine(path.FullName, ".tmp"));
 
             var dataDir = new DirectoryInfo(configuration.GetDataDir(settings));
@@ -45,7 +48,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             if (!dataDir.Exists)
                 dataDir.Create();
             
-            _dockerContainer = Docker
+            var container = Docker
                 .ContainerFromImage(
                     $"localstack/localstack:{configuration.Settings.LocalstackVersion}",
                     configuration.GetContainerName(projectSettings))
@@ -54,12 +57,16 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 .WithDockerSocket()
                 .Port(configuration.Settings.MainPort, 8080)
                 .Port(configuration.Settings.ServicesPort, 4566)
-                .Port(4590, 4590)
                 .EnvironmentVariable("SERVICES", string.Join(",", (configuration.Settings.Services ?? new List<string>())))
                 .EnvironmentVariable("DATA_DIR", "/tmp/localstack/data")
                 .EnvironmentVariable("LAMBDA_REMOTE_DOCKER", "0")
                 .EnvironmentVariable("DEBUG", "1")
                 .EnvironmentVariable("LOCALSTACK_API_KEY", projectSettings.GetConfiguration("localstackApiKey"));
+
+            _dockerContainer = configuration
+                .Settings
+                .PortMappings
+                .Aggregate(container, (current, portMapping) => current.WithArgument($"-p {portMapping}"));
         }
 
         public string Name => _configuration.Name;
@@ -193,9 +200,15 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             return result.ToImmutableList();
         }
         
-        public Task<object> Parse(object value, TemplateData template)
+        public async Task<object> Parse(object value, TemplateData template = null)
         {
-            return CloudformationResources.ParseValue(
+            template ??= (await _components
+                    .FindAll<ICloudformationComponent>(Components.Direction.In)
+                    .Select(x => x.component.GetCloudformationData())
+                    .WhenAll())
+                .Merge();
+            
+            return await CloudformationResources.ParseValue(
                 value,
                 template, 
                 _projectSettings,
@@ -204,7 +217,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 {
                     var services = _configuration.GetConfiguredServices();
 
-                    if (!service.Contains(service))
+                    if (!services.Contains(service))
                         return (false, _configuration.Settings.ServicesPort);
 
                     var isRunning = await WaitForStartedAndResourcesCreated(TimeSpan.FromMinutes(2));
@@ -268,18 +281,21 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             return !_isStarting;
         }
 
-        public static async Task<CloudformationStackComponent> Init(DirectoryInfo path, ProjectSettings settings)
+        public static async Task<CloudformationStackComponent> Init(
+            Components.ComponentTree components, 
+            ProjectSettings settings)
         {
-            if (!File.Exists(Path.Combine(path.FullName, ConfigFileName)))
+            if (!File.Exists(Path.Combine(components.Path.FullName, ConfigFileName)))
                 return null;
             
             var deserializer = new Deserializer();
             return new CloudformationStackComponent(
                 deserializer.Deserialize<CloudformationStackConfiguration>(
-                    await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName))),
+                    await File.ReadAllTextAsync(Path.Combine(components.Path.FullName, ConfigFileName))),
                 settings,
-                path,
-                settings);
+                components.Path,
+                settings,
+                components);
         }
         
         public class CloudformationStackConfiguration
@@ -340,6 +356,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 public IList<string> Services { get; set; }
                 public string DeploymentBucketName { get; set; }
                 public string DeploymentStackName { get; set; }
+                public IList<string> PortMappings { get; set; } = new List<string>();
             }
         }
         

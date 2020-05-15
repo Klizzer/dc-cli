@@ -27,9 +27,9 @@ namespace DC.Cli.Components.Terraform
             return new TerraformRootComponent(data.Name, new FileInfo(filePath));
         }
 
-        public Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public Task<IImmutableList<IComponent>> FindAt(Components.ComponentTree components, ProjectSettings settings)
         {
-            var result = from file in path.EnumerateFiles()
+            var result = from file in components.Path.EnumerateFiles()
                 where file.Name.EndsWith(".main.tf")
                 select new TerraformRootComponent(
                     Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(file.Name)), 

@@ -41,12 +41,14 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 configFilePath,
                 serializer.Serialize(configuration));
 
-            return await CloudformationStackComponent.Init(tree.Path, settings);
+            return await CloudformationStackComponent.Init(tree, settings);
         }
 
-        public async Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public async Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var component = await CloudformationStackComponent.Init(path, settings);
+            var component = await CloudformationStackComponent.Init(components, settings);
 
             return component != null
                 ? new List<IComponent>

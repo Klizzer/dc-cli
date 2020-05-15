@@ -35,9 +35,11 @@ namespace DC.Cli.Components.Nginx
             return await LocalProxyComponent.Init(tree.Path, settings);
         }
 
-        public async Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public async Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var component = await LocalProxyComponent.Init(path, settings);
+            var component = await LocalProxyComponent.Init(components.Path, settings);
 
             return component != null
                 ? new List<IComponent>

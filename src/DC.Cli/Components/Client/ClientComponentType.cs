@@ -48,9 +48,11 @@ namespace DC.Cli.Components.Client
             return await ClientComponent.Init(tree.Path, x => CreateBaseContainer(tree.Path, x, settings));
         }
 
-        public async Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public async Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var component = await ClientComponent.Init(path, x => CreateBaseContainer(path, x, settings));
+            var component = await ClientComponent.Init(components.Path, x => CreateBaseContainer(components.Path, x, settings));
 
             return component != null
                 ? new List<IComponent>
@@ -80,7 +82,6 @@ namespace DC.Cli.Components.Client
             return Docker
                 .ContainerFromImage("node", configuration.GetContainerName(settings))
                 .EntryPoint("yarn")
-                .Port(configuration.Settings.Port, 3000)
                 .WithVolume(path.FullName, "/usr/local/src", true);
         }
 

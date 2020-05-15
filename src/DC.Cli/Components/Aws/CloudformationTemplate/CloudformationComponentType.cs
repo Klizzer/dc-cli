@@ -30,11 +30,13 @@ namespace DC.Cli.Components.Aws.CloudformationTemplate
             return new CloudformationComponent(tree.Path, Path.GetFileName(filePath));
         }
 
-        public Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var result = (from file in path.EnumerateFiles()
+            var result = (from file in components.Path.EnumerateFiles()
                     where file.Name.EndsWith(".cf.yml")
-                    select new CloudformationComponent(path, file.Name))
+                    select new CloudformationComponent(components.Path, file.Name))
                 .Cast<IComponent>()
                 .ToImmutableList();
 

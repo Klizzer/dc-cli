@@ -27,9 +27,11 @@ namespace DC.Cli.Components.Terraform
             return new TerraformResourceComponent(data.Name, new FileInfo(filePath), settings);
         }
 
-        public Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var result = from file in path.EnumerateFiles()
+            var result = from file in components.Path.EnumerateFiles()
                 where file.Name.EndsWith(".tf") && !file.Name.EndsWith(".main.tf")
                 select new TerraformResourceComponent(Path.GetFileNameWithoutExtension(file.Name), file, settings);
             

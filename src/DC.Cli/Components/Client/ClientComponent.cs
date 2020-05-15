@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
@@ -66,14 +67,32 @@ namespace DC.Cli.Components.Client
             
             return await _dockerContainer
                 .Temporary()
-                .Run("run test");
+                .Run("test");
         }
 
         public async Task<bool> Start(Components.ComponentTree components)
         {
-            return await _dockerContainer
+            await Restore();
+            
+            var parsers = components
+                .FindAll<IParseCloudformationValues>(Components.Direction.Out)
+                .Select(x => x.component)
+                .ToImmutableList();
+            
+            var result = new Dictionary<string, string>();
+
+            foreach (var environmentVariable in _configuration.Settings.EnvironmentVariables ?? new Dictionary<string, object>())
+                result[environmentVariable.Key] = (await parsers.Parse(environmentVariable.Value)) as string;
+
+            var container = result.Aggregate(
+                _dockerContainer, 
+                (current, variable) => 
+                    current.EnvironmentVariable(variable.Key, variable.Value));
+
+            return await container
                 .Detached()
-                .Run("run dev --hostname 0.0.0.0");
+                .Port(_configuration.Settings.Port, 3000)
+                .Run("dev --hostname 0.0.0.0");
         }
 
         public Task<bool> Stop()
@@ -128,6 +147,7 @@ namespace DC.Cli.Components.Client
                 public int Port { get; set; }
                 public string Type { get; set; }
                 public string BaseUrl { get; set; }
+                public IDictionary<string, object> EnvironmentVariables { get; set; }
             }
         }
     }

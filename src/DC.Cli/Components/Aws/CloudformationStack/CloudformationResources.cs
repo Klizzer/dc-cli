@@ -337,6 +337,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             return attribute switch
             {
                 "ClientSecret" => userPoolClient.UserPoolClient.ClientSecret,
+                "DefaultRedirectURI" => userPoolClient.UserPoolClient.DefaultRedirectURI,
                 _ => null
             };
         }
@@ -542,6 +543,14 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     .WhenAll())
                 .Select(x => (string) x)
                 .ToList();
+            var defaultRedirectUri = userPoolClientNode.Properties.ContainsKey("DefaultRedirectURI")
+                ? (await ParseValue(
+                    userPoolClientNode.Properties["DefaultRedirectURI"],
+                    template,
+                    settings,
+                    configuration.Settings.AwsRegion, 
+                    GetServiceInformation)) as string
+                : callbackUrls.FirstOrDefault();
             
             if (string.IsNullOrEmpty(userPoolId))
                 return;
@@ -562,7 +571,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     ReadAttributes = readAttributes,
                     WriteAttributes = writeAttributes,
                     CallbackURLs = callbackUrls,
-                    LogoutURLs = logoutUrls
+                    LogoutURLs = logoutUrls,
+                    DefaultRedirectURI = defaultRedirectUri
                 });
             }
             else
@@ -579,7 +589,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     ReadAttributes = readAttributes,
                     WriteAttributes = writeAttributes,
                     CallbackURLs = callbackUrls,
-                    LogoutURLs = logoutUrls
+                    LogoutURLs = logoutUrls,
+                    DefaultRedirectURI = defaultRedirectUri
                 });
             }
         }

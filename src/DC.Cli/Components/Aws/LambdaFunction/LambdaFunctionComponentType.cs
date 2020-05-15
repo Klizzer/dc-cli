@@ -38,9 +38,11 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             return await LambdaFunctionComponent.Init(tree.Path);
         }
 
-        public async Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public async Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var component = await LambdaFunctionComponent.Init(path);
+            var component = await LambdaFunctionComponent.Init(components.Path);
 
             return component != null
                 ? new List<IComponent>

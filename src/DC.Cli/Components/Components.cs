@@ -71,24 +71,25 @@ namespace DC.Cli.Components
         private static async Task<ComponentTree> GetTreeAt(DirectoryInfo directory, ProjectSettings settings)
         {
             var components = new List<IComponent>();
+            
+            var tree = new ComponentTree(directory);
 
             foreach (var componentType in ComponentTypes)
             {
-                components.AddRange(await componentType.FindAt(directory, settings));
+                components.AddRange(await componentType.FindAt(tree, settings));
             }
 
-            return new ComponentTree(components.ToImmutableList(), directory);
+            return ComponentTree.WithComponents(tree, components.ToImmutableList());
         }
 
         public class ComponentTree
         {
             private ComponentTree _parent;
-            private IImmutableList<IComponent> _components;
-            private IImmutableList<ComponentTree> _children;
+            private IImmutableList<IComponent> _components = ImmutableList<IComponent>.Empty;
+            private IImmutableList<ComponentTree> _children = ImmutableList<ComponentTree>.Empty;
             
-            public ComponentTree(IImmutableList<IComponent> components, DirectoryInfo path)
+            public ComponentTree(DirectoryInfo path)
             {
-                _components = components;
                 Path = path;
             }
             
@@ -100,6 +101,13 @@ namespace DC.Cli.Components
 
                 foreach (var child in children)
                     child._parent = tree;
+
+                return tree;
+            }
+
+            public static ComponentTree WithComponents(ComponentTree tree, IImmutableList<IComponent> components)
+            {
+                tree._components = tree._components.AddRange(components);
 
                 return tree;
             }
@@ -247,7 +255,7 @@ namespace DC.Cli.Components
                 }
             }
 
-            private async Task<bool> MergeResults(
+            private static async Task<bool> MergeResults(
                 IEnumerable<Task<bool>> resultCollectors)
             {
                 var results = await Task.WhenAll(resultCollectors);

@@ -8,7 +8,7 @@ namespace DC.Cli.Components
         public static async Task<object> Parse(
             this IEnumerable<IParseCloudformationValues> parsers,
             object value,
-            TemplateData template)
+            TemplateData template = null)
         {
             foreach (var parser in parsers)
             {

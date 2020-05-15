@@ -6,7 +6,7 @@ namespace DC.Cli.Components
 {
     public interface IComponentType
     {
-        Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings);
+        Task<IImmutableList<IComponent>> FindAt(Components.ComponentTree components, ProjectSettings settings);
     }
     
     public interface IComponentType<TComponent, in TComponentData> : IComponentType

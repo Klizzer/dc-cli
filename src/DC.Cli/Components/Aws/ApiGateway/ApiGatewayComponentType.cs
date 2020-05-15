@@ -32,9 +32,11 @@ namespace DC.Cli.Components.Aws.ApiGateway
             return await ApiGatewayComponent.Init(tree.Path, settings);
         }
 
-        public async Task<IImmutableList<IComponent>> FindAt(DirectoryInfo path, ProjectSettings settings)
+        public async Task<IImmutableList<IComponent>> FindAt(
+            Components.ComponentTree components,
+            ProjectSettings settings)
         {
-            var apiGateway = await ApiGatewayComponent.Init(path, settings);
+            var apiGateway = await ApiGatewayComponent.Init(components.Path, settings);
 
             return apiGateway != null
                 ? new List<IComponent>
