@@ -396,15 +396,71 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     ScalarAttributeType.FindValue((string)x["AttributeType"])))
                 .ToList();
 
+            var globalIndices = ((IEnumerable<object>) tableNode.Properties["GlobalSecondaryIndexes"])
+                .Select(x => (IDictionary<string, object>) x)
+                .Select(x => new GlobalSecondaryIndex
+                {
+                    IndexName = (string)x["IndexName"],
+                    KeySchema = ((IEnumerable<object>)x["KeySchema"])
+                        .Select(y => (IDictionary<object, object>)y)
+                        .Select(y => new KeySchemaElement(
+                            (string)y["AttributeName"],
+                            KeyType.FindValue((string)y["KeyType"])))
+                        .ToList(),
+                    Projection = new Projection
+                    {
+                        ProjectionType = (string) ((IDictionary<string, object>)x["Projection"])["ProjectionType"],
+                        NonKeyAttributes = ((IEnumerable<object>)((IDictionary<string, object>)x["Projection"])["NonKeyAttributes"]).Select(y => (string)y).ToList()
+                    },
+                    ProvisionedThroughput = new ProvisionedThroughput
+                    {
+                        ReadCapacityUnits = 1,
+                        WriteCapacityUnits = 1
+                    }
+                })
+                .ToList();
+
             var name = GetTableName(new KeyValuePair<string, TemplateData.ResourceData>(key, tableNode));
             
             if (await client.TableExists(name))
             {
+                var currentTable = await client.DescribeTableAsync(name);
+
+                var newGlobalIndices = globalIndices
+                    .Where(x => currentTable.Table.GlobalSecondaryIndexes.All(y => y.IndexName != x.IndexName))
+                    .ToList();
+
+                var removedGlobalIndices = currentTable.Table.GlobalSecondaryIndexes
+                    .Where(x => globalIndices.All(y => x.IndexName != y.IndexName))
+                    .ToList();
+
+                var indexUpdates = new List<GlobalSecondaryIndexUpdate>();
+
+                indexUpdates.AddRange(newGlobalIndices.Select(x => new GlobalSecondaryIndexUpdate
+                {
+                    Create = new CreateGlobalSecondaryIndexAction
+                    {
+                        Projection = x.Projection,
+                        IndexName = x.IndexName,
+                        KeySchema = x.KeySchema,
+                        ProvisionedThroughput = x.ProvisionedThroughput
+                    }
+                }));
+                
+                indexUpdates.AddRange(removedGlobalIndices.Select(x => new GlobalSecondaryIndexUpdate
+                {
+                    Delete = new DeleteGlobalSecondaryIndexAction
+                    {
+                        IndexName = x.IndexName
+                    }
+                }));
+                
                 await client.UpdateTableAsync(new UpdateTableRequest
                 {
                     TableName = name,
                     AttributeDefinitions = attributeDefinitions,
-                    BillingMode = billingMode
+                    BillingMode = billingMode,
+                    GlobalSecondaryIndexUpdates = indexUpdates
                 });
             }
             else
@@ -419,7 +475,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                             KeyType.FindValue((string)x["KeyType"])))
                         .ToList(),
                     AttributeDefinitions = attributeDefinitions,
-                    BillingMode = billingMode
+                    BillingMode = billingMode,
+                    GlobalSecondaryIndexes = globalIndices
                 });
             }
         }

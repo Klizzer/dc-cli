@@ -1,6 +1,8 @@
 SHELL := /bin/bash
 .ONESHELL:
 .DELETE_ON_ERROR:
+.SHELLFLAGS := -eu -o pipefail -c
+MAKEFLAGS += --warn-undefined-variables 
 MAKEFLAGS += --no-builtin-rules
 
 DC_CLI_VERSION = [[DC_CLI_VERSION]]
