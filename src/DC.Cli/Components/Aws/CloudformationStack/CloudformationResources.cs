@@ -401,7 +401,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             if (tableNode.Properties.ContainsKey("GlobalSecondaryIndexes"))
             {
                 globalIndices = ((IEnumerable<object>) tableNode.Properties["GlobalSecondaryIndexes"])
-                    .Select(x => (IDictionary<string, object>) x)
+                    .Select(x => (IDictionary<object, object>) x)
                     .Select(x => new GlobalSecondaryIndex
                     {
                         IndexName = (string) x["IndexName"],
@@ -413,9 +413,9 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                             .ToList(),
                         Projection = new Projection
                         {
-                            ProjectionType = (string) ((IDictionary<string, object>) x["Projection"])["ProjectionType"],
+                            ProjectionType = (string) ((IDictionary<object, object>) x["Projection"])["ProjectionType"],
                             NonKeyAttributes =
-                                ((IEnumerable<object>) ((IDictionary<string, object>) x["Projection"])[
+                                ((IEnumerable<object>) ((IDictionary<object, object>) x["Projection"])[
                                     "NonKeyAttributes"]).Select(y => (string) y).ToList()
                         },
                         ProvisionedThroughput = new ProvisionedThroughput
@@ -466,9 +466,22 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 {
                     TableName = name,
                     AttributeDefinitions = attributeDefinitions,
-                    BillingMode = billingMode,
-                    GlobalSecondaryIndexUpdates = indexUpdates
+                    BillingMode = billingMode
                 });
+
+                foreach (var indexUpdate in indexUpdates)
+                {
+                    await client.UpdateTableAsync(new UpdateTableRequest
+                    {
+                        TableName = name,
+                        AttributeDefinitions = attributeDefinitions,
+                        BillingMode = billingMode,
+                        GlobalSecondaryIndexUpdates = new List<GlobalSecondaryIndexUpdate>
+                        {
+                            indexUpdate
+                        }
+                    });
+                }
             }
             else
             {
