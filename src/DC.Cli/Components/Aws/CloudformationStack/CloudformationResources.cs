@@ -395,30 +395,37 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     (string)x["AttributeName"],
                     ScalarAttributeType.FindValue((string)x["AttributeType"])))
                 .ToList();
+            
+            var globalIndices = new List<GlobalSecondaryIndex>();
 
-            var globalIndices = ((IEnumerable<object>) tableNode.Properties["GlobalSecondaryIndexes"])
-                .Select(x => (IDictionary<string, object>) x)
-                .Select(x => new GlobalSecondaryIndex
-                {
-                    IndexName = (string)x["IndexName"],
-                    KeySchema = ((IEnumerable<object>)x["KeySchema"])
-                        .Select(y => (IDictionary<object, object>)y)
-                        .Select(y => new KeySchemaElement(
-                            (string)y["AttributeName"],
-                            KeyType.FindValue((string)y["KeyType"])))
-                        .ToList(),
-                    Projection = new Projection
+            if (tableNode.Properties.ContainsKey("GlobalSecondaryIndexes"))
+            {
+                globalIndices = ((IEnumerable<object>) tableNode.Properties["GlobalSecondaryIndexes"])
+                    .Select(x => (IDictionary<string, object>) x)
+                    .Select(x => new GlobalSecondaryIndex
                     {
-                        ProjectionType = (string) ((IDictionary<string, object>)x["Projection"])["ProjectionType"],
-                        NonKeyAttributes = ((IEnumerable<object>)((IDictionary<string, object>)x["Projection"])["NonKeyAttributes"]).Select(y => (string)y).ToList()
-                    },
-                    ProvisionedThroughput = new ProvisionedThroughput
-                    {
-                        ReadCapacityUnits = 1,
-                        WriteCapacityUnits = 1
-                    }
-                })
-                .ToList();
+                        IndexName = (string) x["IndexName"],
+                        KeySchema = ((IEnumerable<object>) x["KeySchema"])
+                            .Select(y => (IDictionary<object, object>) y)
+                            .Select(y => new KeySchemaElement(
+                                (string) y["AttributeName"],
+                                KeyType.FindValue((string) y["KeyType"])))
+                            .ToList(),
+                        Projection = new Projection
+                        {
+                            ProjectionType = (string) ((IDictionary<string, object>) x["Projection"])["ProjectionType"],
+                            NonKeyAttributes =
+                                ((IEnumerable<object>) ((IDictionary<string, object>) x["Projection"])[
+                                    "NonKeyAttributes"]).Select(y => (string) y).ToList()
+                        },
+                        ProvisionedThroughput = new ProvisionedThroughput
+                        {
+                            ReadCapacityUnits = 1,
+                            WriteCapacityUnits = 1
+                        }
+                    })
+                    .ToList();
+            }
 
             var name = GetTableName(new KeyValuePair<string, TemplateData.ResourceData>(key, tableNode));
             
