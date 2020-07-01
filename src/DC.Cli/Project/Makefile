@@ -73,6 +73,9 @@ else
 	mkdir ./.packages
 endif
 	$(DC_CLI_COMMAND) infra package -o ./.packages
+
+.PHONY: publish
+publish: package
 ifdef NUGET_FEED_URL
 ifdef NUGET_API_KEY
 	$(foreach file, $(wildcard ./.packages/*), dotnet nuget push $(file) --skip-duplicate  -k $(NUGET_API_KEY) -s $(NUGET_FEED_URL);)
