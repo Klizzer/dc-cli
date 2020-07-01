@@ -168,6 +168,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 .WithVolume(
                     _projectSettings.GetRootedPath(_path.FullName),
                     $"/usr/src/app/{_projectSettings.GetRelativePath(_path.FullName)}")
+                .EnvironmentVariable("AWS_ACCESS_KEY_ID", Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"))
+                .EnvironmentVariable("AWS_SECRET_ACCESS_KEY", Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"))
                 .WorkDir("/usr/src/app");
 
             await Templates.Extract(
