@@ -60,7 +60,6 @@ namespace DC.Cli.Components.Cloudflare
             
             return await _dockerContainer
                 .Temporary()
-                .AsCurrentUser()
                 .Run("build");
         }
         
