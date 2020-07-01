@@ -151,7 +151,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             
             outputDir.Create();
             
-            var template = (await components
+            var template = (await _components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
                     .Select(x => x.component.GetCloudformationData())
                     .WhenAll())
@@ -186,8 +186,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             await cliDocker
                 .WithVolume(outputDir.FullName, "/usr/src/app/output")
                 .WithVolume(Path.Combine(_tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
-                .Run($"cloudformation package --template-file ./template.yml --output-template-file ./output/template.yml --s3-bucket {_configuration.Settings.DeploymentBucketName} --s3-prefix {version}");
-            
+                .Run($"cloudformation package --template-file ./template.yml --output-template-file ./output/template.yml --s3-bucket {_configuration.Settings.DeploymentBucketName} --s3-prefix {version} --region {_configuration.Settings.AwsRegion}");
+
             var result = new List<PackageResource>();
 
             foreach (var file in outputDir.EnumerateFiles())

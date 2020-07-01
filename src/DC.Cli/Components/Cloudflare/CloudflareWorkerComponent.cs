@@ -112,8 +112,6 @@ namespace DC.Cli.Components.Cloudflare
             Components.ComponentTree components,
             string version)
         {
-            await Build();
-            
             var result = new List<PackageResource>();
             
             var distDirectory = new DirectoryInfo(Path.Combine(_path.FullName, "dist"));
