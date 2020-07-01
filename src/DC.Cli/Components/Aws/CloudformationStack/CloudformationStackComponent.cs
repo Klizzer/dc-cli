@@ -184,6 +184,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             await cliDocker
                 .WithVolume(outputDir.FullName, "/usr/src/app/output")
                 .WithVolume(Path.Combine(_tempDir.FullName, "template.yml"), "/usr/src/app/template.yml")
+                .WithVolume(_path.FullName, $"/usr/src/app/{_projectSettings.GetRelativePath(_path.FullName)}")
                 .Run($"cloudformation package --template-file ./template.yml --output-template-file ./output/template.yml --s3-bucket {_configuration.Settings.DeploymentBucketName} --s3-prefix {version}");
             
             var result = new List<PackageResource>();
