@@ -45,10 +45,28 @@ namespace DC.Cli.Components.Client
                 .Run("");
         }
 
-        public Task<bool> Build()
+        public async Task<bool> Build()
         {
-            //TODO: Build in prod
-            return Task.FromResult(true);
+            var restoreResult = await Restore();
+
+            if (!restoreResult)
+                return false;
+            
+            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+                return true;
+            
+            var packageData =
+                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
+
+            if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
+                .ContainsKey("build"))
+            {
+                return true;
+            }
+            
+            return await _dockerContainer
+                .Temporary()
+                .Run("build");
         }
 
         public async Task<bool> Test()

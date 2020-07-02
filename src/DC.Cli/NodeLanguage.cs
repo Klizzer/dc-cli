@@ -61,7 +61,7 @@ namespace DC.Cli
 
             public Task<bool> Build(string path)
             {
-                return Task.FromResult(true);
+                return Restore(path);
             }
 
             public async Task<bool> Test(string path)
@@ -77,6 +77,8 @@ namespace DC.Cli
                 {
                     return true;
                 }
+
+                await Restore(path);
                 
                 return await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
