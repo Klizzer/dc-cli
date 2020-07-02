@@ -10,7 +10,7 @@ namespace DC.Cli.Components.Aws.LambdaLayer
         IBuildableComponent,
         ITestableComponent
     {
-        public const string ConfigFileName = "lambda-func.config.yml";
+        public const string ConfigFileName = "lambda-layer.config.yml";
         
         private readonly DirectoryInfo _path;
         private readonly LambdaLayerConfiguration _configuration;
