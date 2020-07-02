@@ -59,13 +59,39 @@ namespace DC.Cli
                     .Run("");
             }
 
-            public Task<bool> Build(string path)
+            public async Task<bool> Build(string path)
             {
-                return Restore(path);
+                var restoreResult = await Restore(path);
+
+                if (!restoreResult)
+                    return false;
+                
+                if (!File.Exists(Path.Combine(path, "package.json")))
+                    return true;
+
+                var packageData =
+                    Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(path, "package.json")));
+
+                if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
+                    .ContainsKey("build"))
+                {
+                    return true;
+                }
+
+                await Restore(path);
+                
+                return await _dockerContainer
+                    .WithVolume(path, "/usr/src/app", true)
+                    .Run("run build");
             }
 
             public async Task<bool> Test(string path)
             {
+                var restoreResult = await Restore(path);
+
+                if (!restoreResult)
+                    return false;
+                
                 if (!File.Exists(Path.Combine(path, "package.json")))
                     return true;
 
