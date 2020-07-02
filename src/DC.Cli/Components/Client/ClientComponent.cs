@@ -71,6 +71,11 @@ namespace DC.Cli.Components.Client
 
         public async Task<bool> Test()
         {
+            var restoreResult = await Restore();
+
+            if (!restoreResult)
+                return false;
+            
             if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
                 return true;
 
