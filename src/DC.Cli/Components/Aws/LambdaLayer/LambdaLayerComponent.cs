@@ -3,36 +3,29 @@ using System.IO;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace DC.Cli.Components.Aws.LambdaFunction
+namespace DC.Cli.Components.Aws.LambdaLayer
 {
-    public class LambdaFunctionComponent : ICloudformationComponent,
+    public class LambdaLayerComponent : ICloudformationComponent,
         IRestorableComponent,
         IBuildableComponent,
-        ITestableComponent,
-        IStartableComponent
+        ITestableComponent
     {
         public const string ConfigFileName = "lambda-func.config.yml";
         
         private readonly DirectoryInfo _path;
-        private readonly FunctionConfiguration _configuration;
+        private readonly LambdaLayerConfiguration _configuration;
         
-        private LambdaFunctionComponent(DirectoryInfo path, FunctionConfiguration configuration)
+        private LambdaLayerComponent(DirectoryInfo path, LambdaLayerConfiguration configuration)
         {
             _path = path;
             _configuration = configuration;
         }
-
+        
         public string Name => _configuration.Name;
         
-        public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
-            GetRequiredConfigurations()
+        public Task<bool> Test()
         {
-            return _configuration.Settings.Template.GetRequiredConfigurations();
-        }
-
-        public Task<bool> Restore()
-        {
-            return _configuration.GetLanguage().Restore(_path.FullName);
+            return _configuration.GetLanguage().Test(_path.FullName);
         }
 
         public Task<bool> Build()
@@ -40,50 +33,45 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             return _configuration.GetLanguage().Build(_path.FullName);
         }
 
-        public Task<bool> Test()
+        public Task<bool> Restore()
         {
-            return _configuration.GetLanguage().Test(_path.FullName);
-        }
-        
-        public Task<bool> Start(Components.ComponentTree components)
-        {
-            //TODO: Setup watch
-            return Build();
+            return _configuration.GetLanguage().Restore(_path.FullName);
         }
 
-        public Task<bool> Stop()
+        public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
+            GetRequiredConfigurations()
         {
-            return Task.FromResult(true);
+            return _configuration.Settings.Template.GetRequiredConfigurations();
         }
-        
+
         public Task<TemplateData> GetCloudformationData()
         {
             return Task.FromResult(_configuration.Settings.Template);
         }
         
-        public static async Task<LambdaFunctionComponent> Init(DirectoryInfo path)
+        public static async Task<LambdaLayerComponent> Init(DirectoryInfo path)
         {
             if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
                 return null;
             
             var deserializer = new Deserializer();
-            return new LambdaFunctionComponent(
+            return new LambdaLayerComponent(
                 path,
-                deserializer.Deserialize<FunctionConfiguration>(
+                deserializer.Deserialize<LambdaLayerConfiguration>(
                     await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName))));
         }
         
-        private class FunctionConfiguration
+        private class LambdaLayerConfiguration
         {
             public string Name { get; set; }
-            public FunctionSettings Settings { get; set; }
+            public LambdaLayerSettings Settings { get; set; }
 
             public ILanguageVersion GetLanguage()
             {
                 return FunctionLanguage.Parse(Settings.Language);
             }
             
-            public class FunctionSettings
+            public class LambdaLayerSettings
             {
                 public string Type { get; set; }
                 public string Language { get; set; }

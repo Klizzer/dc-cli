@@ -8,6 +8,7 @@ using DC.Cli.Components.Aws.ApiGateway;
 using DC.Cli.Components.Aws.CloudformationStack;
 using DC.Cli.Components.Aws.CloudformationTemplate;
 using DC.Cli.Components.Aws.LambdaFunction;
+using DC.Cli.Components.Aws.LambdaLayer;
 using DC.Cli.Components.Client;
 using DC.Cli.Components.Cloudflare;
 using DC.Cli.Components.Nginx;
@@ -30,7 +31,8 @@ namespace DC.Cli.Components
             new TerraformResourceComponentType(),
             new TerraformRootComponentType(),
             new CloudflareWorkerComponentType(),
-            new PowershellScriptComponentType()
+            new PowershellScriptComponentType(),
+            new LambdaLayerComponentType()
         }.ToImmutableList();
         
         public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)
