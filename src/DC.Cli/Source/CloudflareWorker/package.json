@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "A Cloudflare Worker [[WORKER_NAME]]",
   "scripts": {
-    "build": "yarn install && webpack --mode=development index.js -o dist/main.js",
+    "build": "yarn install && webpack --mode=production index.js -o dist/main.js",
     "start": "yarn install && nodemon --watch dist/main.js --exec \"cloudflare-worker-local dist/main.js 172.17.0.1:$DESTINATION_PORT 3000 wrangler.toml local\"",
     "watch": "yarn install && webpack --mode=development index.js -o dist/main.js --watch"
   },

@@ -145,9 +145,9 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                                 getServiceInformation);
                         }
                     }
-                    else if (objectVariableValue.ContainsKey("GetAtt"))
+                    else if (objectVariableValue.ContainsKey("Fn::GetAtt"))
                     {
-                        var getAttKey = objectVariableValue["GetAtt"].ToString() ?? "";
+                        var getAttKey = objectVariableValue["Fn::GetAtt"].ToString() ?? "";
 
                         var resourceId = getAttKey.Split('.').First();
 
