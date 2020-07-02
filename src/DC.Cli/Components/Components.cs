@@ -11,6 +11,7 @@ using DC.Cli.Components.Aws.LambdaFunction;
 using DC.Cli.Components.Client;
 using DC.Cli.Components.Cloudflare;
 using DC.Cli.Components.Nginx;
+using DC.Cli.Components.Powershell;
 using DC.Cli.Components.Terraform;
 using MAB.DotIgnore;
 
@@ -28,7 +29,8 @@ namespace DC.Cli.Components
             new CloudformationStackComponentType(),
             new TerraformResourceComponentType(),
             new TerraformRootComponentType(),
-            new CloudflareWorkerComponentType()
+            new CloudflareWorkerComponentType(),
+            new PowershellScriptComponentType()
         }.ToImmutableList();
         
         public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)
