@@ -336,7 +336,6 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             return attribute switch
             {
-                "ClientSecret" => userPoolClient.UserPoolClient.ClientSecret,
                 "DefaultRedirectURI" => userPoolClient.UserPoolClient.DefaultRedirectURI,
                 _ => null
             };
@@ -361,15 +360,22 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             if (!configuration.GetConfiguredServices().Contains("s3"))
                 return;
-            
-            var client = new AmazonS3Client(new BasicAWSCredentials("key", "secret-key"), new AmazonS3Config
-            {
-                ServiceURL = $"http://localhost:{configuration.Settings.ServicesPort}"
-            });
 
             var name = GetBucketName(new KeyValuePair<string, TemplateData.ResourceData>(key, bucketNode));
 
-            await client.PutBucketAsync(name);
+            try
+            {
+                var client = new AmazonS3Client(new BasicAWSCredentials("key", "secret-key"), new AmazonS3Config
+                {
+                    ServiceURL = $"http://localhost:{configuration.Settings.ServicesPort}"
+                });
+
+                await client.PutBucketAsync(name);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to create bucket: \"{name}\"");
+            }
         }
         
         private static async Task EnsureTableExists(
