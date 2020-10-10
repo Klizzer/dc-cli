@@ -372,7 +372,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
                 await client.PutBucketAsync(name);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 Console.WriteLine($"Failed to create bucket: \"{name}\"");
             }

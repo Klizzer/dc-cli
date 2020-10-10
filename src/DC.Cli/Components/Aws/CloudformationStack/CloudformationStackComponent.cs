@@ -251,16 +251,14 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         
                             return true;
                         }
-
-                        Console.WriteLine("Localstack still not running...");
                     }
+                    
+                    Thread.Sleep(TimeSpan.FromSeconds(1));
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine("Localstack still not running...");
+                    Thread.Sleep(TimeSpan.FromSeconds(1));   
                 }
-                
-                Thread.Sleep(TimeSpan.FromSeconds(1));
             }
 
             return false;
