@@ -35,14 +35,14 @@ namespace DC.Cli.Components.Aws.LambdaFunction
                 Path.Combine(executingAssembly.GetPath(), $"Templates/Functions/{languageVersion.Language}"), 
                 tree.Path.FullName);
 
-            return await LambdaFunctionComponent.Init(tree.Path);
+            return await LambdaFunctionComponent.Init(tree.Path, settings);
         }
 
         public async Task<IImmutableList<IComponent>> FindAt(
             Components.ComponentTree components,
             ProjectSettings settings)
         {
-            var component = await LambdaFunctionComponent.Init(components.Path);
+            var component = await LambdaFunctionComponent.Init(components.Path, settings);
 
             return component != null
                 ? new List<IComponent>
@@ -64,7 +64,6 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             if (apiComponent == null)
                 throw new InvalidOperationException("Can't add a api-function outside of any api.");
             
-            var functionPath = settings.GetRelativePath(path.FullName);
             var languageVersion = FunctionLanguage.Parse(language) ?? apiComponent.GetDefaultLanguage(settings);
 
             Console.WriteLine("Enter url:");
@@ -83,7 +82,6 @@ namespace DC.Cli.Components.Aws.LambdaFunction
                 ("LANGUAGE", languageVersion.ToString()),
                 ("FUNCTION_RUNTIME", languageVersion.GetRuntimeName()),
                 ("FUNCTION_METHOD", method),
-                ("FUNCTION_PATH", languageVersion.GetFunctionOutputPath(functionPath)),
                 ("API_NAME", TemplateData.SanitizeResourceName(apiComponent.Name)),
                 ("URL", url),
                 ("FUNCTION_HANDLER", languageVersion.GetHandlerName()));

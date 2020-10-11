@@ -15,7 +15,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
     public static class CloudformationResources
     {
         private static readonly IImmutableDictionary<
-            string, 
+            string,
             (int priority, Func<
                 string,
                 TemplateData,
@@ -29,7 +29,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     string,
                     TemplateData,
                     TemplateData.ResourceData,
-                    CloudformationStackComponent.CloudformationStackConfiguration, 
+                    CloudformationStackComponent.CloudformationStackConfiguration,
                     ProjectSettings,
                     Task> handle)>
             {
@@ -39,7 +39,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 ["AWS::Cognito::UserPoolClient"] = (3, EnsureConitoUserPoolClientExists),
                 ["AWS::Cognito::UserPoolDomain"] = (4, EnsureCognitoUserPoolDomainExists)
             }.ToImmutableDictionary();
-        
+
         private static readonly IImmutableDictionary<
                 string,
                 Func<
@@ -53,7 +53,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 string,
                 Func<
                     TemplateData,
-                    KeyValuePair<string, TemplateData.ResourceData>, 
+                    KeyValuePair<string, TemplateData.ResourceData>,
                     ProjectSettings,
                     string,
                     Func<string, Task<(bool isRunning, int port)>>,
@@ -64,14 +64,14 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 ["AWS::S3::Bucket"] = GetBucketRef,
                 ["AWS::Cognito::UserPoolClient"] = GetUserPoolClientRef
             }.ToImmutableDictionary();
-        
+
         private static readonly IImmutableDictionary<
                 string,
                 Func<
                     TemplateData,
                     ProjectSettings,
                     string,
-                    KeyValuePair<string, TemplateData.ResourceData>, 
+                    KeyValuePair<string, TemplateData.ResourceData>,
                     string,
                     Func<string, Task<(bool isRunning, int port)>>,
                     Task<string>>>
@@ -104,7 +104,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 })
                 .OrderBy(x => x.handler.priority)
                 .ToImmutableList();
-            
+
             foreach (var resource in availableResources)
             {
                 await resource.handler.handle(
@@ -139,7 +139,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         {
                             return await GetRef(
                                 template,
-                                new KeyValuePair<string, TemplateData.ResourceData>(refKey, template.Resources[refKey]), 
+                                new KeyValuePair<string, TemplateData.ResourceData>(refKey, template.Resources[refKey]),
                                 settings,
                                 region,
                                 getServiceInformation);
@@ -155,35 +155,39 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         {
                             return await GetAttribute(
                                 template,
-                                settings, 
+                                settings,
                                 region,
-                                new KeyValuePair<string, TemplateData.ResourceData>(resourceId, template.Resources[resourceId]), 
+                                new KeyValuePair<string, TemplateData.ResourceData>(resourceId,
+                                    template.Resources[resourceId]),
                                 getAttKey.Substring(resourceId.Length + 1),
                                 getServiceInformation);
                         }
                     }
                     else if (objectVariableValue.ContainsKey("Fn::Sub"))
                     {
-                        var items = (List<object>)objectVariableValue["Fn::Sub"];
+                        var items = (List<object>) objectVariableValue["Fn::Sub"];
 
                         var pattern = items.First().ToString() ?? "";
-                        
+
                         var itemValues = new Dictionary<string, string>();
 
-                        foreach (var replaceItem in items.Skip(1).Select(x => (Dictionary<object, object>)x).SelectMany(x => x))
+                        foreach (var replaceItem in items.Skip(1).Select(x => (Dictionary<object, object>) x)
+                            .SelectMany(x => x))
                         {
-                            itemValues[(string) replaceItem.Key] = (await ParseValue(
+                            var parsedValue = await ParseValue(
                                 replaceItem.Value,
                                 template,
                                 settings,
                                 region,
-                                getServiceInformation)).ToString();
+                                getServiceInformation);
+
+                            itemValues[(string) replaceItem.Key] = parsedValue?.ToString() ?? "";
                         }
 
                         return itemValues.Aggregate(pattern, (current, itemValue) => (current ?? "")
                             .Replace($"${{{itemValue.Key}}}", itemValue.Value));
                     }
-                        
+
                     break;
             }
 
@@ -197,7 +201,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             string region,
             Func<string, Task<(bool isRunning, int port)>> getServiceInformation)
         {
-            return GetRefs.ContainsKey(resource.Value.Type) 
+            return GetRefs.ContainsKey(resource.Value.Type)
                 ? GetRefs[resource.Value.Type](template, resource, settings, region, getServiceInformation)
                 : Task.FromResult<string>(null);
         }
@@ -210,7 +214,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             string attribute,
             Func<string, Task<(bool isRunning, int port)>> getServiceInformation)
         {
-            return GetAttributes.ContainsKey(resource.Value.Type) 
+            return GetAttributes.ContainsKey(resource.Value.Type)
                 ? GetAttributes[resource.Value.Type](
                     template,
                     settings,
@@ -230,7 +234,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             return Task.FromResult(GetTableName(resource));
         }
-        
+
         private static async Task<string> GetUserPoolRef(
             TemplateData template,
             KeyValuePair<string, TemplateData.ResourceData> resource,
@@ -242,14 +246,14 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             if (!serviceInformation.isRunning)
                 return null;
-            
+
             var client = new AmazonCognitoIdentityProviderClient(
                 new BasicAWSCredentials("key", "secret-key"),
                 new AmazonCognitoIdentityProviderConfig
                 {
                     ServiceURL = $"http://localhost:{serviceInformation.port}"
                 });
-            
+
             var userPoolName = (await ParseValue(
                 resource.Value.Properties["UserPoolName"],
                 template,
@@ -273,21 +277,21 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             if (!serviceInformation.isRunning)
                 return null;
-            
+
             var client = new AmazonCognitoIdentityProviderClient(
                 new BasicAWSCredentials("key", "secret-key"),
                 new AmazonCognitoIdentityProviderConfig
                 {
                     ServiceURL = $"http://localhost:{serviceInformation.port}"
                 });
-            
+
             var userPoolId = ((await ParseValue(
                 resource.Value.Properties["UserPoolId"],
                 template,
                 settings,
                 region,
                 getServiceInformation)) ?? "").ToString();
-            
+
             var clientName = resource.Value.Properties["ClientName"].ToString();
 
             var data = await client.CognitoUserPoolClientExists(userPoolId, clientName);
@@ -307,21 +311,21 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             if (!serviceInformation.isRunning)
                 return null;
-            
+
             var client = new AmazonCognitoIdentityProviderClient(
                 new BasicAWSCredentials("key", "secret-key"),
                 new AmazonCognitoIdentityProviderConfig
                 {
                     ServiceURL = $"http://localhost:{serviceInformation.port}"
                 });
-            
+
             var userPoolId = ((await ParseValue(
                 resource.Value.Properties["UserPoolId"],
                 template,
                 settings,
                 region,
                 getServiceInformation)) ?? "").ToString();
-            
+
             var clientName = resource.Value.Properties["ClientName"].ToString();
 
             var userPoolClientData = await client.CognitoUserPoolClientExists(userPoolId, clientName);
@@ -377,7 +381,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 Console.WriteLine($"Failed to create bucket: \"{name}\"");
             }
         }
-        
+
         private static async Task EnsureTableExists(
             string key,
             TemplateData template,
@@ -395,13 +399,13 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
             var billingMode = BillingMode.FindValue(tableNode.Properties["BillingMode"].ToString());
 
-            var attributeDefinitions = ((IEnumerable<object>)tableNode.Properties["AttributeDefinitions"])
-                .Select(x => (IDictionary<object, object>)x)
+            var attributeDefinitions = ((IEnumerable<object>) tableNode.Properties["AttributeDefinitions"])
+                .Select(x => (IDictionary<object, object>) x)
                 .Select(x => new AttributeDefinition(
-                    (string)x["AttributeName"],
-                    ScalarAttributeType.FindValue((string)x["AttributeType"])))
+                    (string) x["AttributeName"],
+                    ScalarAttributeType.FindValue((string) x["AttributeType"])))
                 .ToList();
-            
+
             var globalIndices = new List<GlobalSecondaryIndex>();
 
             if (tableNode.Properties.ContainsKey("GlobalSecondaryIndexes"))
@@ -434,7 +438,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             }
 
             var name = GetTableName(new KeyValuePair<string, TemplateData.ResourceData>(key, tableNode));
-            
+
             if (await client.TableExists(name))
             {
                 var currentTable = await client.DescribeTableAsync(name);
@@ -459,7 +463,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         ProvisionedThroughput = x.ProvisionedThroughput
                     }
                 }));
-                
+
                 indexUpdates.AddRange(removedGlobalIndices.Select(x => new GlobalSecondaryIndexUpdate
                 {
                     Delete = new DeleteGlobalSecondaryIndexAction
@@ -467,7 +471,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         IndexName = x.IndexName
                     }
                 }));
-                
+
                 await client.UpdateTableAsync(new UpdateTableRequest
                 {
                     TableName = name,
@@ -494,11 +498,11 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 await client.CreateTableAsync(new CreateTableRequest
                 {
                     TableName = name,
-                    KeySchema = ((IEnumerable<object>)tableNode.Properties["KeySchema"])
-                        .Select(x => (IDictionary<object, object>)x)
+                    KeySchema = ((IEnumerable<object>) tableNode.Properties["KeySchema"])
+                        .Select(x => (IDictionary<object, object>) x)
                         .Select(x => new KeySchemaElement(
-                            (string)x["AttributeName"],
-                            KeyType.FindValue((string)x["KeyType"])))
+                            (string) x["AttributeName"],
+                            KeyType.FindValue((string) x["KeyType"])))
                         .ToList(),
                     AttributeDefinitions = attributeDefinitions,
                     BillingMode = billingMode,
@@ -516,7 +520,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             if (!configuration.GetConfiguredServices().Contains("cognito-idp"))
                 return;
-            
+
             var client = new AmazonCognitoIdentityProviderClient(
                 new BasicAWSCredentials("key", "secret-key"),
                 new AmazonCognitoIdentityProviderConfig
@@ -534,20 +538,20 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             var existing = await client.CognitoUserPoolExists(userPoolName);
 
             var autoVerifiedAttributes = ((List<object>) userPoolNode.Properties["AutoVerifiedAttributes"])
-                .Select(x => (string)x)
+                .Select(x => (string) x)
                 .ToList();
 
             var schema = ((List<object>) userPoolNode.Properties["Schema"])
-                .Select(x => (IDictionary<object, object>)x)
+                .Select(x => (IDictionary<object, object>) x)
                 .Select(x => new SchemaAttributeType
                 {
-                    Mutable = x.ContainsKey("Mutable") && (string)x["Mutable"] == "true",
-                    Name = (string)x["Name"],
-                    Required = x.ContainsKey("Required") && (string)x["Required"] == "true",
-                    AttributeDataType = AttributeDataType.FindValue((string)x["AttributeDataType"])
+                    Mutable = x.ContainsKey("Mutable") && (string) x["Mutable"] == "true",
+                    Name = (string) x["Name"],
+                    Required = x.ContainsKey("Required") && (string) x["Required"] == "true",
+                    AttributeDataType = AttributeDataType.FindValue((string) x["AttributeDataType"])
                 })
                 .ToList();
-            
+
             if (existing.exists)
             {
                 await client.UpdateUserPoolAsync(new UpdateUserPoolRequest
@@ -576,7 +580,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             if (!configuration.GetConfiguredServices().Contains("cognito-idp"))
                 return;
-            
+
             var client = new AmazonCognitoIdentityProviderClient(
                 new BasicAWSCredentials("key", "secret-key"),
                 new AmazonCognitoIdentityProviderConfig
@@ -584,18 +588,19 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     ServiceURL = $"http://localhost:{configuration.Settings.ServicesPort}"
                 });
 
-            Task<(bool, int)> GetServiceInformation(string x) => Task.FromResult((true, configuration.Settings.ServicesPort));
+            Task<(bool, int)> GetServiceInformation(string x) =>
+                Task.FromResult((true, configuration.Settings.ServicesPort));
 
             var userPoolId = ((await ParseValue(
-                                  userPoolClientNode.Properties["UserPoolId"],
-                                  template,
-                                  settings,
-                                  configuration.Settings.AwsRegion,
-                                  GetServiceInformation)) ?? "").ToString();
+                userPoolClientNode.Properties["UserPoolId"],
+                template,
+                settings,
+                configuration.Settings.AwsRegion,
+                GetServiceInformation)) ?? "").ToString();
 
             var clientName = userPoolClientNode.Properties["ClientName"].ToString();
             var generateSecret = userPoolClientNode.Properties.ContainsKey("GenerateSecret") &&
-                                 (string)userPoolClientNode.Properties["GenerateSecret"] == "true";
+                                 (string) userPoolClientNode.Properties["GenerateSecret"] == "true";
             var allowedOAuthFlows = ((List<object>) userPoolClientNode.Properties["AllowedOAuthFlows"])
                 .Select(x => x.ToString())
                 .ToList();
@@ -605,7 +610,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             var allowedOAuthScopes = ((List<object>) userPoolClientNode.Properties["AllowedOAuthScopes"])
                 .Select(x => x.ToString())
                 .ToList();
-            var supportedIdentityProviders = ((List<object>) userPoolClientNode.Properties["SupportedIdentityProviders"])
+            var supportedIdentityProviders =
+                ((List<object>) userPoolClientNode.Properties["SupportedIdentityProviders"])
                 .Select(x => x.ToString())
                 .ToList();
             var readAttributes = ((List<object>) userPoolClientNode.Properties["ReadAttributes"])
@@ -631,10 +637,10 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     userPoolClientNode.Properties["DefaultRedirectURI"],
                     template,
                     settings,
-                    configuration.Settings.AwsRegion, 
+                    configuration.Settings.AwsRegion,
                     GetServiceInformation)) as string
                 : callbackUrls.FirstOrDefault();
-            
+
             if (string.IsNullOrEmpty(userPoolId))
                 return;
 
@@ -687,15 +693,16 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             if (!configuration.GetConfiguredServices().Contains("cognito-idp"))
                 return;
-            
+
             var client = new AmazonCognitoIdentityProviderClient(
                 new BasicAWSCredentials("key", "secret-key"),
                 new AmazonCognitoIdentityProviderConfig
                 {
                     ServiceURL = $"http://localhost:{configuration.Settings.ServicesPort}"
                 });
-            
-            Task<(bool, int)> GetServiceInformation(string x) => Task.FromResult((true, configuration.Settings.ServicesPort));
+
+            Task<(bool, int)> GetServiceInformation(string x) =>
+                Task.FromResult((true, configuration.Settings.ServicesPort));
 
             var userPoolId = ((await ParseValue(
                 userPoolClientNode.Properties["UserPoolId"],

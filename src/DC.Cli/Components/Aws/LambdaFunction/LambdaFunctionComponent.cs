@@ -15,11 +15,16 @@ namespace DC.Cli.Components.Aws.LambdaFunction
         
         private readonly DirectoryInfo _path;
         private readonly FunctionConfiguration _configuration;
+        private readonly ProjectSettings _settings;
         
-        private LambdaFunctionComponent(DirectoryInfo path, FunctionConfiguration configuration)
+        private LambdaFunctionComponent(
+            DirectoryInfo path,
+            FunctionConfiguration configuration,
+            ProjectSettings settings)
         {
             _path = path;
             _configuration = configuration;
+            _settings = settings;
         }
 
         public string Name => _configuration.Name;
@@ -58,10 +63,15 @@ namespace DC.Cli.Components.Aws.LambdaFunction
         
         public Task<TemplateData> GetCloudformationData()
         {
-            return Task.FromResult(_configuration.Settings.Template);
+            var template = _configuration.Settings.Template;
+            
+            var functionPath = _settings.GetRelativePath(_path.FullName);
+            var languageVersion = _configuration.GetLanguage();
+            
+            return Task.FromResult(template.SetCodeUris(languageVersion.GetFunctionOutputPath(functionPath)));
         }
         
-        public static async Task<LambdaFunctionComponent> Init(DirectoryInfo path)
+        public static async Task<LambdaFunctionComponent> Init(DirectoryInfo path, ProjectSettings settings)
         {
             if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
                 return null;
@@ -70,7 +80,8 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             return new LambdaFunctionComponent(
                 path,
                 deserializer.Deserialize<FunctionConfiguration>(
-                    await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName))));
+                    await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName))),
+                settings);
         }
         
         private class FunctionConfiguration

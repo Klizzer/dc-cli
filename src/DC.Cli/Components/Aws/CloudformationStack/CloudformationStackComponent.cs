@@ -152,7 +152,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             
             var template = (await _components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component.GetCloudformationData())
+                    .Select(x => x.component?.GetCloudformationData())
                     .WhenAll())
                 .Merge();
             
@@ -205,7 +205,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             template ??= (await _components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component.GetCloudformationData())
+                    .Select(x => x.component?.GetCloudformationData())
                     .WhenAll())
                 .Merge();
             
@@ -253,12 +253,12 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                             return true;
                         }
                     }
-                    
-                    Thread.Sleep(TimeSpan.FromSeconds(1));
+
+                    await Task.Delay(TimeSpan.FromSeconds(1));
                 }
                 catch (Exception)
                 {
-                    Thread.Sleep(TimeSpan.FromSeconds(1));   
+                    await Task.Delay(TimeSpan.FromSeconds(1));  
                 }
             }
 
