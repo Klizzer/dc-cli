@@ -120,7 +120,6 @@ namespace DC.Cli.Components.Client
 
         public Task<bool> Stop()
         {
-            Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
             return Task.FromResult(true);

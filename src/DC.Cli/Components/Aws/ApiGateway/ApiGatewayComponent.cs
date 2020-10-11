@@ -76,7 +76,6 @@ namespace DC.Cli.Components.Aws.ApiGateway
 
         public Task<bool> Stop()
         {
-            Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
             
             if (_tempPath.Exists)

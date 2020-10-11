@@ -85,27 +85,6 @@ namespace DC.Cli
             return result.success && !string.IsNullOrEmpty(result.output);
         }
         
-        public static void Pull(string image)
-        {
-            ProcessExecutor.Execute("docker", $"pull {image}");
-        }
-
-        public static void Stop(string name)
-        {
-            if (!HasContainer(name))
-                return;
-            
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "docker",
-                Arguments = $"stop {name}"
-            };
- 
-            var process = Process.Start(startInfo);
-
-            process?.WaitForExit();
-        }
-
         public static void Remove(string name)
         {
             if (!HasContainer(name))
@@ -114,7 +93,7 @@ namespace DC.Cli
             var startInfo = new ProcessStartInfo
             {
                 FileName = "docker",
-                Arguments = $"container rm {name}"
+                Arguments = $"container rm -f {name}"
             };
  
             var process = Process.Start(startInfo);

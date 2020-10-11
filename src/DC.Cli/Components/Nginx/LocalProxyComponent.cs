@@ -33,7 +33,6 @@ namespace DC.Cli.Components.Nginx
 
         public Task<bool> Stop()
         {
-            Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
             return Task.FromResult(true);

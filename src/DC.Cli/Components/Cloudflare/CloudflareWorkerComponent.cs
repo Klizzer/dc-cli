@@ -100,9 +100,7 @@ namespace DC.Cli.Components.Cloudflare
 
         public Task<bool> Stop()
         {
-            Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
-            Docker.Stop(_watchContainer.Name);
             Docker.Remove(_watchContainer.Name);
 
             return Task.FromResult(true);

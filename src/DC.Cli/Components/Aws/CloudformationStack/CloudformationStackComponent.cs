@@ -123,7 +123,6 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
         public Task<bool> Stop()
         {
-            Docker.Stop(_dockerContainer.Name);
             Docker.Remove(_dockerContainer.Name);
 
             return Task.FromResult(true);
