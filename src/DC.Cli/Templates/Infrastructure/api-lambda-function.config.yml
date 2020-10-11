@@ -8,7 +8,6 @@ Settings:
       [[FUNCTION_NAME]]Function:
         Type: AWS::Serverless::Function
         Properties:
-          CodeUri: [[FUNCTION_PATH]]
           Handler: [[FUNCTION_HANDLER]]
           Runtime: [[FUNCTION_RUNTIME]]
           Events:
