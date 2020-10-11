@@ -731,14 +731,16 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
         private static string GetTableName(KeyValuePair<string, TemplateData.ResourceData> tableNode)
         {
-            //TODO: Check TableName property
-            return tableNode.Key;
+            return tableNode.Value.Properties.ContainsKey("TableName")
+                ? tableNode.Value.Properties["TableName"].ToString()
+                : tableNode.Key;
         }
 
         private static string GetBucketName(KeyValuePair<string, TemplateData.ResourceData> bucketNode)
         {
-            //TODO: Check BucketName property
-            return bucketNode.Key;
+            return bucketNode.Value.Properties.ContainsKey("BucketName")
+                ? bucketNode.Value.Properties["BucketName"].ToString()
+                : bucketNode.Key;
         }
     }
 }

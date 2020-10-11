@@ -194,32 +194,32 @@ namespace DC.Cli.Components
             
             public Task<bool> Build()
             {
-                return MergeResults(Run<IBuildableComponent>((component, _) => component.Build()));
+                return MergeResults(Run<IBuildableComponent>((component, _) => component.Build(), "Build"));
             }
 
             public Task<bool> Test()
             {
-                return MergeResults(Run<ITestableComponent>((component, _) => component.Test()));
+                return MergeResults(Run<ITestableComponent>((component, _) => component.Test(), "Test"));
             }
 
             public Task<bool> Restore()
             {
-                return MergeResults(Run<IRestorableComponent>((component, _) => component.Restore()));
+                return MergeResults(Run<IRestorableComponent>((component, _) => component.Restore(), "Restore"));
             }
 
             public Task<bool> Start()
             {
-                return MergeResults(Run<IStartableComponent>((component, tree) => component.Start(tree)));
+                return MergeResults(Run<IStartableComponent>((component, tree) => component.Start(tree), "Start"));
             }
 
             public Task<bool> Stop()
             {
-                return MergeResults(Run<IStartableComponent>((component, _) => component.Stop()));
+                return MergeResults(Run<IStartableComponent>((component, _) => component.Stop(), "Stop"));
             }
 
             public Task<bool> Logs()
             {
-                return MergeResults(Run<IComponentWithLogs>((component, tree) => component.Logs()));
+                return MergeResults(Run<IComponentWithLogs>((component, tree) => component.Logs(), "Logs"));
             }
 
             public async Task<IImmutableList<PackageResult>> Package(string version)
@@ -229,7 +229,7 @@ namespace DC.Cli.Components
                 foreach (var package in _components.OfType<IPackageApplication>())
                 {
                     var resources = (await FindAll<IHavePackageResources>(Direction.In)
-                            .Select(x => x.component.GetPackageResources(this, version))
+                            .Select(x => x.component?.GetPackageResources(this, version))
                             .WhenAll())
                         .SelectMany(x => x)
                         .ToImmutableList();
@@ -246,15 +246,20 @@ namespace DC.Cli.Components
             }
 
             private IEnumerable<Task<bool>> Run<TComponentType>(
-                Func<TComponentType, ComponentTree, Task<bool>> execute) 
+                Func<TComponentType, ComponentTree, Task<bool>> execute,
+                string actionName)
                 where TComponentType : IComponent
             {
                 foreach (var component in _components.OfType<TComponentType>())
-                    yield return execute(component, this);
+                {
+                    yield return Retries.RetryOnException(
+                        () => execute(component, this),
+                        $"{typeof(TComponentType).Name}.{actionName}");
+                }
 
                 foreach (var child in _children)
                 {
-                    foreach (var childRun in child.Run(execute))
+                    foreach (var childRun in child.Run(execute, actionName))
                         yield return childRun;
                 }
             }

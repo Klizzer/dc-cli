@@ -224,39 +224,51 @@ namespace DC.Cli
 
             public Task<bool> Run(string command)
             {
-                var arguments = string.Join(" ", _dockerArguments);
+                return Task.Run(() =>
+                {
+                    var arguments = string.Join(" ", _dockerArguments);
 
-                if (!string.IsNullOrEmpty(Name))
-                    arguments = $"--name {Name} {arguments}";
+                    if (!string.IsNullOrEmpty(Name))
+                        arguments = $"--name {Name} {arguments}";
                 
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "docker",
-                    Arguments = $"run {arguments} {_image} {command}"
-                };
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = "docker",
+                        Arguments = $"run {arguments} {_image} {command}"
+                    };
                 
-                if (!_interactive)
-                {
-                    startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                    startInfo.CreateNoWindow = true;
-                    startInfo.RedirectStandardError = true;
-                    startInfo.RedirectStandardOutput = true;
-                }
+                    if (!_interactive)
+                    {
+                        startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                        startInfo.CreateNoWindow = true;
+                        startInfo.RedirectStandardError = true;
+                        startInfo.RedirectStandardOutput = true;
+                    }
                 
-                var process = Process.Start(startInfo);
+                    var process = Process.Start(startInfo);
 
-                if (!_interactive && process != null)
-                {
-                    process.ErrorDataReceived += (sender, args) => Console.WriteLine(args.Data);
-                    process.OutputDataReceived += (sender, args) => Console.WriteLine(args.Data);
+                    if (!_interactive && process != null)
+                    {
+                        process.ErrorDataReceived += (sender, args) =>
+                        {
+                            if (!string.IsNullOrEmpty(args.Data))
+                                Console.WriteLine(args.Data);
+                        };
                     
-                    process.BeginErrorReadLine();
-                    process.BeginOutputReadLine();
-                }
+                        process.OutputDataReceived += (sender, args) =>
+                        {
+                            if (!string.IsNullOrEmpty(args.Data))
+                                Console.WriteLine(args.Data);
+                        };
+                    
+                        process.BeginErrorReadLine();
+                        process.BeginOutputReadLine();
+                    }
+                    
+                    process?.WaitForExit();
 
-                process?.WaitForExit();
-
-                return Task.FromResult((process?.ExitCode ?? 127) == 0);
+                    return (process?.ExitCode ?? 127) == 0;
+                });
             }
         }
     }

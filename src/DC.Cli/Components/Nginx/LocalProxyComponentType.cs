@@ -61,7 +61,6 @@ namespace DC.Cli.Components.Nginx
         
         public static async Task AddProxyPath(ProjectSettings settings, string path, string baseUrl, int port)
         {
-            //TODO: Refactor
             var dir = new DirectoryInfo(settings.GetRootedPath(path));
             
             if (!File.Exists(Path.Combine(dir.FullName, LocalProxyComponent.ConfigFileName)))
