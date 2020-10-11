@@ -52,11 +52,8 @@ namespace DC.Cli.Components.Aws.LambdaLayer
         public Task<TemplateData> GetCloudformationData()
         {
             var template = _configuration.Settings.Template;
-            
-            var functionPath = _settings.GetRelativePath(_path.FullName);
-            var languageVersion = _configuration.GetLanguage();
-            
-            return Task.FromResult(template.SetContentUris(languageVersion.GetFunctionOutputPath(functionPath)));
+
+            return Task.FromResult(template.SetContentUris(_settings.GetRelativePath(_path.Parent?.FullName)));
         }
         
         public static async Task<LambdaLayerComponent> Init(DirectoryInfo path, ProjectSettings settings)
