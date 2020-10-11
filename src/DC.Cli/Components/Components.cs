@@ -254,7 +254,7 @@ namespace DC.Cli.Components
                 {
                     yield return Retries.RetryOnException(
                         () => execute(component, this),
-                        $"{typeof(TComponentType).Name}.{actionName}");
+                        $"{component.Name}.{actionName}");
                 }
 
                 foreach (var child in _children)

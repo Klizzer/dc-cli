@@ -110,7 +110,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             
             var template = (await components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component.GetCloudformationData())
+                    .Select(x => x.component?.GetCloudformationData())
                     .WhenAll())
                 .Merge();
 
@@ -229,6 +229,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
 
         private async Task<bool> WaitForStart(TimeSpan timeout)
         {
+            Console.WriteLine($"Waiting for cloudformation stack {Name} to start.");
+            
             var requiredServices = _configuration.GetConfiguredServices();
             
             var timer = Stopwatch.StartNew();

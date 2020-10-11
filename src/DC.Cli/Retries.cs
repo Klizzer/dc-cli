@@ -31,16 +31,16 @@ namespace DC.Cli
                     
                     return await operation();
                 }
-                catch (TException)
+                catch (TException ex)
                 {
                     if (attempts >= times)
                     {
-                        Console.WriteLine($"Action \"{actionName}\" has failed maximum number of times ({times}). Throwing exception...");
+                        Console.WriteLine($"Action \"{actionName}\" has failed maximum number of times ({times}). Throwing exception {ex.Message}");
                         
                         throw;
                     }
                     
-                    Console.WriteLine($"Action \"{actionName}\" has failed {attempts} times. Retrying...");
+                    Console.WriteLine($"Action \"{actionName}\" has failed {attempts} times {ex.Message}. Retrying.");
                 }
             } while (true);
         }
