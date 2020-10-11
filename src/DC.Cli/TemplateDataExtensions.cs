@@ -37,7 +37,27 @@ namespace DC.Cli
             }
 
             return template;
-        } 
+        }
+
+        public static TemplateData SetContentUris(this TemplateData template, string contentUri)
+        {
+            if (template.Resources == null)
+                return template;
+            
+            foreach (var resource in template.Resources)
+            {
+                if (resource.Value.Properties == null) 
+                    continue;
+                    
+                if (!resource.Value.Properties.ContainsKey("ContentUri") ||
+                    resource.Value.Properties["ContentUri"] == null)
+                {
+                    resource.Value.Properties["ContentUri"] = contentUri;
+                }
+            }
+
+            return template;
+        }
 
         public static Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>>
             GetRequiredConfigurations(this TemplateData templateData)

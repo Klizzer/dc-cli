@@ -28,14 +28,14 @@ namespace DC.Cli.Components.Aws.LambdaLayer
                 Path.Combine(executingAssembly.GetPath(), $"Templates/LambdaLayers/{languageVersion.Language}"), 
                 tree.Path.FullName);
 
-            return await LambdaLayerComponent.Init(tree.Path);
+            return await LambdaLayerComponent.Init(tree.Path, settings);
         }
 
         public async Task<IImmutableList<IComponent>> FindAt(
             Components.ComponentTree components,
             ProjectSettings settings)
         {
-            var component = await LambdaLayerComponent.Init(components.Path);
+            var component = await LambdaLayerComponent.Init(components.Path, settings);
 
             return component != null
                 ? new List<IComponent>

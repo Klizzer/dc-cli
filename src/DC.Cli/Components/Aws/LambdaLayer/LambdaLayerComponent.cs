@@ -14,11 +14,16 @@ namespace DC.Cli.Components.Aws.LambdaLayer
         
         private readonly DirectoryInfo _path;
         private readonly LambdaLayerConfiguration _configuration;
+        private readonly ProjectSettings _settings;
         
-        private LambdaLayerComponent(DirectoryInfo path, LambdaLayerConfiguration configuration)
+        private LambdaLayerComponent(
+            DirectoryInfo path,
+            LambdaLayerConfiguration configuration,
+            ProjectSettings settings)
         {
             _path = path;
             _configuration = configuration;
+            _settings = settings;
         }
         
         public string Name => _configuration.Name;
@@ -46,10 +51,15 @@ namespace DC.Cli.Components.Aws.LambdaLayer
 
         public Task<TemplateData> GetCloudformationData()
         {
-            return Task.FromResult(_configuration.Settings.Template);
+            var template = _configuration.Settings.Template;
+            
+            var functionPath = _settings.GetRelativePath(_path.FullName);
+            var languageVersion = _configuration.GetLanguage();
+            
+            return Task.FromResult(template.SetContentUris(languageVersion.GetFunctionOutputPath(functionPath)));
         }
         
-        public static async Task<LambdaLayerComponent> Init(DirectoryInfo path)
+        public static async Task<LambdaLayerComponent> Init(DirectoryInfo path, ProjectSettings settings)
         {
             if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
                 return null;
@@ -58,7 +68,8 @@ namespace DC.Cli.Components.Aws.LambdaLayer
             return new LambdaLayerComponent(
                 path,
                 deserializer.Deserialize<LambdaLayerConfiguration>(
-                    await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName))));
+                    await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName))),
+                settings);
         }
         
         private class LambdaLayerConfiguration
