@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc</AssemblyName>
-    <Version>0.75.0</Version>
+    <Version>0.76.0</Version>
     <RootNamespace>DC.Cli</RootNamespace>
   </PropertyGroup>
 
@@ -38,6 +38,7 @@
     <EmbeddedResource Include="Templates\Config\proxy.conf" />
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-lambda-function.config.yml" />
+    <EmbeddedResource Include="Templates\Infrastructure\kinesis-stream-lambda-function.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\proxy.config.yml" />
     <EmbeddedResource Include="Containers\sam\Dockerfile" />
     <EmbeddedResource Include="Templates\Infrastructure\deployment-bucket.yml" />

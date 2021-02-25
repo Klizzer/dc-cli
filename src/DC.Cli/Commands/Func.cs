@@ -18,7 +18,7 @@ namespace DC.Cli.Commands
             await components.Initialize<LambdaFunctionComponent, LambdaFunctionComponentType.ComponentData>(
                 new LambdaFunctionComponentType.ComponentData(
                     options.Name, 
-                    options.Trigger ?? FunctionTrigger.Api,
+                    options.GetTrigger(),
                     options.Language),
                 projectSettings);
         }
@@ -33,7 +33,7 @@ namespace DC.Cli.Commands
             public string Language { get; set; }
 
             [Option('t', "trigger", HelpText = "Trigger type for the function.")]
-            public FunctionTrigger? Trigger { get; set; }
+            public string Trigger { private get; set; }
 
             [Option('p', "path", HelpText = "Path where to put the function.")]
             public string Path { private get; set; } = Environment.CurrentDirectory;
@@ -43,9 +43,14 @@ namespace DC.Cli.Commands
                 return settings.GetRootedPath(System.IO.Path.Combine(Path, Name));
             }
 
-            public string GetBasePath(ProjectSettings settings)
+            public FunctionTrigger GetTrigger()
             {
-                return settings.GetRootedPath(Path);
+                return Trigger switch
+                {
+                    "api" => FunctionTrigger.Api,
+                    "kinesis-stream" => FunctionTrigger.KinesisStream,
+                    _ => FunctionTrigger.Api
+                };
             }
         }
     }

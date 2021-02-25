@@ -44,7 +44,7 @@ namespace DC.Cli.Commands
                 Language = options.Language,
                 Name = options.Name,
                 Path = path,
-                Trigger = FunctionTrigger.Api
+                Trigger = "api"
             });
         }
         

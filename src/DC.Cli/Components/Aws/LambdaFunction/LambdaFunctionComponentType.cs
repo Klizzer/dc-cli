@@ -14,7 +14,8 @@ namespace DC.Cli.Components.Aws.LambdaFunction
         private static readonly IImmutableDictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, string, Task<ILanguageVersion>>> TriggerHandlers =
             new Dictionary<FunctionTrigger, Func<string, DirectoryInfo, ProjectSettings, Components.ComponentTree, string, Task<ILanguageVersion>>>
             {
-                [FunctionTrigger.Api] = SetupApiTrigger
+                [FunctionTrigger.Api] = SetupApiTrigger,
+                [FunctionTrigger.KinesisStream] = SetupKinesisStreamTrigger
             }.ToImmutableDictionary();
 
         public async Task<LambdaFunctionComponent> InitializeAt(
@@ -84,6 +85,30 @@ namespace DC.Cli.Components.Aws.LambdaFunction
                 ("FUNCTION_METHOD", method),
                 ("API_NAME", TemplateData.SanitizeResourceName(apiComponent.Name)),
                 ("URL", url),
+                ("FUNCTION_HANDLER", languageVersion.GetHandlerName()));
+
+            return languageVersion;
+        }
+
+        private static async Task<ILanguageVersion> SetupKinesisStreamTrigger(
+            string language,
+            DirectoryInfo path,
+            ProjectSettings settings,
+            Components.ComponentTree componentTree,
+            string name)
+        {
+            var languageVersion = FunctionLanguage.GetLanguage(language,
+                settings.GetConfiguration(FunctionLanguage.DefaultLanguageConfigurationKay));
+            
+            await Templates.Extract(
+                "kinesis-stream-lambda-function.config.yml",
+                settings.GetRootedPath(Path.Combine(path.FullName, LambdaFunctionComponent.ConfigFileName)),
+                Templates.TemplateType.Infrastructure,
+                ("NAME", name),
+                ("FUNCTION_NAME", TemplateData.SanitizeResourceName(name)),
+                ("FUNCTION_TYPE", "kinesis-stream"),
+                ("LANGUAGE", languageVersion.ToString()),
+                ("FUNCTION_RUNTIME", languageVersion.GetRuntimeName()),
                 ("FUNCTION_HANDLER", languageVersion.GetHandlerName()));
 
             return languageVersion;

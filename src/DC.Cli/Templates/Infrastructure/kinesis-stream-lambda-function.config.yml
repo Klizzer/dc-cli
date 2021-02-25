@@ -1,0 +1,24 @@
+Name: [[NAME]]
+
+Settings:
+  Type: [[FUNCTION_TYPE]]
+  Language: [[LANGUAGE]]
+  Template:
+    Resources:
+      [[FUNCTION_NAME]]Function:
+        Type: AWS::Serverless::Function
+        Properties:
+          Handler: [[FUNCTION_HANDLER]]
+          Runtime: [[FUNCTION_RUNTIME]]
+          Events:
+            Stream:
+              Type: Kinesis
+              Properties:
+                Stream: !GetAtt [[FUNCTION_NAME]]Stream.Arn
+                BatchSize: 100
+                StartingPosition: LATEST
+
+      [[FUNCTION_NAME]]Stream:
+        Type: AWS::Kinesis::Stream
+        Properties:
+          ShardCount: 1
