@@ -50,15 +50,19 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             return _configuration.GetLanguage().Test(_path.FullName);
         }
         
-        public Task<bool> Start(Components.ComponentTree components)
+        public async Task<bool> Start(Components.ComponentTree components)
         {
-            //TODO: Setup watch
-            return Build();
+            var buildResult = await Build();
+
+            if (!buildResult)
+                return false;
+
+            return await _configuration.GetLanguage().StartWatch(_path.FullName);
         }
 
         public Task<bool> Stop()
         {
-            return Task.FromResult(true);
+            return _configuration.GetLanguage().StopWatch(_path.FullName);
         }
         
         public Task<TemplateData> GetCloudformationData()

@@ -111,6 +111,34 @@ namespace DC.Cli
                     .Run("run test");
             }
 
+            public async Task<bool> StartWatch(string path)
+            {
+                if (!File.Exists(Path.Combine(path, "package.json")))
+                    return true;
+
+                var packageData =
+                    Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(path, "package.json")));
+
+                if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
+                    .ContainsKey("watch"))
+                {
+                    return true;
+                }
+                
+                return await _dockerContainer
+                    .WithName(GetDockerName(path))
+                    .WithVolume(path, "/usr/src/app", true)
+                    .Detached()
+                    .Run("run watch");
+            }
+
+            public Task<bool> StopWatch(string path)
+            {
+                Docker.Remove(GetDockerName(path));
+
+                return Task.FromResult(true);
+            }
+
             public string GetHandlerName()
             {
                 return "handler.handler";
@@ -129,6 +157,11 @@ namespace DC.Cli
             public override string ToString()
             {
                 return $"{Language}:{Version}";
+            }
+
+            private static string GetDockerName(string path)
+            {
+                return $"nodewatch-{path.GetStableHashCode():X}";
             }
             
             private class PackageJsonData

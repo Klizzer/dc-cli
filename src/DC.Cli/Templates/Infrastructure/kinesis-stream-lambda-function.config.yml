@@ -14,7 +14,8 @@ Settings:
             Stream:
               Type: Kinesis
               Properties:
-                Stream: !GetAtt [[FUNCTION_NAME]]Stream.Arn
+                Stream: 
+                  Fn::GetAtt: [[FUNCTION_NAME]]Stream.Arn
                 BatchSize: 100
                 StartingPosition: LATEST
 

@@ -79,6 +79,18 @@ namespace DC.Cli
                     .Run("test -run ''");
             }
 
+            public Task<bool> StartWatch(string path)
+            {
+                //TODO: Implement
+                return Task.FromResult(true);
+            }
+
+            public Task<bool> StopWatch(string path)
+            {
+                //TODO: Implement
+                return Task.FromResult(true);
+            }
+
             public string GetHandlerName()
             {
                 return "main";

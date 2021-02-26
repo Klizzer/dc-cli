@@ -32,7 +32,7 @@ namespace DC.Cli.Commands
             [Option('l', "lang", HelpText = "Language to use for the function.")]
             public string Language { get; set; }
 
-            [Option('t', "trigger", HelpText = "Trigger type for the function.")]
+            [Option('t', "trigger", HelpText = "Trigger type for the function.", Required = true)]
             public string Trigger { private get; set; }
 
             [Option('p', "path", HelpText = "Path where to put the function.")]
@@ -49,7 +49,7 @@ namespace DC.Cli.Commands
                 {
                     "api" => FunctionTrigger.Api,
                     "kinesis-stream" => FunctionTrigger.KinesisStream,
-                    _ => FunctionTrigger.Api
+                    _ => throw new Exception("You must select a trigger")
                 };
             }
         }

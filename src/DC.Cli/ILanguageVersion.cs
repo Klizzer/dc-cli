@@ -11,6 +11,8 @@ namespace DC.Cli
         Task<bool> Restore(string path);
         Task<bool> Build(string path);
         Task<bool> Test(string path);
+        Task<bool> StartWatch(string path);
+        Task<bool> StopWatch(string path);
 
         string GetHandlerName();
         string GetFunctionOutputPath(string functionPath);
