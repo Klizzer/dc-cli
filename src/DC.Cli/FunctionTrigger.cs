@@ -3,6 +3,7 @@ namespace DC.Cli
     public enum FunctionTrigger
     {
         Api,
-        KinesisStream
+        KinesisStream,
+        Cron
     }
 }

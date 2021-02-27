@@ -1,0 +1,17 @@
+Name: [[NAME]]
+
+Settings:
+  Type: [[FUNCTION_TYPE]]
+  Language: [[LANGUAGE]]
+  Template:
+    Resources:
+      [[FUNCTION_NAME]]Function:
+        Type: AWS::Serverless::Function
+        Properties:
+          Handler: [[FUNCTION_HANDLER]]
+          Runtime: [[FUNCTION_RUNTIME]]
+          Events:
+            Scheduled:
+              Type: Schedule
+              Properties:
+                Schedule: cron(0 0 0/1 1/1 * ? *)

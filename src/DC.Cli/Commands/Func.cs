@@ -49,6 +49,7 @@ namespace DC.Cli.Commands
                 {
                     "api" => FunctionTrigger.Api,
                     "kinesis-stream" => FunctionTrigger.KinesisStream,
+                    "cron" => FunctionTrigger.Cron,
                     _ => throw new Exception("You must select a trigger")
                 };
             }
