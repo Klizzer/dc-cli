@@ -10,7 +10,8 @@ namespace DC.Cli
         private static readonly IImmutableList<ILanguage> AvailableLanguages = new List<ILanguage>
         {
             NodeLanguage.Instance,
-            GoLanguage.Instance
+            GoLanguage.Instance,
+            PythonLanguage.Instance
         }.ToImmutableList();
 
         public const string DefaultLanguageConfigurationKay = "defaultFunctionLanguage";
