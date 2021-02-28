@@ -152,7 +152,7 @@ namespace DC.Cli.Components
 
                 var requiredConfigurations = (await _components
                         .OfType<INeedConfiguration>()
-                        .Select(x => x.GetRequiredConfigurations())
+                        .Select(x => x.GetRequiredConfigurations(this))
                         .WhenAll())
                     .SelectMany(x => x);
 

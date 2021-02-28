@@ -44,7 +44,7 @@ namespace DC.Cli.Components.Aws.ApiGateway
         public DirectoryInfo Path { get; }
         
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
-            GetRequiredConfigurations()
+            GetRequiredConfigurations(Components.ComponentTree components)
         {
             return _configuration.Settings.Template.GetRequiredConfigurations();
         }
@@ -55,7 +55,7 @@ namespace DC.Cli.Components.Aws.ApiGateway
             
             var template = (await components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component.GetCloudformationData())
+                    .Select(x => x.component.GetCloudformationData(x.tree))
                     .WhenAll())
                 .Merge();
             
@@ -93,7 +93,7 @@ namespace DC.Cli.Components.Aws.ApiGateway
             return true;
         }
 
-        public Task<TemplateData> GetCloudformationData()
+        public Task<TemplateData> GetCloudformationData(Components.ComponentTree components)
         {
             return Task.FromResult(_configuration.Settings.Template);
         }

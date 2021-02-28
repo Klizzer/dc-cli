@@ -19,14 +19,14 @@ namespace DC.Cli.Components.Aws.CloudformationTemplate
         public string Name => _path.Name;
         
         public async Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
-            GetRequiredConfigurations()
+            GetRequiredConfigurations(Components.ComponentTree components)
         {
-            var template = await GetCloudformationData();
+            var template = await GetCloudformationData(components);
 
             return await template.GetRequiredConfigurations();
         }
 
-        public async Task<TemplateData> GetCloudformationData()
+        public async Task<TemplateData> GetCloudformationData(Components.ComponentTree components)
         {
             var deserializer = new Deserializer();
 

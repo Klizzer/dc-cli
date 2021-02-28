@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
@@ -72,7 +71,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         public string Name => _configuration.Name;
         
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
-            GetRequiredConfigurations()
+            GetRequiredConfigurations(Components.ComponentTree components)
         {
             return Task.FromResult<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>>(
                 new List<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>
@@ -110,7 +109,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             
             var template = (await components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component?.GetCloudformationData())
+                    .Select(x => x.component?.GetCloudformationData(x.tree))
                     .WhenAll())
                 .Merge();
 
@@ -152,7 +151,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             
             var template = (await _components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component?.GetCloudformationData())
+                    .Select(x => x.component?.GetCloudformationData(x.tree))
                     .WhenAll())
                 .Merge();
             
@@ -205,7 +204,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
         {
             template ??= (await _components
                     .FindAll<ICloudformationComponent>(Components.Direction.In)
-                    .Select(x => x.component?.GetCloudformationData())
+                    .Select(x => x.component?.GetCloudformationData(x.tree))
                     .WhenAll())
                 .Merge();
             

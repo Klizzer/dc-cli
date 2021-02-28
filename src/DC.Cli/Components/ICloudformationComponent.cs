@@ -4,6 +4,6 @@ namespace DC.Cli.Components
 {
     public interface ICloudformationComponent : INeedConfiguration
     {
-        Task<TemplateData> GetCloudformationData();
+        Task<TemplateData> GetCloudformationData(Components.ComponentTree components);
     }
 }

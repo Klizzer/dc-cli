@@ -44,12 +44,12 @@ namespace DC.Cli.Components.Aws.LambdaLayer
         }
 
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
-            GetRequiredConfigurations()
+            GetRequiredConfigurations(Components.ComponentTree components)
         {
             return _configuration.Settings.Template.GetRequiredConfigurations();
         }
 
-        public Task<TemplateData> GetCloudformationData()
+        public Task<TemplateData> GetCloudformationData(Components.ComponentTree components)
         {
             var template = _configuration.Settings.Template;
 

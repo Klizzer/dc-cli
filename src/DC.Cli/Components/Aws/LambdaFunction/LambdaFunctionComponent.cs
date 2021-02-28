@@ -30,7 +30,7 @@ namespace DC.Cli.Components.Aws.LambdaFunction
         public string Name => _configuration.Name;
         
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
-            GetRequiredConfigurations()
+            GetRequiredConfigurations(Components.ComponentTree components)
         {
             return _configuration.Settings.Template.GetRequiredConfigurations();
         }
@@ -65,7 +65,7 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             return _configuration.GetLanguage().StopWatch(_path.FullName);
         }
         
-        public Task<TemplateData> GetCloudformationData()
+        public Task<TemplateData> GetCloudformationData(Components.ComponentTree components)
         {
             var template = _configuration.Settings.Template;
             
