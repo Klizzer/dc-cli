@@ -31,8 +31,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     Services = data.Services.ToList(),
                     MainPort = data.MainPort,
                     ServicesPort = data.ServicesPort,
-                    DeploymentBucketName = $"{data.Name}-deployments",
-                    DeploymentStackName = $"{data.Name}-deployments",
+                    DeploymentBucketName = $"{settings.GetProjectName()}-{data.Name}-deployments",
+                    DeploymentStackName = $"{settings.GetProjectName()}-{data.Name}-deployments",
                     AwsRegion = data.AwsRegion
                 }
             };

@@ -43,13 +43,25 @@ namespace DC.Cli
         public class ResourceData
         {
             public string Type { get; set; }
+            public IList<string> DependsOn { get; set; }
             public IDictionary<string, object> Properties { get; set; }
 
             public ResourceData Merge(ResourceData other)
             {
+                var dependsOn = new List<string>();
+                
+                if (DependsOn != null)
+                    dependsOn.AddRange(DependsOn);
+                
+                if (other.DependsOn != null)
+                    dependsOn.AddRange(other.DependsOn);
+
+                dependsOn = dependsOn.Distinct().ToList();
+                
                 return new ResourceData
                 {
                     Type = Type,
+                    DependsOn = dependsOn.Any() ? dependsOn : null,
                     Properties = Merge(Properties, other.Properties)
                 };
             }
