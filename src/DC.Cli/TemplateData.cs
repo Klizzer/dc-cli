@@ -43,7 +43,7 @@ namespace DC.Cli
         public class ResourceData
         {
             public string Type { get; set; }
-            public IList<string> DependsOn { get; set; }
+            public IList<string> DependsOn { get; set; } = new List<string>();
             public IDictionary<string, object> Properties { get; set; }
 
             public ResourceData Merge(ResourceData other)
@@ -61,7 +61,7 @@ namespace DC.Cli
                 return new ResourceData
                 {
                     Type = Type,
-                    DependsOn = dependsOn.Any() ? dependsOn : null,
+                    DependsOn = dependsOn,
                     Properties = Merge(Properties, other.Properties)
                 };
             }
