@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DC.Cli.Components.Aws.ApiGateway;
+using DC.Cli.Components.Aws.ChildConfig;
 using DC.Cli.Components.Aws.CloudformationStack;
 using DC.Cli.Components.Aws.CloudformationTemplate;
 using DC.Cli.Components.Aws.LambdaFunction;
@@ -12,6 +13,7 @@ using DC.Cli.Components.Aws.LambdaLayer;
 using DC.Cli.Components.Client;
 using DC.Cli.Components.Cloudflare;
 using DC.Cli.Components.Nginx;
+using DC.Cli.Components.PackageFiles;
 using DC.Cli.Components.Powershell;
 using DC.Cli.Components.Terraform;
 using MAB.DotIgnore;
@@ -32,7 +34,9 @@ namespace DC.Cli.Components
             new TerraformRootComponentType(),
             new CloudflareWorkerComponentType(),
             new PowershellScriptComponentType(),
-            new LambdaLayerComponentType()
+            new LambdaLayerComponentType(),
+            new ChildConfigComponentType(),
+            new PackageFileComponentType()
         }.ToImmutableList();
         
         public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)

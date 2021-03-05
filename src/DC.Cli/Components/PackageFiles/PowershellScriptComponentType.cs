@@ -4,27 +4,27 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace DC.Cli.Components.Powershell
+namespace DC.Cli.Components.PackageFiles
 {
-    public class PowershellScriptComponentType 
-        : IComponentType<PowershellScriptComponent, PowershellScriptComponentType.ComponentData>
+    public class PackageFileComponentType 
+        : IComponentType<PackageFileScriptComponent, PackageFileComponentType.ComponentData>
     {
-        public async Task<PowershellScriptComponent> InitializeAt(
+        public async Task<PackageFileScriptComponent> InitializeAt(
             Components.ComponentTree tree,
             ComponentData data,
             ProjectSettings settings)
         {
-            var filePath = Path.Combine(tree.Path.FullName, $"{data.Name}.ps1");
+            var filePath = Path.Combine(tree.Path.FullName, data.Name);
 
             if (File.Exists(filePath))
             {
                 throw new InvalidOperationException(
-                    $"There is already a powershell script named {data.Name} at {tree.Path.FullName}");
+                    $"There is already a file named {data.Name} at {tree.Path.FullName}");
             }
 
             await File.WriteAllTextAsync(filePath, "");
 
-            return new PowershellScriptComponent(data.Name, new FileInfo(filePath), settings);
+            return new PackageFileScriptComponent(data.Name, new FileInfo(filePath), settings);
         }
 
         public Task<IImmutableList<IComponent>> FindAt(
@@ -32,8 +32,8 @@ namespace DC.Cli.Components.Powershell
             ProjectSettings settings)
         {
             var result = from file in components.Path.EnumerateFiles()
-                where file.Name.EndsWith(".ps1")
-                select new PowershellScriptComponent(Path.GetFileNameWithoutExtension(file.Name), file, settings);
+                where file.Name.Contains(".include.")
+                select new PackageFileScriptComponent(Path.GetFileNameWithoutExtension(file.Name), file, settings);
             
             return Task.FromResult<IImmutableList<IComponent>>(result.OfType<IComponent>().ToImmutableList());
         }
