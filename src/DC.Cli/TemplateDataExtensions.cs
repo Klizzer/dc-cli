@@ -24,7 +24,7 @@ namespace DC.Cli
             if (template.Resources == null)
                 return template;
             
-            foreach (var resource in template.Resources)
+            foreach (var resource in template.Resources.Where(x => x.Value?.Type == "AWS::Serverless::Function"))
             {
                 if (resource.Value.Properties == null) 
                     continue;
@@ -44,7 +44,7 @@ namespace DC.Cli
             if (template.Resources == null)
                 return template;
             
-            foreach (var resource in template.Resources)
+            foreach (var resource in template.Resources.Where(x => x.Value?.Type == "AWS::Serverless::LayerVersion"))
             {
                 if (resource.Value.Properties == null) 
                     continue;
