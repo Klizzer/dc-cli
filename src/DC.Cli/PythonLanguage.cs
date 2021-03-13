@@ -71,7 +71,7 @@ namespace DC.Cli
                 return await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .EntryPoint("/bin/bash")
-                    .Run("-c \"for file in *.py; do cp '$file' '.out/${file}';done\"");
+                    .Run("-c 'for file in *.py; do cp \"$file\" \".out/${file}\";done'");
             }
 
             public async Task<bool> Test(string path)
