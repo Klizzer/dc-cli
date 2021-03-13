@@ -54,19 +54,11 @@ namespace DC.Cli
 
                 if (!File.Exists(requirementsFile))
                     return true;
-                
-                var venvSuccess = await _dockerContainer
-                    .WithVolume(path, "/usr/local/src", true)
-                    .EntryPoint("python")
-                    .Run("-m venv .venv");
 
-                if (!venvSuccess)
-                    return false;
-                
                 return await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .EntryPoint("pip")
-                    .Run("install -r requirements.txt");
+                    .Run("install -r requirements.txt --target ./python");
             }
 
             public Task<bool> Build(string path)
