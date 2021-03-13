@@ -17,6 +17,7 @@ namespace DC.Cli
         public static ILanguage Instance { get; } = new NodeLanguage();
         private static ILanguageVersion Node10 { get; } = new NodeVersion("10", "nodejs10.x", "10");
         private static ILanguageVersion Node12 { get; } = new NodeVersion("12", "nodejs12.x", "12");
+        private static ILanguageVersion Node14 { get; } = new NodeVersion("14", "nodejs14.x", "14");
 
         public string Name { get; } = LanguageName;
 
@@ -24,6 +25,7 @@ namespace DC.Cli
         {
             yield return Node10;
             yield return Node12;
+            yield return Node14;
         }
 
         public ILanguageVersion GetDefaultVersion()

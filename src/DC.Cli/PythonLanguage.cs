@@ -12,10 +12,16 @@ namespace DC.Cli
         
         public static ILanguage Instance { get; } = new PythonLanguage();
 
+        public static ILanguageVersion Python2_7 { get; } = new PythonVersion("2.7", "python2.7", "2.7-buster");
+        public static ILanguageVersion Python3_6 { get; } = new PythonVersion("3.6", "python3.6", "3.6-buster");
+        public static ILanguageVersion Python3_7 { get; } = new PythonVersion("3.7", "python3.7", "3.7-buster");
         public static ILanguageVersion Python3_8 { get; } = new PythonVersion("3.8", "python3.8", "3.8-buster");
         
         public IEnumerable<ILanguageVersion> GetVersions()
         {
+            yield return Python2_7;
+            yield return Python3_6;
+            yield return Python3_7;
             yield return Python3_8;
         }
 
