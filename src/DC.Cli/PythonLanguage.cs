@@ -58,12 +58,20 @@ namespace DC.Cli
                 return await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .EntryPoint("pip")
-                    .Run("install -r requirements.txt --target ./python");
+                    .Run("install -r requirements.txt --target ./.out --upgrade");
             }
 
-            public Task<bool> Build(string path)
+            public async Task<bool> Build(string path)
             {
-                return Restore(path);
+                var restoreSuccess = await Restore(path);
+
+                if (!restoreSuccess)
+                    return false;
+                
+                return await _dockerContainer
+                    .WithVolume(path, "/usr/local/src", true)
+                    .EntryPoint("/bin/bash")
+                    .Run("-c \"for file in *.py; do cp '$file' '.out/${file}';done\"");
             }
 
             public async Task<bool> Test(string path)
@@ -95,7 +103,7 @@ namespace DC.Cli
 
             public string GetFunctionOutputPath(string functionPath)
             {
-                return functionPath;
+                return Path.Combine(functionPath, ".out");
             }
 
             public string GetRuntimeName()
