@@ -67,11 +67,30 @@ namespace DC.Cli
 
                 if (!restoreSuccess)
                     return false;
+
+                var pythonFiles = Directory.GetFiles(path, "*.py");
+
+                var outputPath = Path.Combine(path, ".out");
+
+                if (!Directory.Exists(outputPath))
+                    Directory.CreateDirectory(outputPath);
                 
-                return await _dockerContainer
-                    .WithVolume(path, "/usr/local/src", true)
-                    .EntryPoint("/bin/bash")
-                    .Run("-c 'for file in *.py; do cp \"$file\" \".out/${file}\";done'");
+                foreach (var pythonFile in pythonFiles)
+                {
+                    var source = Path.GetFileName(pythonFile);
+                    
+                    var destination = Path.Combine(".out", source);
+
+                    var success = await _dockerContainer
+                        .WithVolume(path, "/usr/local/src", true)
+                        .EntryPoint("cp")
+                        .Run($"{source} {destination}");
+
+                    if (!success)
+                        return false;
+                }
+
+                return true;
             }
 
             public async Task<bool> Test(string path)
