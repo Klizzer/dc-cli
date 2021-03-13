@@ -71,12 +71,17 @@ namespace DC.Cli
 
             public Task<bool> Build(string path)
             {
-                return Task.FromResult(true);
+                return Restore(path);
             }
 
-            public Task<bool> Test(string path)
+            public async Task<bool> Test(string path)
             {
-                return _dockerContainer
+                var build = await Build(path);
+
+                if (!build)
+                    return false;
+                
+                return await _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("-m test");
             }
