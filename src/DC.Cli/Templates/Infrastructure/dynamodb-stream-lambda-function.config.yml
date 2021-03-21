@@ -1,0 +1,19 @@
+Name: [[NAME]]
+
+Settings:
+  Type: [[FUNCTION_TYPE]]
+  Language: [[LANGUAGE]]
+  Template:
+    Resources:
+      [[FUNCTION_NAME]]Function:
+        Type: AWS::Serverless::Function
+        Properties:
+          Handler: [[FUNCTION_HANDLER]]
+          Runtime: [[FUNCTION_RUNTIME]]
+          Events:
+            DynamoDb:
+              Type: DynamoDB
+              Properties:
+                Stream: 
+                  Fn::GetAtt: [[FUNCTION_NAME]]Stream.Arn
+                StartingPosition: LATEST

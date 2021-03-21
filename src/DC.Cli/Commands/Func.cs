@@ -49,6 +49,7 @@ namespace DC.Cli.Commands
                 {
                     "api" => FunctionTrigger.Api,
                     "kinesis-stream" => FunctionTrigger.KinesisStream,
+                    "dynamodb-stream" => FunctionTrigger.DynamoDbStream,
                     "cron" => FunctionTrigger.Cron,
                     _ => throw new Exception("You must select a trigger")
                 };

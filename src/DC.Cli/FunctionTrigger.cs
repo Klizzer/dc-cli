@@ -4,6 +4,7 @@ namespace DC.Cli
     {
         Api,
         KinesisStream,
-        Cron
+        Cron,
+        DynamoDbStream
     }
 }
