@@ -234,7 +234,7 @@ namespace DC.Cli
                     var startInfo = new ProcessStartInfo
                     {
                         FileName = "docker",
-                        Arguments = $"run {arguments} {_image} {command}"
+                        Arguments = $"run {arguments} --rm {_image} {command}"
                     };
                 
                     if (!_interactive)
