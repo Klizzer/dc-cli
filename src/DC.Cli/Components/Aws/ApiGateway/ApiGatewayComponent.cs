@@ -28,7 +28,8 @@ namespace DC.Cli.Components.Aws.ApiGateway
                 .ContainerFromProject(
                     "sam",
                     configuration.GetContainerImageName(settings),
-                    configuration.GetContainerName(settings))
+                    configuration.GetContainerName(settings),
+                    false)
                 .WithDockerSocket()
                 .Detached()
                 .WithVolume(path.FullName, $"/usr/src/app/{settings.GetRelativePath(path.FullName)}")
