@@ -60,7 +60,7 @@ namespace DC.Cli
                 return _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .EntryPoint("rm")
-                    .Run(".go && rm .out");
+                    .Run("-r -f .go .out");
             }
 
             public async Task<bool> Build(string path)

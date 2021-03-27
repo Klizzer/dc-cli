@@ -15,7 +15,7 @@ namespace DC.Cli.Commands
             var cleanResult = await components.Clean();
             
             if (!cleanResult)
-                throw new RestoreFailedException(settings.GetRootedPath(options.Path));
+                throw new CleanFailedException(settings.GetRootedPath(options.Path));
         }
         
         [Verb("clean")]
@@ -25,9 +25,9 @@ namespace DC.Cli.Commands
             public string Path { get; set; } = Environment.CurrentDirectory;
         }
         
-        private class RestoreFailedException : Exception
+        private class CleanFailedException : Exception
         {
-            public RestoreFailedException(string path) : base($"Clean failed at: \"{path}\"")
+            public CleanFailedException(string path) : base($"Clean failed at: \"{path}\"")
             {
                 
             }
