@@ -12,22 +12,26 @@ namespace DC.Cli
 {
     public static class Docker
     {
-        public static Container TemporaryContainerFromImage(string image)
+        public static Container TemporaryContainerFromImage(string image, bool runAsCurrentUser = true)
         {
-            return ContainerFromImage(image, null);
+            return ContainerFromImage(image, null, runAsCurrentUser);
         }
         
-        public static Container ContainerFromImage(string image, string name)
+        public static Container ContainerFromImage(string image, string name, bool runAsCurrentUser = true)
         {
-            return CreateContainer(image, name);
+            return CreateContainer(image, name, runAsCurrentUser);
         }
         
-        public static Container ContainerFromProject(string name, string imageName, string containerName)
+        public static Container ContainerFromProject(
+            string name,
+            string imageName,
+            string containerName,
+            bool runAsCurrentUser = true)
         {
             var imageTag = $"{imageName}:{Assembly.GetExecutingAssembly().GetInformationVersion()}";
 
             if (HasImage(imageTag)) 
-                return CreateContainer(imageTag, containerName);
+                return CreateContainer(imageTag, containerName, runAsCurrentUser);
 
             var fileData = GetProjectDockerContent(name);
 
@@ -50,17 +54,20 @@ namespace DC.Cli
             process?.CloseMainWindow();
             process?.Close();
 
-            return CreateContainer(imageTag, containerName);
+            return CreateContainer(imageTag, containerName, runAsCurrentUser);
         }
 
-        private static Container CreateContainer(string image, string name)
+        private static Container CreateContainer(string image, string name, bool runAsCurrentUser)
         {
+            if (!runAsCurrentUser)
+                return new Container(name, image);
+            
             var imageTag = $"base-{image}-{Assembly.GetExecutingAssembly().GetInformationVersion()}";
 
             if (HasImage(imageTag))
                 return new Container(name, imageTag);
             
-            var fileData = GetProjectDockerContent(image.StartsWith("localstack/localstack") ? "localstackbase" : "base", ("BASE_IMAGE", image));
+            var fileData = GetProjectDockerContent("base", ("BASE_IMAGE", image));
 
             var userId = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? ProcessExecutor.Execute("id", "-u").output.Split('\n').FirstOrDefault()

@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc</AssemblyName>
-    <Version>0.96.0</Version>
+    <Version>0.97.0</Version>
     <RootNamespace>DC.Cli</RootNamespace>
   </PropertyGroup>
 
@@ -35,7 +35,6 @@
   
   <ItemGroup>
     <EmbeddedResource Include="Containers\base\Dockerfile" />
-    <EmbeddedResource Include="Containers\localstackbase\Dockerfile" />
     <EmbeddedResource Include="Templates\Config\proxy-path.conf" />
     <EmbeddedResource Include="Templates\Config\proxy.conf" />
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />

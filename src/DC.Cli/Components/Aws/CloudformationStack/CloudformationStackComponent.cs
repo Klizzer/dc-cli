@@ -50,7 +50,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             var container = Docker
                 .ContainerFromImage(
                     $"localstack/localstack:{configuration.Settings.LocalstackVersion}",
-                    configuration.GetContainerName(projectSettings))
+                    configuration.GetContainerName(projectSettings),
+                    false)
                 .Detached()
                 .WithVolume(dataDir.FullName, "/tmp/localstack")
                 .WithDockerSocket()
@@ -161,7 +162,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 Path.Combine(_tempDir.FullName, "template.yml"),
                 serializer.Serialize(template));
 
-            var cliDocker = Docker.TemporaryContainerFromImage("amazon/aws-cli")
+            var cliDocker = Docker.TemporaryContainerFromImage("amazon/aws-cli", false)
                 .WithVolume(Path.Combine(User.GetHome(), ".aws"), "/root/.aws")
                 .WithVolume(
                     _projectSettings.GetRootedPath(_path.FullName),
