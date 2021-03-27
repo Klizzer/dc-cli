@@ -70,7 +70,6 @@ namespace DC.Cli.Components.Client
             return CreateBaseContainer(dir.Parent, configuration, settings)
                 .Temporary()
                 .Interactive()
-                .AsCurrentUser()
                 .Run($"create nuxt-app {dir.Name}");
         }
 

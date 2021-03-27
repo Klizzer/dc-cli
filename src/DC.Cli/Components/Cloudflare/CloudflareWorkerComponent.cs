@@ -40,8 +40,7 @@ namespace DC.Cli.Components.Cloudflare
                 .EnvironmentVariable("DESTINATION_PORT", configuration.Settings.DestinationPort.ToString());
             
             _watchContainer = _dockerContainer
-                .WithName($"{_dockerContainer.Name}-watcher")
-                .WithEmptyVolume("/usr/src/app/node_modules/");
+                .WithName($"{_dockerContainer.Name}-watcher");
         }
 
         public string Name => _configuration.Name;
@@ -83,7 +82,6 @@ namespace DC.Cli.Components.Cloudflare
         {
             return _dockerContainer
                 .Temporary()
-                .AsCurrentUser()
                 .Run("");
         }
         
@@ -127,7 +125,6 @@ namespace DC.Cli.Components.Cloudflare
             var startResponse = await _dockerContainer
                 .Port(_configuration.Settings.Port, 3000)
                 .Detached()
-                .WithEmptyVolume("/usr/src/app/node_modules/")
                 .Run("start");
 
             return startResponse;

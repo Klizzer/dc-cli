@@ -55,10 +55,53 @@ namespace DC.Cli
 
         private static Container CreateContainer(string image, string name)
         {
-            return new Container(name, image);
+            var imageTag = $"base-{image}-{Assembly.GetExecutingAssembly().GetInformationVersion()}";
+
+            if (HasImage(imageTag))
+                return new Container(name, imageTag);
+            
+            var fileData = GetProjectDockerContent(image.StartsWith("localstack/localstack") ? "localstackbase" : "base", ("BASE_IMAGE", image));
+
+            var userId = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? ProcessExecutor.Execute("id", "-u").output.Split('\n').FirstOrDefault()
+                : "1000";
+            
+            var groupId =
+                RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                    ? ProcessExecutor.Execute("id", "-g").output.Split('\n').FirstOrDefault()
+                    : "1000";
+            
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = $"build -t {imageTag} --build-arg USER_ID={userId} --build-arg GROUP_ID={groupId} -",
+                RedirectStandardInput = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
+            var process = Process.Start(startInfo);
+            
+            Console.Write(fileData);
+
+            process?.StandardInput.Write(fileData);
+            process?.StandardInput.Flush();
+            process?.StandardInput.Close();
+
+            process?.WaitForExit();
+            
+            var success = (process?.ExitCode ?? 127) == 0;
+            
+            process?.CloseMainWindow();
+            process?.Close();
+
+            if (!success)
+                throw new Exception($"Failed building docker image {imageTag}");
+            
+            return new Container(name, imageTag);
         }
         
-        private static string GetProjectDockerContent(string name)
+        private static string GetProjectDockerContent(string name, params (string name, string value)[] variables)
         {
             var dockerFileData = Assembly
                 .GetExecutingAssembly()
@@ -67,7 +110,13 @@ namespace DC.Cli
             using (dockerFileData)
             using(var reader = new StreamReader(dockerFileData!))
             {
-                return reader.ReadToEnd();
+                var data = reader.ReadToEnd();
+                
+                return variables
+                    .Aggregate(
+                        data,
+                        (current, variable) => current
+                            .Replace($"[[{variable.name}]]", (variable.value ?? "").Trim()));
             }
         }
 
@@ -147,18 +196,7 @@ namespace DC.Cli
                 return new Container(Name, _image, true, _dockerArguments)
                     .WithArgument("-it");
             }
-
-            public Container AsCurrentUser()
-            {
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    return this;
-
-                var userId = ProcessExecutor.Execute("id", "-u").output.Split('\n').FirstOrDefault();
-                var groupId = ProcessExecutor.Execute("id", "-g").output.Split('\n').FirstOrDefault();
-                
-                return WithArgument($"--user \"{userId}:{groupId}\"");
-            }
-
+            
             public Container Detached()
             {
                 return WithArgument("-d");
@@ -187,12 +225,7 @@ namespace DC.Cli
                 
                 return useAsWorkDir ? container.WorkDir(destination) : container;
             }
-
-            public Container WithEmptyVolume(string destination)
-            {
-                return WithArgument($"-v {destination}");
-            }
-
+            
             public Container WorkDir(string path)
             {
                 return WithArgument($"--workdir \"{path}\"");
