@@ -17,7 +17,7 @@ namespace DC.Cli.Components.Nginx
             _configuration = configuration;
 
             _dockerContainer = Docker
-                .ContainerFromImage("nginx", configuration.GetContainerName(settings))
+                .ContainerFromImage("nginx", configuration.GetContainerName(settings), false)
                 .Detached()
                 .Port(configuration.Settings.Port, 80)
                 .WithVolume(Path.Combine(path.FullName, "proxy.nginx.conf"), "/etc/nginx/nginx.conf")
