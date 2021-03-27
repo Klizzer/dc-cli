@@ -61,6 +61,25 @@ namespace DC.Cli
                     .Run("");
             }
 
+            public async Task<bool> Clean(string path)
+            {
+                if (!File.Exists(Path.Combine(path, "package.json")))
+                    return true;
+
+                var packageData =
+                    Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(path, "package.json")));
+
+                if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
+                    .ContainsKey("clean"))
+                {
+                    return true;
+                }
+                
+                return await _dockerContainer
+                    .WithVolume(path, "/usr/src/app", true)
+                    .Run("clean");
+            }
+
             public async Task<bool> Build(string path)
             {
                 var restoreResult = await Restore(path);
@@ -84,7 +103,7 @@ namespace DC.Cli
                 
                 return await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
-                    .Run("run build");
+                    .Run("build");
             }
 
             public async Task<bool> Test(string path)
@@ -110,7 +129,7 @@ namespace DC.Cli
                 
                 return await _dockerContainer
                     .WithVolume(path, "/usr/src/app", true)
-                    .Run("run test");
+                    .Run("test");
             }
 
             public async Task<bool> StartWatch(string path)
@@ -131,7 +150,7 @@ namespace DC.Cli
                     .WithName(GetDockerName(path))
                     .WithVolume(path, "/usr/src/app", true)
                     .Detached()
-                    .Run("run watch");
+                    .Run("watch");
             }
 
             public Task<bool> StopWatch(string path)

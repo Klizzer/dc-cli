@@ -7,6 +7,7 @@ namespace DC.Cli.Components.Aws.LambdaFunction
 {
     public class LambdaFunctionComponent : ICloudformationComponent,
         IRestorableComponent,
+        ICleanableComponent,
         IBuildableComponent,
         ITestableComponent,
         IStartableComponent
@@ -28,7 +29,7 @@ namespace DC.Cli.Components.Aws.LambdaFunction
         }
 
         public string Name => _configuration.Name;
-        
+
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
             GetRequiredConfigurations(Components.ComponentTree components)
         {
@@ -38,6 +39,11 @@ namespace DC.Cli.Components.Aws.LambdaFunction
         public Task<bool> Restore()
         {
             return _configuration.GetLanguage().Restore(_path.FullName);
+        }
+        
+        public Task<bool> Clean()
+        {
+            return _configuration.GetLanguage().Clean(_path.FullName);
         }
 
         public Task<bool> Build()

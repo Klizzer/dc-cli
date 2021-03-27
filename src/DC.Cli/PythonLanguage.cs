@@ -61,6 +61,14 @@ namespace DC.Cli
                     .Run("install -r requirements.txt --target ./.out --upgrade");
             }
 
+            public Task<bool> Clean(string path)
+            {
+                return _dockerContainer
+                    .WithVolume(path, "/usr/local/src", true)
+                    .EntryPoint("rm")
+                    .Run(".out");
+            }
+
             public async Task<bool> Build(string path)
             {
                 var restoreSuccess = await Restore(path);

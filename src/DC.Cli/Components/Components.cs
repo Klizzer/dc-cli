@@ -210,6 +210,11 @@ namespace DC.Cli.Components
             {
                 return MergeResults(Run<IRestorableComponent>((component, _) => component.Restore(), "Restore"));
             }
+            
+            public Task<bool> Clean()
+            {
+                return MergeResults(Run<ICleanableComponent>((component, _) => component.Clean(), "Clean"));
+            }
 
             public Task<bool> Start()
             {

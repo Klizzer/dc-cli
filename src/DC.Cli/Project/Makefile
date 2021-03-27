@@ -6,7 +6,8 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 DC_CLI_VERSION = [[DC_CLI_VERSION]]
-PROJECT_NAME = [[PROJECT_NAME]]
+NUGET_FEED_URL ?= [[NUGET_FEED_URL]]
+NUGET_API_KEY ?=
 
 ifeq ($(OS), Windows_NT)
     DETECTED_OS := Windows
@@ -16,8 +17,6 @@ else
     DC_CLI_COMMAND := ./.tools/dc
 endif
 
-NUGET_FEED_URL ?= [[NUGET_FEED_URL]]
-NUGET_API_KEY ?=
 CONFIGURE ?= true
 
 .DEFAULT_GOAL := build
@@ -42,6 +41,10 @@ endif
 .PHONY: configure
 configure:
 	$(DC_CLI_COMMAND) project configure
+
+.PHONY: clean
+clean:
+	$(DC_CLI_COMMAND) project clean
 
 .PHONY: restore
 restore:

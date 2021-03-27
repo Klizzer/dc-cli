@@ -63,6 +63,7 @@ namespace DC.Cli
                     Client.Options,
                     Test.Options,
                     Restore.Options,
+                    Clean.Options,
                     Start.Options,
                     Stop.Options,
                     Logs.Options,
@@ -78,6 +79,7 @@ namespace DC.Cli
                 await parsedArguments.WithParsedAsync<Client.Options>(Client.Execute);
                 await parsedArguments.WithParsedAsync<Test.Options>(Test.Execute);
                 await parsedArguments.WithParsedAsync<Restore.Options>(Restore.Execute);
+                await parsedArguments.WithParsedAsync<Clean.Options>(Clean.Execute);
                 await parsedArguments.WithParsedAsync<Start.Options>(Start.Execute);
                 await parsedArguments.WithParsedAsync<Stop.Options>(Stop.Execute);
                 await parsedArguments.WithParsedAsync<Logs.Options>(Logs.Execute);

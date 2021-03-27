@@ -7,6 +7,7 @@ namespace DC.Cli.Components.Aws.LambdaLayer
 {
     public class LambdaLayerComponent : ICloudformationComponent,
         IRestorableComponent,
+        ICleanableComponent,
         IBuildableComponent,
         ITestableComponent
     {
@@ -27,7 +28,7 @@ namespace DC.Cli.Components.Aws.LambdaLayer
         }
         
         public string Name => _configuration.Name;
-        
+
         public Task<bool> Test()
         {
             return _configuration.GetLanguage().Test(_path.FullName);
@@ -41,6 +42,11 @@ namespace DC.Cli.Components.Aws.LambdaLayer
         public Task<bool> Restore()
         {
             return _configuration.GetLanguage().Restore(_path.FullName);
+        }
+        
+        public Task<bool> Clean()
+        {
+            return _configuration.GetLanguage().Clean(_path.FullName);
         }
 
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 

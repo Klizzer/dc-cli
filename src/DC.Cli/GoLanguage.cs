@@ -43,18 +43,26 @@ namespace DC.Cli
             public string Language { get; } = LanguageName;
             public string Version { get; }
             
-            public async Task<bool> Restore(string path)
+            public Task<bool> Restore(string path)
             {
                 var goPath = new DirectoryInfo(Path.Combine(path, ".go"));
                 
                 if (!goPath.Exists)
                     goPath.Create();
                 
-                return await _dockerContainer
+                return _dockerContainer
                     .WithVolume(path, "/usr/local/src", true)
                     .Run("get -v -t -d ./...");
             }
-            
+
+            public Task<bool> Clean(string path)
+            {
+                return _dockerContainer
+                    .WithVolume(path, "/usr/local/src", true)
+                    .EntryPoint("rm")
+                    .Run(".go && rm .out");
+            }
+
             public async Task<bool> Build(string path)
             {
                 var restoreResult = await Restore(path);

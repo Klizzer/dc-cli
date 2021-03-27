@@ -13,6 +13,7 @@ namespace DC.Cli.Components.Cloudflare
         IBuildableComponent,
         ITestableComponent,
         IRestorableComponent,
+        ICleanableComponent,
         IHavePackageResources
     {
         public const string ConfigFileName = "cloudflare-worker.config.yml";
@@ -56,19 +57,53 @@ namespace DC.Cli.Components.Cloudflare
 
         public async Task<bool> Build()
         {
-            await Restore();
+            var restoreResult = await Restore();
+
+            if (!restoreResult)
+                return false;
+            
+            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+                return true;
+            
+            var packageData =
+                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
+
+            if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
+                .ContainsKey("build"))
+            {
+                return true;
+            }
             
             return await _dockerContainer
                 .Temporary()
                 .Run("build");
         }
         
-        public async Task<bool> Restore()
+        public Task<bool> Restore()
         {
-            return await _dockerContainer
+            return _dockerContainer
                 .Temporary()
                 .AsCurrentUser()
                 .Run("");
+        }
+        
+        public async Task<bool> Clean()
+        {
+            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+                return true;
+            
+            var packageData =
+                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
+
+            if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
+                .ContainsKey("clean"))
+            {
+                return true;
+            }
+            
+            return await _dockerContainer
+                .Temporary()
+                .Run("clean");
         }
 
         public async Task<bool> Logs()
@@ -149,6 +184,11 @@ namespace DC.Cli.Components.Cloudflare
                 public int Port { get; set; }
                 public int DestinationPort { get; set; }
             }
+        }
+        
+        private class PackageJsonData
+        {
+            public IImmutableDictionary<string, string> Scripts { get; set; }
         }
     }
 }

@@ -9,6 +9,7 @@ namespace DC.Cli
         string Version { get; }
 
         Task<bool> Restore(string path);
+        Task<bool> Clean(string path);
         Task<bool> Build(string path);
         Task<bool> Test(string path);
         Task<bool> StartWatch(string path);

@@ -11,6 +11,7 @@ namespace DC.Cli.Components.Client
     public class ClientComponent : IBuildableComponent, 
         ITestableComponent,
         IRestorableComponent,
+        ICleanableComponent,
         IStartableComponent,
         IComponentWithLogs,
         IHaveHttpEndpoint
@@ -34,7 +35,7 @@ namespace DC.Cli.Components.Client
         public string BaseUrl => _configuration.Settings.BaseUrl;
         public int Port => _configuration.Settings.Port;
         public string Name => _configuration.Name;
-        
+
         public async Task<bool> Restore()
         {
             if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
@@ -43,6 +44,25 @@ namespace DC.Cli.Components.Client
             return await _dockerContainer
                 .Temporary()
                 .Run("");
+        }
+        
+        public async Task<bool> Clean()
+        {
+            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+                return true;
+            
+            var packageData =
+                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
+
+            if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
+                .ContainsKey("clean"))
+            {
+                return true;
+            }
+            
+            return await _dockerContainer
+                .Temporary()
+                .Run("clean");
         }
 
         public async Task<bool> Build()
