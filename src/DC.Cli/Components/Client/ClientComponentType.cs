@@ -41,14 +41,14 @@ namespace DC.Cli.Components.Client
                     tree.Path.FullName, 
                     tree.FindFirst<TerraformRootComponent>(Components.Direction.Out)?.FoundAt.Path.FullName)));
             
-            return await ClientComponent.Init(tree.Path, x => CreateBaseContainer(tree.Path, settings, x.Name));
+            return await ClientComponent.Init(tree.Path, x => CreateBaseContainer(tree.Path, settings, x.Name), settings);
         }
 
         public async Task<IImmutableList<IComponent>> FindAt(
             Components.ComponentTree components,
             ProjectSettings settings)
         {
-            var component = await ClientComponent.Init(components.Path, x => CreateBaseContainer(components.Path, settings, x.Name));
+            var component = await ClientComponent.Init(components.Path, x => CreateBaseContainer(components.Path, settings, x.Name), settings);
 
             return component != null
                 ? new List<IComponent>

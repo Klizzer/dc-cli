@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ICSharpCode.SharpZipLib.Zip;
 using YamlDotNet.Serialization;
 
 namespace DC.Cli.Components.Client
@@ -14,26 +15,63 @@ namespace DC.Cli.Components.Client
         ICleanableComponent,
         IStartableComponent,
         IComponentWithLogs,
-        ICloudformationComponent
+        ICloudformationComponent,
+        IHavePackageResources
     {
         public const string ConfigFileName = "js-client.config.yml";
 
         private readonly DirectoryInfo _path;
         private readonly ClientConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
+        private readonly ProjectSettings _settings;
         
         private ClientComponent(
             DirectoryInfo path,
             ClientConfiguration configuration,
-            Docker.Container dockerContainer)
+            Docker.Container dockerContainer, 
+            ProjectSettings settings)
         {
             _path = path;
             _configuration = configuration;
             _dockerContainer = dockerContainer;
+            _settings = settings;
         }
 
         public string Name => _configuration.Name;
         
+        public async Task<IImmutableList<PackageResource>> GetPackageResources(
+            Components.ComponentTree components,
+            string version)
+        {
+            async Task AddFilesFrom(DirectoryInfo directory, ZipOutputStream zipStream)
+            {
+                foreach (var file in directory.GetFiles())
+                {
+                    zipStream.PutNextEntry(new ZipEntry(_settings.GetRelativePath(file.FullName, _path.FullName)));
+                        
+                    await zipStream.WriteAsync(await File.ReadAllBytesAsync(file.FullName));
+                        
+                    zipStream.CloseEntry();
+                }
+
+                foreach (var childDirectory in directory.GetDirectories())
+                    await AddFilesFrom(childDirectory, zipStream);
+            }
+            
+            await using var stream = new MemoryStream();
+            await using var outStream = new ZipOutputStream(stream);
+
+            await AddFilesFrom(_path, outStream);
+            
+            await outStream.FlushAsync();
+
+            stream.Position = 0;
+            
+            return ImmutableList.Create(new PackageResource(
+                _settings.GetRelativePath(Path.Combine(_path.FullName, "amplify-app.zip"), components.Path.FullName),
+                stream.ToArray()));
+        }
+
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
             GetRequiredConfigurations(Components.ComponentTree components)
         {
@@ -174,7 +212,8 @@ namespace DC.Cli.Components.Client
         
         public static async Task<ClientComponent> Init(
             DirectoryInfo path,
-            Func<ClientConfiguration, Docker.Container> getBaseContainer)
+            Func<ClientConfiguration, Docker.Container> getBaseContainer,
+            ProjectSettings settings)
         {
             if (!File.Exists(Path.Combine(path.FullName, ConfigFileName))) 
                 return null;
@@ -184,7 +223,7 @@ namespace DC.Cli.Components.Client
             var configuration = deserializer.Deserialize<ClientConfiguration>(
                 await File.ReadAllTextAsync(Path.Combine(path.FullName, ConfigFileName)));
             
-            return new ClientComponent(path, configuration, getBaseContainer(configuration));
+            return new ClientComponent(path, configuration, getBaseContainer(configuration), settings);
         }
         
         private class PackageJsonData
