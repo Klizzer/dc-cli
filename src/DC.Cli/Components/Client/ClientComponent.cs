@@ -52,6 +52,8 @@ namespace DC.Cli.Components.Client
             
             tempDir.Create();
 
+            var distFolder = new DirectoryInfo(Path.Combine(_sourcePath.FullName, "dist"));
+
             async Task AddFilesFrom(DirectoryInfo directory, ZipOutputStream zipStream)
             {
                 if (directory.FullName == tempDir.FullName)
@@ -59,7 +61,7 @@ namespace DC.Cli.Components.Client
                 
                 foreach (var file in directory.GetFiles())
                 {
-                    zipStream.PutNextEntry(new ZipEntry(_settings.GetRelativePath(file.FullName, _sourcePath.FullName)));
+                    zipStream.PutNextEntry(new ZipEntry(_settings.GetRelativePath(file.FullName, distFolder.FullName)));
 
                     await zipStream.WriteAsync(await File.ReadAllBytesAsync(file.FullName));
                         
@@ -75,7 +77,7 @@ namespace DC.Cli.Components.Client
             await using var zipFile = File.Create(appFilePath);
             await using var outStream = new ZipOutputStream(zipFile);
 
-            await AddFilesFrom(_sourcePath, outStream);
+            await AddFilesFrom(distFolder, outStream);
             
             await outStream.FlushAsync();
             outStream.Close();
