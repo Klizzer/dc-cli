@@ -8,7 +8,7 @@ using YamlDotNet.Serialization;
 
 namespace DC.Cli.Components.Aws.ApiGateway
 {
-    public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, IComponentWithLogs, IHaveHttpEndpoint
+    public class ApiGatewayComponent : ICloudformationComponent, IStartableComponent, IComponentWithLogs
     {
         public const string ConfigFileName = "api-gw.config.yml";
 
@@ -38,8 +38,6 @@ namespace DC.Cli.Components.Aws.ApiGateway
                 .Port(configuration.Settings.Port, 3000);
         }
 
-        public string BaseUrl => _configuration.Settings.BaseUrl;
-        public int Port => _configuration.Settings.Port;
         public string Name => _configuration.Name;
 
         public DirectoryInfo Path { get; }

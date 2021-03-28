@@ -12,7 +12,6 @@ using DC.Cli.Components.Aws.LambdaFunction;
 using DC.Cli.Components.Aws.LambdaLayer;
 using DC.Cli.Components.Client;
 using DC.Cli.Components.Cloudflare;
-using DC.Cli.Components.Nginx;
 using DC.Cli.Components.PackageFiles;
 using DC.Cli.Components.Powershell;
 using DC.Cli.Components.Terraform;
@@ -28,7 +27,6 @@ namespace DC.Cli.Components
             new LambdaFunctionComponentType(),
             new ClientComponentType(),
             new CloudformationComponentType(),
-            new LocalProxyComponentType(),
             new CloudformationStackComponentType(),
             new TerraformResourceComponentType(),
             new TerraformRootComponentType(),
@@ -291,7 +289,7 @@ namespace DC.Cli.Components
                     .FirstOrDefault(x => x != null);
             }
 
-            public TComponent FindFirst<TComponent>(Direction direction, string name = null)
+            public FoundComponent<TComponent> FindFirst<TComponent>(Direction direction, string name = null)
                 where TComponent : class, IComponent
             {
                 switch (direction)
@@ -308,7 +306,7 @@ namespace DC.Cli.Components
                             var matchingComponent = tree.FindComponent<TComponent>();
 
                             if (matchingComponent != null)
-                                return matchingComponent;
+                                return new FoundComponent<TComponent>(tree, matchingComponent);
 
                             foreach (var child in tree._children)
                                 queue.Enqueue(child);
@@ -317,7 +315,11 @@ namespace DC.Cli.Components
                         return null;
 
                     case Direction.Out:
-                        return FindComponent<TComponent>(name) ?? _parent?.FindFirst<TComponent>(Direction.Out, name);
+                        var component = FindComponent<TComponent>(name);
+
+                        return component != null
+                            ? new FoundComponent<TComponent>(this, component)
+                            : _parent?.FindFirst<TComponent>(Direction.Out, name);
 
                     default:
                         throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
@@ -379,6 +381,18 @@ namespace DC.Cli.Components
         {
             In,
             Out
+        }
+        
+        public class FoundComponent<TComponent>
+        {
+            public FoundComponent(ComponentTree foundAt, TComponent component)
+            {
+                FoundAt = foundAt;
+                Component = component;
+            }
+
+            public ComponentTree FoundAt { get; }
+            public TComponent Component { get; }
         }
     }
 }

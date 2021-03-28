@@ -26,16 +26,10 @@ namespace DC.Cli
             public static async Task Setup(IEnumerable<string> args)
             {
                 var parsedArguments = Parser.Default.ParseArguments<
-                    AddProxy.Options,
-                    AddProxyPath.Options,
-                    AutoProxy.Options,
                     CloudformationStack.Options,
                     CfChildOverrides.Options,
                     Package.Options>(args);
                 
-                await parsedArguments.WithParsedAsync<AddProxy.Options>(AddProxy.Execute);
-                await parsedArguments.WithParsedAsync<AddProxyPath.Options>(AddProxyPath.Execute);
-                await parsedArguments.WithParsedAsync<AutoProxy.Options>(AutoProxy.Execute);
                 await parsedArguments.WithParsedAsync<CloudformationStack.Options>(CloudformationStack.Execute);
                 await parsedArguments.WithParsedAsync<CfChildOverrides.Options>(CfChildOverrides.Execute);
                 await parsedArguments.WithParsedAsync<Package.Options>(Package.Execute);

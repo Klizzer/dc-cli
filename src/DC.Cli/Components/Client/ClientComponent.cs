@@ -14,9 +14,9 @@ namespace DC.Cli.Components.Client
         ICleanableComponent,
         IStartableComponent,
         IComponentWithLogs,
-        IHaveHttpEndpoint
+        ICloudformationComponent
     {
-        public const string ConfigFileName = "client.config.yml";
+        public const string ConfigFileName = "js-client.config.yml";
 
         private readonly DirectoryInfo _path;
         private readonly ClientConfiguration _configuration;
@@ -32,9 +32,18 @@ namespace DC.Cli.Components.Client
             _dockerContainer = dockerContainer;
         }
 
-        public string BaseUrl => _configuration.Settings.BaseUrl;
-        public int Port => _configuration.Settings.Port;
         public string Name => _configuration.Name;
+        
+        public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 
+            GetRequiredConfigurations(Components.ComponentTree components)
+        {
+            return _configuration.Settings.Template.GetRequiredConfigurations();
+        }
+
+        public Task<TemplateData> GetCloudformationData(Components.ComponentTree components)
+        {
+            return Task.FromResult(_configuration.Settings.Template);
+        }
 
         public async Task<bool> Restore()
         {
@@ -115,7 +124,10 @@ namespace DC.Cli.Components.Client
 
         public async Task<bool> Start(Components.ComponentTree components)
         {
-            await Restore();
+            var restoreSuccess = await Restore();
+
+            if (!restoreSuccess)
+                return false;
             
             var parsers = components
                 .FindAll<IParseCloudformationValues>(Components.Direction.Out)
@@ -124,8 +136,14 @@ namespace DC.Cli.Components.Client
             
             var result = new Dictionary<string, string>();
 
-            foreach (var environmentVariable in _configuration.Settings.EnvironmentVariables ?? new Dictionary<string, object>())
-                result[environmentVariable.Key] = (await parsers.Parse(environmentVariable.Value)) as string;
+            var amplifyApp =
+                _configuration.Settings.Template.Resources.Values.FirstOrDefault(x => x.Type == "AWS::Amplify::App");
+
+            if (amplifyApp != null && amplifyApp.Properties.ContainsKey("EnvironmentVariables"))
+            {
+                foreach (var environmentVariable in (amplifyApp.Properties["EnvironmentVariables"] as Dictionary<string, object>) ?? new Dictionary<string, object>())
+                    result[environmentVariable.Key] = (await parsers.Parse(environmentVariable.Value)) as string;   
+            }
 
             var container = result.Aggregate(
                 _dockerContainer, 
@@ -179,17 +197,16 @@ namespace DC.Cli.Components.Client
             public string Name { get; set; }
             public ClientSettings Settings { get; set; }
 
-            public string GetContainerName(ProjectSettings settings)
+            public static string GetContainerName(ProjectSettings settings, string name)
             {
-                return $"{settings.GetProjectName()}-client-{Name}";
+                return $"{settings.GetProjectName()}-client-{name}";
             }
             
             public class ClientSettings
             {
                 public int Port { get; set; }
                 public string Type { get; set; }
-                public string BaseUrl { get; set; }
-                public IDictionary<string, object> EnvironmentVariables { get; set; }
+                public TemplateData Template { get; set; }
             }
         }
     }

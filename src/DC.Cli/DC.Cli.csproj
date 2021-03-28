@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc</AssemblyName>
-    <Version>0.99.0</Version>
+    <Version>0.100.0</Version>
     <RootNamespace>DC.Cli</RootNamespace>
   </PropertyGroup>
 
@@ -35,8 +35,6 @@
   
   <ItemGroup>
     <EmbeddedResource Include="Containers\base\Dockerfile" />
-    <EmbeddedResource Include="Templates\Config\proxy-path.conf" />
-    <EmbeddedResource Include="Templates\Config\proxy.conf" />
     <EmbeddedResource Include="Templates\Infrastructure\api-gw.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\api-lambda-function.config.yml" />
     <EmbeddedResource Include="Templates\Infrastructure\childconfig.yml" />
@@ -47,5 +45,11 @@
     <EmbeddedResource Include="Containers\sam\Dockerfile" />
     <EmbeddedResource Include="Templates\Infrastructure\deployment-bucket.yml" />
     <None Remove="Templates\Infrastructure\cron-lambda-function.config.yml" />
+    <None Remove="Templates\Infrastructure\client.config.yml" />
+    <EmbeddedResource Include="Templates\Infrastructure\js-client.config.yml" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Templates\Config" />
   </ItemGroup>
 </Project>

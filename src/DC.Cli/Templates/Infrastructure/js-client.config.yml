@@ -1,0 +1,53 @@
+Name: [[NAME]]
+Settings:
+  Port: [[PORT]]
+  Type: [[TYPE]]
+  Template:
+    Resources:
+      [[NAME]]Hosting:
+        Type: AWS::Amplify::App
+        Properties:
+          Name: [[NAME]]
+          BuildSpec:
+            version: 1
+            frontend:
+              phases:
+                preBuild:
+                  commands:
+                    - yarn
+                build:
+                  commands:
+                    - yarn generate
+              artifacts:
+                baseDirectory: dist
+                files:
+                  - '**/*'
+              cache:
+                paths:
+                  - node_modules/**/*
+
+      [[NAME]]Deployment:
+        DependsOn: 
+          - [[NAME]]Hosting
+        Type: AWSUtility::CloudFormation::CommandRunner
+        Properties:
+          Command:
+            Fn::Sub:
+              - |
+                DEPLOYMENT_RESPONSE=$(aws amplify create-deployment --app-id ${__HOST_APP_ID__} --branch-name master)
+                AMPLIFY_ZIP_UPLOAD_URL=$($DEPLOYMENT_RESPONSE | jq -r '.zipUploadUrl')
+                AMPLIFY_JOB_ID=$($DEPLOYMENT_RESPONSE | jq -r '.jobId')
+                curl -H "Content-Type: application/zip" $AMPLIFY_ZIP_UPLOAD_URL --upload-file ./[[PATH]]/amplify-app.zip
+                aws amplify start-deployment --app-id ${__HOST_APP_ID__} --branch-name master --job-id $AMPLIFY_JOB_ID
+                while :
+                do
+                  sleep 10
+                  STATUS=$(aws amplify get-job --app-id ${__HOST_APP_ID__} --branch-name master --job-id $AMPLIFY_JOB_ID | jq -r '.job.summary.status')
+                  if [ $STATUS != 'PENDING' ]; then
+                    break
+                  fi
+                done
+
+                printf "Amplify deployment status $STATUS\n"
+              - __HOST_APP_ID__:
+                  Fn::GetAtt: [[NAME]]Hosting.AppId

@@ -67,10 +67,10 @@ namespace DC.Cli.Components.Aws.LambdaFunction
             if (apiComponent == null)
                 throw new InvalidOperationException("Can't add a api-function outside of any api.");
             
-            var languageVersion = FunctionLanguage.Parse(language) ?? apiComponent.GetDefaultLanguage(settings);
+            var languageVersion = FunctionLanguage.Parse(language) ?? apiComponent.Component.GetDefaultLanguage(settings);
 
             Console.WriteLine("Enter url:");
-            var url = apiComponent.GetUrl(Console.ReadLine());
+            var url = apiComponent.Component.GetUrl(Console.ReadLine());
 
             Console.WriteLine("Enter method:");
             var method = Console.ReadLine();
@@ -85,7 +85,7 @@ namespace DC.Cli.Components.Aws.LambdaFunction
                 ("LANGUAGE", languageVersion.ToString()),
                 ("FUNCTION_RUNTIME", languageVersion.GetRuntimeName()),
                 ("FUNCTION_METHOD", method),
-                ("API_NAME", TemplateData.SanitizeResourceName(apiComponent.Name)),
+                ("API_NAME", TemplateData.SanitizeResourceName(apiComponent.Component.Name)),
                 ("URL", url),
                 ("FUNCTION_HANDLER", languageVersion.GetHandlerName()));
 

@@ -34,8 +34,8 @@ namespace DC.Cli.Commands
                         throw new InvalidOperationException($"Can't find a api named {options.Api}");
 
                     path = Path.IsPathRooted(path) 
-                        ? apiComponent.Path.FullName 
-                        : Path.Combine(apiComponent.Path.FullName, path ?? "");
+                        ? apiComponent.Component.Path.FullName 
+                        : Path.Combine(apiComponent.Component.Path.FullName, path ?? "");
                 }
             }
 

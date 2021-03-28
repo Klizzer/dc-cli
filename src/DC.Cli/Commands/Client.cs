@@ -14,7 +14,7 @@ namespace DC.Cli.Commands
             var components = await Components.Components.BuildTree(settings, options.GetRootedClientPath(settings));
 
             await components.Initialize<ClientComponent, ClientComponentType.ComponentData>(
-                new ClientComponentType.ComponentData(options.Name, options.Port, options.ClientType, options.BaseUrl),
+                new ClientComponentType.ComponentData(options.Name, options.Port, options.ClientType),
                 settings);
         }
         
@@ -26,9 +26,6 @@ namespace DC.Cli.Commands
 
             [Option('p', "path", HelpText = "Path where to put the client.")]
             public string Path { get; set; } = Environment.CurrentDirectory;
-            
-            [Option('b', "base-url", Default = "/", HelpText = "Base url for the client.")]
-            public string BaseUrl { get; set; }
     
             [Option('t', "type", Default = ClientType.VueNuxt, HelpText = "Client type.")]
             public ClientType ClientType { get; set; }

@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
-using YamlDotNet.Serialization;
+using DC.Cli.Components.Terraform;
 
 namespace DC.Cli.Components.Client
 {
     public class ClientComponentType : IComponentType<ClientComponent, ClientComponentType.ComponentData>
     {
-        private static readonly IImmutableDictionary<ClientType, Func<DirectoryInfo, ClientComponent.ClientConfiguration, ProjectSettings, Task>> TypeHandlers =
-            new Dictionary<ClientType, Func<DirectoryInfo, ClientComponent.ClientConfiguration, ProjectSettings, Task>>
+        private static readonly IImmutableDictionary<ClientType, Func<DirectoryInfo, ProjectSettings, string, Task>> TypeHandlers =
+            new Dictionary<ClientType, Func<DirectoryInfo, ProjectSettings, string, Task>>
             {
                 [ClientType.VueNuxt] = CreateVueNuxt
             }.ToImmutableDictionary();
@@ -27,32 +27,28 @@ namespace DC.Cli.Components.Client
                 throw new InvalidOperationException($"You can't create a client at \"{tree.Path.FullName}\". It already exists.");
             
             var clientPort = data.Port ?? ProjectSettings.GetRandomUnusedPort();
-            
-            var configuration = new ClientComponent.ClientConfiguration
-            {
-                Name = data.Name,
-                Settings = new ClientComponent.ClientConfiguration.ClientSettings
-                {
-                    Port = clientPort,
-                    Type = data.ClientType.ToString(),
-                    BaseUrl = data.BaseUrl
-                }
-            };
-            
-            await TypeHandlers[data.ClientType](tree.Path, configuration, settings);
-            
-            var serializer = new Serializer();
-            await File.WriteAllTextAsync(Path.Combine(tree.Path.FullName, ClientComponent.ConfigFileName),
-                serializer.Serialize(configuration));
 
-            return await ClientComponent.Init(tree.Path, x => CreateBaseContainer(tree.Path, x, settings));
+            await TypeHandlers[data.ClientType](tree.Path, settings, data.Name);
+
+            await Templates.Extract(
+                ClientComponent.ConfigFileName,
+                configFile,
+                Templates.TemplateType.Infrastructure,
+                ("NAME", TemplateData.SanitizeResourceName(data.Name)),
+                ("PORT", clientPort.ToString()),
+                ("TYPE", data.ClientType.ToString()),
+                ("PATH", settings.GetRelativePath(
+                    tree.Path.FullName, 
+                    tree.FindFirst<TerraformRootComponent>(Components.Direction.Out)?.FoundAt.Path.FullName)));
+            
+            return await ClientComponent.Init(tree.Path, x => CreateBaseContainer(tree.Path, settings, x.Name));
         }
 
         public async Task<IImmutableList<IComponent>> FindAt(
             Components.ComponentTree components,
             ProjectSettings settings)
         {
-            var component = await ClientComponent.Init(components.Path, x => CreateBaseContainer(components.Path, x, settings));
+            var component = await ClientComponent.Init(components.Path, x => CreateBaseContainer(components.Path, settings, x.Name));
 
             return component != null
                 ? new List<IComponent>
@@ -64,10 +60,10 @@ namespace DC.Cli.Components.Client
         
         private static Task CreateVueNuxt(
             DirectoryInfo dir,
-            ClientComponent.ClientConfiguration configuration,
-            ProjectSettings settings)
+            ProjectSettings settings,
+            string name)
         {
-            return CreateBaseContainer(dir.Parent, configuration, settings)
+            return CreateBaseContainer(dir.Parent, settings, name)
                 .Temporary()
                 .Interactive()
                 .Run($"create nuxt-app {dir.Name}");
@@ -75,29 +71,27 @@ namespace DC.Cli.Components.Client
 
         private static Docker.Container CreateBaseContainer(
             FileSystemInfo path,
-            ClientComponent.ClientConfiguration configuration,
-            ProjectSettings settings)
+            ProjectSettings settings,
+            string name)
         {
             return Docker
-                .ContainerFromImage("node", configuration.GetContainerName(settings))
+                .ContainerFromImage("node", ClientComponent.ClientConfiguration.GetContainerName(settings, name))
                 .EntryPoint("yarn")
                 .WithVolume(path.FullName, "/usr/local/src", true);
         }
 
         public class ComponentData
         {
-            public ComponentData(string name, int? port, ClientType clientType, string baseUrl)
+            public ComponentData(string name, int? port, ClientType clientType)
             {
                 Name = name;
                 Port = port;
                 ClientType = clientType;
-                BaseUrl = baseUrl;
             }
 
             public string Name { get; }
             public int? Port { get; }
             public ClientType ClientType { get; }
-            public string BaseUrl { get; }
         }
     }
 }
