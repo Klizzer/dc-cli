@@ -82,7 +82,7 @@ namespace DC.Cli.Components.Client
                 _settings.GetRelativePath(Path.Combine(_path.FullName, "amplify-app.zip"), components.Path.FullName),
                 await File.ReadAllBytesAsync(appFilePath)));
             
-            tempDir.Delete();
+            tempDir.Delete(true);
 
             return result;
         }
