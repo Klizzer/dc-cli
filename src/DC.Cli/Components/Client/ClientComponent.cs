@@ -196,8 +196,16 @@ namespace DC.Cli.Components.Client
 
             if (amplifyApp != null && amplifyApp.Properties.ContainsKey("EnvironmentVariables"))
             {
-                foreach (var environmentVariable in (amplifyApp.Properties["EnvironmentVariables"] as Dictionary<string, object>) ?? new Dictionary<string, object>())
-                    result[environmentVariable.Key] = (await parsers.Parse(environmentVariable.Value)) as string;   
+                var environmentVariables = (amplifyApp.Properties["EnvironmentVariables"] as IEnumerable<object> ?? new List<object>()).OfType<IDictionary<object, object>>();
+
+                foreach (var item in environmentVariables)
+                {
+                    if (item.ContainsKey("Name") && item.ContainsKey("Value"))
+                    {
+                        result[item["Name"].ToString() ?? string.Empty] =
+                            (await parsers.Parse(item["Value"])) as string;
+                    }
+                }
             }
 
             var container = result.Aggregate(

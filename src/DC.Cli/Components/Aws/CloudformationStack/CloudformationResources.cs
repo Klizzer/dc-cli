@@ -86,7 +86,8 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                     Func<string, Task<(bool isRunning, int port)>>,
                     Task<string>>>
             {
-                ["AWS::Cognito::UserPoolClient"] = GetUserPoolClientAttr
+                ["AWS::Cognito::UserPoolClient"] = GetUserPoolClientAttr,
+                ["AWS::Cognito::UserPool"] = GetUserPoolAttr
             }.ToImmutableDictionary();
 
         public static async Task EnsureResourcesExist(
@@ -343,6 +344,22 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                 "DefaultRedirectURI" => userPoolClient.UserPoolClient.DefaultRedirectURI,
                 _ => null
             };
+        }
+
+        private static Task<string> GetUserPoolAttr(
+            TemplateData template,
+            ProjectSettings settings,
+            string region,
+            KeyValuePair<string, TemplateData.ResourceData> resource,
+            string attribute,
+            Func<string, Task<(bool isRunning, int port)>> getServiceInformation)
+        {
+            return Task.FromResult(attribute switch
+            {
+                //TODO: Get port mapping from stack
+                "ProviderURL" => "http://localhost:4590",
+                _ => null
+            });
         }
 
         private static Task<string> GetBucketRef(
