@@ -43,12 +43,22 @@ namespace DC.Cli.Components.Client
             Components.ComponentTree components,
             string version)
         {
+            var tempDir = new DirectoryInfo(Path.Combine(_path.FullName, ".tmp"));
+            
+            if (tempDir.Exists)
+                tempDir.Delete(true);
+            
+            tempDir.Create();
+            
             async Task AddFilesFrom(DirectoryInfo directory, ZipOutputStream zipStream)
             {
+                if (directory.FullName == tempDir.FullName)
+                    return;
+                
                 foreach (var file in directory.GetFiles())
                 {
                     zipStream.PutNextEntry(new ZipEntry(_settings.GetRelativePath(file.FullName, _path.FullName)));
-                        
+
                     await zipStream.WriteAsync(await File.ReadAllBytesAsync(file.FullName));
                         
                     zipStream.CloseEntry();
@@ -57,19 +67,24 @@ namespace DC.Cli.Components.Client
                 foreach (var childDirectory in directory.GetDirectories())
                     await AddFilesFrom(childDirectory, zipStream);
             }
+
+            var appFilePath = Path.Combine(tempDir.FullName, "amplify-app.zip");
             
-            await using var stream = new MemoryStream();
-            await using var outStream = new ZipOutputStream(stream);
+            await using var zipFile = File.Create(appFilePath);
+            await using var outStream = new ZipOutputStream(zipFile);
 
             await AddFilesFrom(_path, outStream);
             
             await outStream.FlushAsync();
+            outStream.Close();
 
-            stream.Position = 0;
-            
-            return ImmutableList.Create(new PackageResource(
+            var result = ImmutableList.Create(new PackageResource(
                 _settings.GetRelativePath(Path.Combine(_path.FullName, "amplify-app.zip"), components.Path.FullName),
-                stream.ToArray()));
+                await File.ReadAllBytesAsync(appFilePath)));
+            
+            tempDir.Delete();
+
+            return result;
         }
 
         public Task<IEnumerable<(string key, string question, INeedConfiguration.ConfigurationType configurationType)>> 

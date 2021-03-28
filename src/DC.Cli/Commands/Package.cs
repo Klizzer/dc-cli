@@ -29,7 +29,7 @@ namespace DC.Cli.Commands
                 foreach (var resource in package.Resources)
                 {
                     outStream.PutNextEntry(new ZipEntry(resource.ResourceName));
-                        
+
                     await outStream.WriteAsync(resource.ResourceContent);
                         
                     outStream.CloseEntry();
