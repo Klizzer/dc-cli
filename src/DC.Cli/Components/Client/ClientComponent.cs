@@ -21,6 +21,7 @@ namespace DC.Cli.Components.Client
         public const string ConfigFileName = "js-client.config.yml";
 
         private readonly DirectoryInfo _path;
+        private readonly DirectoryInfo _sourcePath;
         private readonly ClientConfiguration _configuration;
         private readonly Docker.Container _dockerContainer;
         private readonly ProjectSettings _settings;
@@ -32,6 +33,7 @@ namespace DC.Cli.Components.Client
             ProjectSettings settings)
         {
             _path = path;
+            _sourcePath = new DirectoryInfo(Path.Combine(path.FullName, "src"));
             _configuration = configuration;
             _dockerContainer = dockerContainer;
             _settings = settings;
@@ -50,8 +52,6 @@ namespace DC.Cli.Components.Client
             
             tempDir.Create();
 
-            var sourcePath = new DirectoryInfo(Path.Combine(_path.FullName, "src"));
-            
             async Task AddFilesFrom(DirectoryInfo directory, ZipOutputStream zipStream)
             {
                 if (directory.FullName == tempDir.FullName)
@@ -59,7 +59,7 @@ namespace DC.Cli.Components.Client
                 
                 foreach (var file in directory.GetFiles())
                 {
-                    zipStream.PutNextEntry(new ZipEntry(_settings.GetRelativePath(file.FullName, sourcePath.FullName)));
+                    zipStream.PutNextEntry(new ZipEntry(_settings.GetRelativePath(file.FullName, _sourcePath.FullName)));
 
                     await zipStream.WriteAsync(await File.ReadAllBytesAsync(file.FullName));
                         
@@ -75,7 +75,7 @@ namespace DC.Cli.Components.Client
             await using var zipFile = File.Create(appFilePath);
             await using var outStream = new ZipOutputStream(zipFile);
 
-            await AddFilesFrom(sourcePath, outStream);
+            await AddFilesFrom(_sourcePath, outStream);
             
             await outStream.FlushAsync();
             outStream.Close();
@@ -102,7 +102,7 @@ namespace DC.Cli.Components.Client
 
         public async Task<bool> Restore()
         {
-            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+            if (!File.Exists(Path.Combine(_sourcePath.FullName, "package.json")))
                 return true;
 
             return await _dockerContainer
@@ -112,11 +112,11 @@ namespace DC.Cli.Components.Client
         
         public async Task<bool> Clean()
         {
-            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+            if (!File.Exists(Path.Combine(_sourcePath.FullName, "package.json")))
                 return true;
             
             var packageData =
-                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
+                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_sourcePath.FullName, "package.json")));
 
             if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
                 .ContainsKey("clean"))
@@ -136,11 +136,11 @@ namespace DC.Cli.Components.Client
             if (!restoreResult)
                 return false;
             
-            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+            if (!File.Exists(Path.Combine(_sourcePath.FullName, "package.json")))
                 return true;
             
             var packageData =
-                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
+                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_sourcePath.FullName, "package.json")));
 
             if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
                 .ContainsKey("build"))
@@ -160,11 +160,11 @@ namespace DC.Cli.Components.Client
             if (!restoreResult)
                 return false;
             
-            if (!File.Exists(Path.Combine(_path.FullName, "package.json")))
+            if (!File.Exists(Path.Combine(_sourcePath.FullName, "package.json")))
                 return true;
 
             var packageData =
-                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_path.FullName, "package.json")));
+                Json.DeSerialize<PackageJsonData>(await File.ReadAllTextAsync(Path.Combine(_sourcePath.FullName, "package.json")));
 
             if (!(packageData.Scripts ?? new Dictionary<string, string>().ToImmutableDictionary())
                 .ContainsKey("test"))
