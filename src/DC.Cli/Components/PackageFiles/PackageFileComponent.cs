@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 
 namespace DC.Cli.Components.PackageFiles
 {
-    public class PackageFileScriptComponent : IHavePackageResources
+    public class PackageFileComponent : IHavePackageResources
     {
         private readonly FileInfo _file;
         private readonly ProjectSettings _settings;
 
-        public PackageFileScriptComponent(string name, FileInfo file, ProjectSettings settings)
+        public PackageFileComponent(string name, FileInfo file, ProjectSettings settings)
         {
             Name = name;
             _file = file;

@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace DC.Cli.Components.PackageFiles
 {
     public class PackageFileComponentType 
-        : IComponentType<PackageFileScriptComponent, PackageFileComponentType.ComponentData>
+        : IComponentType<PackageFileComponent, PackageFileComponentType.ComponentData>
     {
-        public async Task<PackageFileScriptComponent> InitializeAt(
+        public async Task<PackageFileComponent> InitializeAt(
             Components.ComponentTree tree,
             ComponentData data,
             ProjectSettings settings)
@@ -24,7 +24,7 @@ namespace DC.Cli.Components.PackageFiles
 
             await File.WriteAllTextAsync(filePath, "");
 
-            return new PackageFileScriptComponent(data.Name, new FileInfo(filePath), settings);
+            return new PackageFileComponent(data.Name, new FileInfo(filePath), settings);
         }
 
         public Task<IImmutableList<IComponent>> FindAt(
@@ -33,7 +33,7 @@ namespace DC.Cli.Components.PackageFiles
         {
             var result = from file in components.Path.EnumerateFiles()
                 where file.Name.Contains(".include.")
-                select new PackageFileScriptComponent(Path.GetFileNameWithoutExtension(file.Name), file, settings);
+                select new PackageFileComponent(Path.GetFileNameWithoutExtension(file.Name), file, settings);
             
             return Task.FromResult<IImmutableList<IComponent>>(result.OfType<IComponent>().ToImmutableList());
         }

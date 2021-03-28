@@ -63,10 +63,10 @@ namespace DC.Cli.Components.Client
             ProjectSettings settings,
             string name)
         {
-            return CreateBaseContainer(dir.Parent, settings, name)
+            return CreateBaseContainer(dir, settings, name)
                 .Temporary()
                 .Interactive()
-                .Run($"create nuxt-app {dir.Name}");
+                .Run("create nuxt-app .");
         }
 
         private static Docker.Container CreateBaseContainer(
@@ -77,7 +77,7 @@ namespace DC.Cli.Components.Client
             return Docker
                 .ContainerFromImage("node", ClientComponent.ClientConfiguration.GetContainerName(settings, name))
                 .EntryPoint("yarn")
-                .WithVolume(path.FullName, "/usr/local/src", true);
+                .WithVolume( Path.Combine(path.FullName, "src"), "/usr/local/src", true);
         }
 
         public class ComponentData

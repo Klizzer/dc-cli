@@ -34,7 +34,8 @@ namespace DC.Cli.Components
             new PowershellScriptComponentType(),
             new LambdaLayerComponentType(),
             new ChildConfigComponentType(),
-            new PackageFileComponentType()
+            new PackageFileComponentType(),
+            new PackageDirectoryComponentType()
         }.ToImmutableList();
         
         public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)
