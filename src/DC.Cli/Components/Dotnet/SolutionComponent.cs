@@ -45,7 +45,7 @@ namespace DC.Cli.Components.Dotnet
         public Task<bool> Clean()
         {
             if (_packagesDirectory.Exists)
-                _packagesDirectory.Delete();
+                _packagesDirectory.Delete(true);
                 
             return _dockerContainer.Run("clean");
         }
