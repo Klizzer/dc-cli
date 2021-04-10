@@ -38,7 +38,7 @@ namespace DC.Cli.Components.Dotnet
 
             return _packagesDirectory
                 .GetFiles("*.nupkg")
-                .Select(x => new PackageResult(x.Name, x.OpenRead()))
+                .Select(x => new PackageResult(x.Name, File.ReadAllBytes(x.FullName)))
                 .ToImmutableList();
         }
 

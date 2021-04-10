@@ -23,13 +23,9 @@ namespace DC.Cli.Commands
             
             foreach (var package in results)
             {
-                await using var outStream = File.Create(Path.Combine(outputDirectory.FullName, package.PackageName));
-                await using (package.Content)
-                {
-                    await package.Content.CopyToAsync(outStream);
-
-                    await outStream.FlushAsync();
-                }
+                await File.WriteAllBytesAsync(
+                    Path.Combine(outputDirectory.FullName, package.PackageName), 
+                    package.Content);
             }
         }
         

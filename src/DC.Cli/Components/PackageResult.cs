@@ -7,24 +7,22 @@ namespace DC.Cli.Components
 {
     public class PackageResult
     {
-        public PackageResult(string packageName, Stream content)
+        public PackageResult(string packageName, byte[] content)
         {
             PackageName = packageName;
             Content = content;
-
-            Content.Position = 0;
         }
 
         public string PackageName { get; }
-        public Stream Content { get; }
+        public byte[] Content { get; }
 
         public static async Task<PackageResult> FromResources(
             string packageName,
             IImmutableList<PackageResource> resources)
         {
-            var output = new MemoryStream();
-            var zipStream = new ZipOutputStream(output);
-                
+            await using var output = new MemoryStream();
+            await using var zipStream = new ZipOutputStream(output);
+
             foreach (var resource in resources)
             {
                 zipStream.PutNextEntry(new ZipEntry(resource.ResourceName));
@@ -34,12 +32,11 @@ namespace DC.Cli.Components
                 zipStream.CloseEntry();
             }
 
-            await zipStream.FlushAsync();
+            zipStream.Finish();
 
-            await output.FlushAsync();
             output.Position = 0;
 
-            return new PackageResult(packageName, output);
+            return new PackageResult(packageName, output.ToArray());
         }
     }
 }
