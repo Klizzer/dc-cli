@@ -12,6 +12,7 @@ using DC.Cli.Components.Aws.LambdaFunction;
 using DC.Cli.Components.Aws.LambdaLayer;
 using DC.Cli.Components.Client;
 using DC.Cli.Components.Cloudflare;
+using DC.Cli.Components.Dotnet;
 using DC.Cli.Components.PackageFiles;
 using DC.Cli.Components.Powershell;
 using DC.Cli.Components.Terraform;
@@ -35,7 +36,8 @@ namespace DC.Cli.Components
             new LambdaLayerComponentType(),
             new ChildConfigComponentType(),
             new PackageFileComponentType(),
-            new PackageDirectoryComponentType()
+            new PackageDirectoryComponentType(),
+            new SolutionComponentType()
         }.ToImmutableList();
         
         public static async Task<ComponentTree> BuildTree(ProjectSettings settings, string path)
@@ -244,7 +246,7 @@ namespace DC.Cli.Components
 
                     var result = await package.Package(resources, version);
                     
-                    results.Add(result);
+                    results.AddRange(result);
                 }
 
                 foreach (var child in _children)

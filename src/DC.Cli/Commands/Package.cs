@@ -23,19 +23,13 @@ namespace DC.Cli.Commands
             
             foreach (var package in results)
             {
-                await using var zipFile = File.Create(Path.Combine(outputDirectory.FullName, package.PackageName));
-                await using var outStream = new ZipOutputStream(zipFile);
-                
-                foreach (var resource in package.Resources)
+                await using var outStream = File.Create(Path.Combine(outputDirectory.FullName, package.PackageName));
+                await using (package.Content)
                 {
-                    outStream.PutNextEntry(new ZipEntry(resource.ResourceName));
+                    await package.Content.CopyToAsync(outStream);
 
-                    await outStream.WriteAsync(resource.ResourceContent);
-                        
-                    outStream.CloseEntry();
+                    await outStream.FlushAsync();
                 }
-
-                await outStream.FlushAsync();
             }
         }
         

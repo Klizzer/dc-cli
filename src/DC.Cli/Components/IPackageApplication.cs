@@ -5,6 +5,6 @@ namespace DC.Cli.Components
 {
     public interface IPackageApplication : IComponent
     {
-        Task<PackageResult> Package(IImmutableList<PackageResource> resources, string version);
+        Task<IImmutableList<PackageResult>> Package(IImmutableList<PackageResource> resources, string version);
     }
 }

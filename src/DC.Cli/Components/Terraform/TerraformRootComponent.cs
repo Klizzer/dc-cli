@@ -16,13 +16,13 @@ namespace DC.Cli.Components.Terraform
         
         public string Name { get; }
         
-        public async Task<PackageResult> Package(IImmutableList<PackageResource> resources, string version)
+        public async Task<IImmutableList<PackageResult>> Package(IImmutableList<PackageResource> resources, string version)
         {
             var packageResources = resources
                 .Add(new PackageResource("main.tf",
                     await File.ReadAllBytesAsync(_file.FullName)));
             
-            return new PackageResult($"{Name}.{version}.zip", packageResources);
+            return ImmutableList.Create(await PackageResult.FromResources($"{Name}.{version}.zip", packageResources));
         }
     }
 }
