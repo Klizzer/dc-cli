@@ -8,12 +8,20 @@ namespace DC.Cli
     {
         public string AWSTemplateFormatVersion { get; set; } = "2010-09-09";
         public string Transform { get; set; } = "AWS::Serverless-2016-10-31";
+
+        public IDictionary<string, object> Globals { get; set; } = new Dictionary<string, object>();
         public IDictionary<string, object> Outputs { get; set; } = new Dictionary<string, object>();
         public IDictionary<string, IDictionary<string, object>> Parameters { get; set; } = new Dictionary<string, IDictionary<string, object>>();
         public IDictionary<string, ResourceData> Resources { get; set; } = new Dictionary<string, ResourceData>();
 
         public void Merge(TemplateData other)
         {
+            foreach (var global in other.Globals)
+            {
+                if (!Globals.ContainsKey(global.Key))
+                    Globals[global.Key] = global.Value;
+            }
+            
             foreach (var output in other.Outputs)
             {
                 if (!Outputs.ContainsKey(output.Key))
