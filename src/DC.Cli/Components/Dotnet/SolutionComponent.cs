@@ -1,6 +1,4 @@
-using System.Collections.Immutable;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace DC.Cli.Components.Dotnet
@@ -8,18 +6,15 @@ namespace DC.Cli.Components.Dotnet
     public class SolutionComponent : IBuildableComponent, 
         ITestableComponent,
         IRestorableComponent,
-        ICleanableComponent,
-        IPackageApplication
+        ICleanableComponent
     {
         private readonly FileInfo _path;
-        private readonly DirectoryInfo _packagesDirectory;
         private readonly Docker.Container _dockerContainer;
 
         public SolutionComponent(FileInfo path, ProjectSettings settings)
         {
             _path = path;
-            _packagesDirectory = new DirectoryInfo(Path.Combine(path.Directory.FullName, ".packages"));
-
+            
             _dockerContainer = Docker
                 .ContainerFromImage("mcr.microsoft.com/dotnet/sdk:5.0", $"{settings.GetProjectName()}-dotnet-{Name}")
                 .EntryPoint("dotnet")
@@ -28,25 +23,8 @@ namespace DC.Cli.Components.Dotnet
 
         public string Name => Path.GetFileNameWithoutExtension(_path.Name);
         
-        public async Task<IImmutableList<PackageResult>> Package(
-            IImmutableList<PackageResource> resources, 
-            string version)
-        {
-            await Clean();
-            
-            await _dockerContainer.Run($"pack -c Release -o ./.packages -p:Version={version}");
-
-            return _packagesDirectory
-                .GetFiles("*.nupkg")
-                .Select(x => new PackageResult(x.Name, File.ReadAllBytes(x.FullName)))
-                .ToImmutableList();
-        }
-
         public Task<bool> Clean()
         {
-            if (_packagesDirectory.Exists)
-                _packagesDirectory.Delete(true);
-                
             return _dockerContainer.Run("clean");
         }
 
@@ -62,7 +40,7 @@ namespace DC.Cli.Components.Dotnet
 
         public Task<bool> Build()
         {
-            return _dockerContainer.Run("build");
+            return _dockerContainer.Run("build -c Release");
         }
     }
 }
