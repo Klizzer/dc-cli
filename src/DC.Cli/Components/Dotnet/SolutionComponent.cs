@@ -40,7 +40,7 @@ namespace DC.Cli.Components.Dotnet
 
         public Task<bool> Build()
         {
-            return _dockerContainer.Run("build -c Release");
+            return _dockerContainer.Run("build");
         }
     }
 }
