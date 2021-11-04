@@ -239,7 +239,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
             {
                 try
                 {
-                    var response = await HttpClient.GetAsync($"http://localhost:{_configuration.Settings.MainPort}/health");
+                    var response = await HttpClient.GetAsync($"http://localhost:{_configuration.Settings.ServicesPort}/health");
 
                     if (response.IsSuccessStatusCode)
                     {
