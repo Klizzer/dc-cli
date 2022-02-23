@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>dc</AssemblyName>
-    <Version>0.115.0</Version>
+    <Version>0.116.0</Version>
     <RootNamespace>DC.Cli</RootNamespace>
   </PropertyGroup>
 
