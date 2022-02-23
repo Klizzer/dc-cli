@@ -246,7 +246,7 @@ namespace DC.Cli.Components.Aws.CloudformationStack
                         var responseData = Json.DeSerialize<HealthResponse>(await response.Content.ReadAsStringAsync());
 
                         if (responseData.Services.Any() 
-                            && requiredServices.All(x => responseData.Services.ContainsKey(x) && responseData.Services[x] == "running"))
+                            && requiredServices.All(x => responseData.Services.ContainsKey(x) && responseData.Services[x] == "running" || responseData.Services[x] == "available"))
                         {
                             Console.WriteLine($"Running services: {string.Join(", ", responseData.Services.Keys)}");
                         
